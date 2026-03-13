@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, LayoutGrid, List, Star, Loader2 } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -288,18 +288,6 @@ export default function CompaniesPage() {
                         📍 {company.location}
                       </p>
                     )}
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < company.priority
-                              ? "text-yellow-400 fill-yellow-400"
-                              : "text-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
                     <p className="text-xs text-muted-foreground">
                       更新: {company.updatedAt}
                     </p>
@@ -328,18 +316,6 @@ export default function CompaniesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 self-start md:self-auto">
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-3 w-3 ${
-                          i < company.priority
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-200"
-                        }`}
-                      />
-                    ))}
-                  </div>
                   <StatusBadge status={company.status} />
                 </div>
               </Link>

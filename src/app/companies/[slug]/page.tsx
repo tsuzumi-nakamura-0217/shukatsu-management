@@ -4,7 +4,6 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Star,
   ExternalLink,
   MapPin,
   Trash2,
@@ -303,20 +302,6 @@ export default function CompanyDetailPage({
                 <ExternalLink className="h-3 w-3" /> Webサイト
               </a>
             )}
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className={`h-5 w-5 cursor-pointer ${i < company.priority ? "text-yellow-400 fill-yellow-400" : "text-gray-200"}`}
-                onClick={async () => {
-                  await fetch(`/api/companies/${slug}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ priority: i + 1 }),
-                  });
-                  fetchAll();
-                }}
-              />
-            ))}
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
