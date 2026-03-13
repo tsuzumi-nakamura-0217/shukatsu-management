@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, LayoutGrid, List, Star } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, Star, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -39,6 +39,7 @@ export default function CompaniesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newCompany, setNewCompany] = useState({
     name: "",
     industry: "",
@@ -66,22 +67,28 @@ export default function CompaniesPage() {
   }, []);
 
   const handleCreate = async () => {
+    if (isCreating) return;
     if (!newCompany.name) {
       toast.error("企業名を入力してください");
       return;
     }
-    const res = await fetch("/api/companies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newCompany),
-    });
-    if (res.ok) {
-      toast.success("企業を追加しました");
-      setDialogOpen(false);
-      setNewCompany({ name: "", industry: config?.industries?.[0] || "", url: "", location: "" });
-      fetchCompanies();
-    } else {
-      toast.error("企業の追加に失敗しました");
+    setIsCreating(true);
+    try {
+      const res = await fetch("/api/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCompany),
+      });
+      if (res.ok) {
+        toast.success("企業を追加しました");
+        setDialogOpen(false);
+        setNewCompany({ name: "", industry: config?.industries?.[0] || "", url: "", location: "" });
+        fetchCompanies();
+      } else {
+        toast.error("企業の追加に失敗しました");
+      }
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -185,10 +192,23 @@ export default function CompaniesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" disabled={isCreating} onClick={() => setDialogOpen(false)}>
                 キャンセル
               </Button>
-              <Button onClick={handleCreate}>追加</Button>
+              <Button
+                onClick={handleCreate}
+                disabled={isCreating}
+                className="transition-transform active:scale-95"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    追加中...
+                  </>
+                ) : (
+                  "追加"
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

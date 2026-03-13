@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save, Trash2, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -28,6 +28,7 @@ export default function SelfAnalysisPage() {
   const [selected, setSelected] = useState<SelfAnalysis | null>(null);
   const [editContent, setEditContent] = useState("");
   const [newOpen, setNewOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newItem, setNewItem] = useState({ title: "" });
 
   async function fetchItems() {
@@ -79,22 +80,28 @@ export default function SelfAnalysisPage() {
   };
 
   const handleCreate = async () => {
+    if (isCreating) return;
     if (!newItem.title) {
       toast.error("タイトルを入力してください");
       return;
     }
-    await fetch("/api/self-analysis", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: newItem.title,
-        content: "",
-      }),
-    });
-    toast.success("メモを作成しました");
-    setNewOpen(false);
-    setNewItem({ title: "" });
-    fetchItems();
+    setIsCreating(true);
+    try {
+      await fetch("/api/self-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newItem.title,
+          content: "",
+        }),
+      });
+      toast.success("メモを作成しました");
+      setNewOpen(false);
+      setNewItem({ title: "" });
+      fetchItems();
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -144,7 +151,20 @@ export default function SelfAnalysisPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleCreate}>作成</Button>
+              <Button
+                onClick={handleCreate}
+                disabled={isCreating}
+                className="transition-transform active:scale-95"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    作成中...
+                  </>
+                ) : (
+                  "作成"
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

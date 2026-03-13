@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Save, Trash2, Copy } from "lucide-react";
+import { Plus, Save, Trash2, Copy, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -30,6 +30,7 @@ export default function TemplatesPage() {
   const [editContent, setEditContent] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newTemplate, setNewTemplate] = useState({
     title: "",
     description: "",
@@ -79,19 +80,25 @@ export default function TemplatesPage() {
   };
 
   const handleCreate = async () => {
+    if (isCreating) return;
     if (!newTemplate.title) {
       toast.error("タイトルを入力してください");
       return;
     }
-    await fetch("/api/templates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newTemplate),
-    });
-    toast.success("テンプレートを作成しました");
-    setNewOpen(false);
-    setNewTemplate({ title: "", description: "" });
-    fetchTemplates();
+    setIsCreating(true);
+    try {
+      await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTemplate),
+      });
+      toast.success("テンプレートを作成しました");
+      setNewOpen(false);
+      setNewTemplate({ title: "", description: "" });
+      fetchTemplates();
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -160,7 +167,20 @@ export default function TemplatesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleCreate}>作成</Button>
+              <Button
+                onClick={handleCreate}
+                disabled={isCreating}
+                className="transition-transform active:scale-95"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    作成中...
+                  </>
+                ) : (
+                  "作成"
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

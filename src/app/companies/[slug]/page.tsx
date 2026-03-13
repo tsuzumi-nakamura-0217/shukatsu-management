@@ -15,6 +15,7 @@ import {
   CheckSquare,
   BookOpen,
   Edit,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -75,6 +76,9 @@ export default function CompanyDetailPage({
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [newInterviewOpen, setNewInterviewOpen] = useState(false);
   const [newEsOpen, setNewEsOpen] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [isCreatingInterview, setIsCreatingInterview] = useState(false);
+  const [isCreatingEs, setIsCreatingEs] = useState(false);
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
@@ -141,16 +145,22 @@ export default function CompanyDetailPage({
   };
 
   const handleCreateTask = async () => {
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newTask, companySlug: slug }),
-    });
-    if (res.ok) {
-      toast.success("タスクを追加しました");
-      setNewTaskOpen(false);
-      setNewTask({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
-      fetchAll();
+    if (isCreatingTask) return;
+    setIsCreatingTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newTask, companySlug: slug }),
+      });
+      if (res.ok) {
+        toast.success("タスクを追加しました");
+        setNewTaskOpen(false);
+        setNewTask({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
+        fetchAll();
+      }
+    } finally {
+      setIsCreatingTask(false);
     }
   };
 
@@ -187,16 +197,22 @@ export default function CompanyDetailPage({
   };
 
   const handleCreateInterview = async () => {
-    const res = await fetch(`/api/companies/${slug}/interviews`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newInterview),
-    });
-    if (res.ok) {
-      toast.success("面接記録を追加しました");
-      setNewInterviewOpen(false);
-      setNewInterview({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
-      fetchAll();
+    if (isCreatingInterview) return;
+    setIsCreatingInterview(true);
+    try {
+      const res = await fetch(`/api/companies/${slug}/interviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newInterview),
+      });
+      if (res.ok) {
+        toast.success("面接記録を追加しました");
+        setNewInterviewOpen(false);
+        setNewInterview({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
+        fetchAll();
+      }
+    } finally {
+      setIsCreatingInterview(false);
     }
   };
 
@@ -224,16 +240,22 @@ export default function CompanyDetailPage({
   };
 
   const handleCreateEs = async () => {
-    const res = await fetch(`/api/companies/${slug}/es`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newEs),
-    });
-    if (res.ok) {
-      toast.success("文書を作成しました");
-      setNewEsOpen(false);
-      setNewEs({ title: "", content: "" });
-      fetchAll();
+    if (isCreatingEs) return;
+    setIsCreatingEs(true);
+    try {
+      const res = await fetch(`/api/companies/${slug}/es`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEs),
+      });
+      if (res.ok) {
+        toast.success("文書を作成しました");
+        setNewEsOpen(false);
+        setNewEs({ title: "", content: "" });
+        fetchAll();
+      }
+    } finally {
+      setIsCreatingEs(false);
     }
   };
 
@@ -423,7 +445,20 @@ export default function CompanyDetailPage({
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleCreateEs}>作成</Button>
+                  <Button
+                    onClick={handleCreateEs}
+                    disabled={isCreatingEs}
+                    className="transition-transform active:scale-95"
+                  >
+                    {isCreatingEs ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        作成中...
+                      </>
+                    ) : (
+                      "作成"
+                    )}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -514,7 +549,20 @@ export default function CompanyDetailPage({
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleCreateInterview}>追加</Button>
+                  <Button
+                    onClick={handleCreateInterview}
+                    disabled={isCreatingInterview}
+                    className="transition-transform active:scale-95"
+                  >
+                    {isCreatingInterview ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        追加中...
+                      </>
+                    ) : (
+                      "追加"
+                    )}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -698,7 +746,20 @@ export default function CompanyDetailPage({
                   </label>
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleCreateTask}>追加</Button>
+                  <Button
+                    onClick={handleCreateTask}
+                    disabled={isCreatingTask}
+                    className="transition-transform active:scale-95"
+                  >
+                    {isCreatingTask ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        追加中...
+                      </>
+                    ) : (
+                      "追加"
+                    )}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

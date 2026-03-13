@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { RefreshCw, Trash2, Plus, Edit } from "lucide-react";
+import { RefreshCw, Trash2, Plus, Edit, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -42,6 +42,7 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newTask, setNewTask] = useState({
     title: "",
@@ -90,38 +91,44 @@ export default function TasksPage() {
   };
 
   const handleCreateTask = async () => {
+    if (isCreatingTask) return;
     if (!newTask.title || !newTask.companySlug) {
       toast.error("タイトルと企業は必須です");
       return;
     }
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newTask),
-    });
-    if (res.ok) {
-      const created = await res.json();
-      if (newTask.completed) {
-        await fetch("/api/tasks", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: created.id, completed: true }),
-        });
-      }
-      toast.success("タスクを作成しました");
-      setNewTaskOpen(false);
-      setNewTask({
-        title: "",
-        companySlug: companies[0]?.slug || "",
-        category: config?.taskCategories?.[0] || "その他",
-        priority: "medium",
-        deadline: "",
-        memo: "",
-        completed: false,
+    setIsCreatingTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTask),
       });
-      fetchTasks();
-    } else {
-      toast.error("タスクの作成に失敗しました");
+      if (res.ok) {
+        const created = await res.json();
+        if (newTask.completed) {
+          await fetch("/api/tasks", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: created.id, completed: true }),
+          });
+        }
+        toast.success("タスクを作成しました");
+        setNewTaskOpen(false);
+        setNewTask({
+          title: "",
+          companySlug: companies[0]?.slug || "",
+          category: config?.taskCategories?.[0] || "その他",
+          priority: "medium",
+          deadline: "",
+          memo: "",
+          completed: false,
+        });
+        fetchTasks();
+      } else {
+        toast.error("タスクの作成に失敗しました");
+      }
+    } finally {
+      setIsCreatingTask(false);
     }
   };
 
@@ -286,8 +293,21 @@ export default function TasksPage() {
                 </label>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setNewTaskOpen(false)}>キャンセル</Button>
-                <Button onClick={handleCreateTask}>作成</Button>
+                <Button variant="outline" disabled={isCreatingTask} onClick={() => setNewTaskOpen(false)}>キャンセル</Button>
+                <Button
+                  onClick={handleCreateTask}
+                  disabled={isCreatingTask}
+                  className="transition-transform active:scale-95"
+                >
+                  {isCreatingTask ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      作成中...
+                    </>
+                  ) : (
+                    "作成"
+                  )}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
