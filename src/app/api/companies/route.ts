@@ -4,7 +4,7 @@ import type { CompanyCreate } from "@/types";
 
 export async function GET() {
   try {
-    const companies = getAllCompanies();
+    const companies = await getAllCompanies();
     return NextResponse.json(companies);
   } catch (error) {
     return NextResponse.json(
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const company = createCompany(body);
+    const company = await createCompany(body);
     return NextResponse.json(company, { status: 201 });
   } catch (error) {
     return NextResponse.json(

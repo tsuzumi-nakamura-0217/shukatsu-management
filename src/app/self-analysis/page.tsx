@@ -28,7 +28,7 @@ export default function SelfAnalysisPage() {
   const [selected, setSelected] = useState<SelfAnalysis | null>(null);
   const [editContent, setEditContent] = useState("");
   const [newOpen, setNewOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ filename: "", title: "" });
+  const [newItem, setNewItem] = useState({ title: "" });
 
   useEffect(() => {
     fetchItems();
@@ -54,7 +54,7 @@ export default function SelfAnalysisPage() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        filename: selected.filename,
+        id: selected.id,
         title: selected.title,
         content: editContent,
       }),
@@ -64,35 +64,33 @@ export default function SelfAnalysisPage() {
   };
 
   const handleCreate = async () => {
-    if (!newItem.filename || !newItem.title) {
-      toast.error("ファイル名とタイトルを入力してください");
+    if (!newItem.title) {
+      toast.error("タイトルを入力してください");
       return;
     }
-    const filename = `custom/${newItem.filename.replace(/\.md$/, "")}.md`;
     await fetch("/api/self-analysis", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        filename,
         title: newItem.title,
         content: "",
       }),
     });
     toast.success("メモを作成しました");
     setNewOpen(false);
-    setNewItem({ filename: "", title: "" });
+    setNewItem({ title: "" });
     fetchItems();
   };
 
-  const handleDelete = async (filename: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("このメモを削除しますか？")) return;
     await fetch("/api/self-analysis", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename }),
+      body: JSON.stringify({ id }),
     });
     toast.success("削除しました");
-    if (selected?.filename === filename) {
+    if (selected?.id === id) {
       setSelected(null);
       setEditContent("");
     }
@@ -120,16 +118,6 @@ export default function SelfAnalysisPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>ファイル名</Label>
-                <Input
-                  value={newItem.filename}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, filename: e.target.value })
-                  }
-                  placeholder="leadership"
-                />
-              </div>
-              <div>
                 <Label>タイトル</Label>
                 <Input
                   value={newItem.title}
@@ -152,9 +140,9 @@ export default function SelfAnalysisPage() {
         <div className="space-y-2">
           {items.map((item) => (
             <div
-              key={item.filename}
+              key={item.id}
               className={`flex items-center justify-between rounded-lg p-3 cursor-pointer transition-colors ${
-                selected?.filename === item.filename
+                selected?.id === item.id
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent"
               }`}
@@ -163,19 +151,17 @@ export default function SelfAnalysisPage() {
               <span className="text-sm font-medium truncate">
                 {item.title}
               </span>
-              {item.filename.startsWith("custom/") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(item.filename);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item.id);
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
             </div>
           ))}
         </div>

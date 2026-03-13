@@ -10,7 +10,7 @@ import { syncTaskToNotion } from "@/lib/notion";
 
 export async function GET(request: NextRequest) {
   try {
-    const tasks = getAllTasks();
+    const tasks = await getAllTasks();
     const { searchParams } = new URL(request.url);
     const companySlug = searchParams.get("companySlug");
     const category = searchParams.get("category");
@@ -52,14 +52,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const task = createTask(body);
+    const task = await createTask(body);
 
     // Sync to Notion if enabled
-    const config = getConfig();
+    const config = await getConfig();
     if (config.notion.enabled) {
       const notionPageId = await syncTaskToNotion(task);
       if (notionPageId) {
-        updateTask(task.id, { notionPageId });
+        await updateTask(task.id, { notionPageId });
         task.notionPageId = notionPageId;
       }
     }
@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, ...updates } = body;
-    const task = updateTask(id, updates);
+    const task = await updateTask(id, updates);
     if (!task) {
       return NextResponse.json(
         { error: "タスクが見つかりません" },
@@ -86,7 +86,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Sync to Notion if enabled
-    const config = getConfig();
+    const config = await getConfig();
     if (config.notion.enabled) {
       await syncTaskToNotion(task);
     }
@@ -103,7 +103,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
-    const deleted = deleteTask(id);
+    const deleted = await deleteTask(id);
     if (!deleted) {
       return NextResponse.json(
         { error: "タスクが見つかりません" },

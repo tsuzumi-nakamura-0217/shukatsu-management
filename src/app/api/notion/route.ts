@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "sync-one" && taskId) {
-      const tasks = getAllTasks();
+      const tasks = await getAllTasks();
       const task = tasks.find((t) => t.id === taskId);
       if (!task) {
         return NextResponse.json(
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       }
       const notionPageId = await syncTaskToNotion(task);
       if (notionPageId) {
-        updateTask(task.id, { notionPageId });
+        await updateTask(task.id, { notionPageId });
         return NextResponse.json({ success: true, notionPageId });
       }
       return NextResponse.json(
@@ -32,12 +32,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "sync-all") {
-      const tasks = getAllTasks();
+      const tasks = await getAllTasks();
       const results: { id: string; success: boolean }[] = [];
       for (const task of tasks) {
         const notionPageId = await syncTaskToNotion(task);
         if (notionPageId) {
-          updateTask(task.id, { notionPageId });
+          await updateTask(task.id, { notionPageId });
           results.push({ id: task.id, success: true });
         } else {
           results.push({ id: task.id, success: false });

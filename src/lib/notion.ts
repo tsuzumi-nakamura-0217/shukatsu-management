@@ -2,17 +2,17 @@ import { Client } from "@notionhq/client";
 import { getConfig } from "./data";
 import type { Task } from "@/types";
 
-function getNotionClient(): Client | null {
-  const config = getConfig();
+async function getNotionClient(): Promise<Client | null> {
+  const config = await getConfig();
   if (!config.notion.enabled || !config.notion.apiKey) return null;
   return new Client({ auth: config.notion.apiKey });
 }
 
 export async function syncTaskToNotion(task: Task): Promise<string | null> {
-  const client = getNotionClient();
+  const client = await getNotionClient();
   if (!client) return null;
 
-  const config = getConfig();
+  const config = await getConfig();
   const databaseId = config.notion.databaseId;
   if (!databaseId) return null;
 

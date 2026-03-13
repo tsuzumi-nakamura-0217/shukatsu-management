@@ -3,7 +3,7 @@ import { getCalendarEvents } from "@/lib/data";
 
 export async function GET() {
   try {
-    const events = getCalendarEvents();
+    const events = await getCalendarEvents();
     return NextResponse.json(events);
   } catch (error) {
     return NextResponse.json(

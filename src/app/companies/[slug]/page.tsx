@@ -82,7 +82,7 @@ export default function CompanyDetailPage({
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; priority: string; deadline: string; memo: string; completed: boolean }>({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
-  const [newEs, setNewEs] = useState({ filename: "", title: "", content: "" });
+  const [newEs, setNewEs] = useState({ title: "", content: "" });
 
   function fetchAll() {
     Promise.all([
@@ -232,7 +232,7 @@ export default function CompanyDetailPage({
     if (res.ok) {
       toast.success("文書を作成しました");
       setNewEsOpen(false);
-      setNewEs({ filename: "", title: "", content: "" });
+      setNewEs({ title: "", content: "" });
       fetchAll();
     }
   };
@@ -241,7 +241,7 @@ export default function CompanyDetailPage({
     await fetch(`/api/companies/${slug}/es`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(doc),
+      body: JSON.stringify({ id: doc.id, title: doc.title, content: doc.content }),
     });
     toast.success("文書を保存しました");
     setEditEsDoc(null);
@@ -418,10 +418,6 @@ export default function CompanyDetailPage({
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>ファイル名</Label>
-                    <Input value={newEs.filename} onChange={(e) => setNewEs({ ...newEs, filename: e.target.value })} placeholder="es" />
-                  </div>
-                  <div>
                     <Label>タイトル</Label>
                     <Input value={newEs.title} onChange={(e) => setNewEs({ ...newEs, title: e.target.value })} placeholder="エントリーシート" />
                   </div>
@@ -437,7 +433,7 @@ export default function CompanyDetailPage({
           ) : (
             <div className="space-y-4">
               {esDocs.map((doc) => (
-                <Card key={doc.filename}>
+                <Card key={doc.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">{doc.title}</CardTitle>
@@ -450,7 +446,7 @@ export default function CompanyDetailPage({
                     <CardDescription>更新: {doc.updatedAt}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {editEsDoc?.filename === doc.filename ? (
+                    {editEsDoc?.id === doc.id ? (
                       <div className="space-y-2">
                         <MarkdownEditor value={editEsDoc.content} onChange={(val) => setEditEsDoc({ ...editEsDoc, content: val })} />
                         <div className="flex gap-2 justify-end">

@@ -1,5 +1,6 @@
 // 企業情報の型定義
 export interface Company {
+  id: string;
   slug: string;
   name: string;
   industry: string;
@@ -10,7 +11,7 @@ export interface Company {
   stages: string[];
   createdAt: string;
   updatedAt: string;
-  memo: string; // Markdownの本文
+  memo: string;
 }
 
 // 企業作成用
@@ -28,6 +29,7 @@ export interface CompanyCreate {
 export interface Task {
   id: string;
   title: string;
+  companyId: string;
   companySlug: string;
   companyName?: string;
   category: string;
@@ -52,6 +54,7 @@ export interface TaskCreate {
 // 面接記録の型定義
 export interface Interview {
   id: string;
+  companyId: string;
   companySlug: string;
   type: string; // "1次面接", "2次面接" etc.
   date: string;
@@ -72,7 +75,9 @@ export interface InterviewCreate {
 
 // ES文書の型定義
 export interface ESDocument {
-  filename: string;
+  id: string;
+  companyId: string;
+  companySlug: string;
   title: string;
   content: string;
   updatedAt: string;
@@ -80,14 +85,14 @@ export interface ESDocument {
 
 // 自己分析メモの型定義
 export interface SelfAnalysis {
-  filename: string;
+  id: string;
   title: string;
   content: string;
 }
 
 // テンプレートの型定義
 export interface Template {
-  filename: string;
+  id: string;
   title: string;
   description: string;
   content: string;

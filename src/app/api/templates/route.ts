@@ -3,7 +3,7 @@ import { getAllTemplates, saveTemplate, deleteTemplate } from "@/lib/data";
 
 export async function GET() {
   try {
-    const templates = getAllTemplates();
+    const templates = await getAllTemplates();
     return NextResponse.json(templates);
   } catch (error) {
     return NextResponse.json(
@@ -15,15 +15,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, title, description, content } = await request.json();
-    if (!filename || !title) {
+    const { title, description, content } = await request.json();
+    if (!title) {
       return NextResponse.json(
-        { error: "ファイル名とタイトルは必須です" },
+        { error: "タイトルは必須です" },
         { status: 400 }
       );
     }
-    const template = saveTemplate(
-      filename,
+    const template = await saveTemplate(
+      null,
       title,
       description || "",
       content || ""
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { filename, title, description, content } = await request.json();
-    const template = saveTemplate(filename, title, description, content);
+    const { id, title, description, content } = await request.json();
+    const template = await saveTemplate(id, title, description, content);
     return NextResponse.json(template);
   } catch (error) {
     return NextResponse.json(
@@ -52,8 +52,8 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { filename } = await request.json();
-    const deleted = deleteTemplate(filename);
+    const { id } = await request.json();
+    const deleted = await deleteTemplate(id);
     if (!deleted) {
       return NextResponse.json(
         { error: "テンプレートが見つかりません" },

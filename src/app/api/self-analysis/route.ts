@@ -7,7 +7,7 @@ import {
 
 export async function GET() {
   try {
-    const items = getAllSelfAnalysis();
+    const items = await getAllSelfAnalysis();
     return NextResponse.json(items);
   } catch (error) {
     return NextResponse.json(
@@ -19,14 +19,14 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { filename, title, content } = await request.json();
-    if (!filename || !title) {
+    const { title, content } = await request.json();
+    if (!title) {
       return NextResponse.json(
-        { error: "ファイル名とタイトルは必須です" },
+        { error: "タイトルは必須です" },
         { status: 400 }
       );
     }
-    const item = saveSelfAnalysis(filename, title, content || "");
+    const item = await saveSelfAnalysis(null, title, content || "");
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { filename, title, content } = await request.json();
-    const item = saveSelfAnalysis(filename, title, content);
+    const { id, title, content } = await request.json();
+    const item = await saveSelfAnalysis(id, title, content);
     return NextResponse.json(item);
   } catch (error) {
     return NextResponse.json(
@@ -51,8 +51,8 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { filename } = await request.json();
-    const deleted = deleteSelfAnalysis(filename);
+    const { id } = await request.json();
+    const deleted = await deleteSelfAnalysis(id);
     if (!deleted) {
       return NextResponse.json(
         { error: "ファイルが見つかりません" },

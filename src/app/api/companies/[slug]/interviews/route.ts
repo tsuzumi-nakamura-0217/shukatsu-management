@@ -12,7 +12,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const interviews = getInterviews(slug);
+    const interviews = await getInterviews(slug);
     return NextResponse.json(interviews);
   } catch (error) {
     return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(
         { status: 400 }
       );
     }
-    const interview = createInterview(slug, body);
+    const interview = await createInterview(slug, body);
     return NextResponse.json(interview, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -53,7 +53,7 @@ export async function PUT(
     const { slug } = await params;
     const body = await request.json();
     const { id, ...updates } = body;
-    const interview = updateInterview(slug, id, updates);
+    const interview = await updateInterview(slug, id, updates);
     if (!interview) {
       return NextResponse.json(
         { error: "面接記録が見つかりません" },
@@ -76,7 +76,7 @@ export async function DELETE(
   try {
     const { slug } = await params;
     const { id } = await request.json();
-    const deleted = deleteInterview(slug, id);
+    const deleted = await deleteInterview(slug, id);
     if (!deleted) {
       return NextResponse.json(
         { error: "面接記録が見つかりません" },

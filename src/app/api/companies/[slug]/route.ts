@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const company = getCompany(slug);
+    const company = await getCompany(slug);
     if (!company) {
       return NextResponse.json(
         { error: "企業が見つかりません" },
@@ -30,7 +30,7 @@ export async function PUT(
 ) {
   try {
     const { slug } = await params;
-    const company = getCompany(slug);
+    const company = await getCompany(slug);
     if (!company) {
       return NextResponse.json(
         { error: "企業が見つかりません" },
@@ -40,7 +40,7 @@ export async function PUT(
 
     const body: Partial<Company> = await request.json();
     const updated: Company = { ...company, ...body, slug };
-    saveCompany(updated);
+    await saveCompany(updated);
     return NextResponse.json(updated);
   } catch (error) {
     return NextResponse.json(
@@ -56,7 +56,7 @@ export async function DELETE(
 ) {
   try {
     const { slug } = await params;
-    const deleted = deleteCompany(slug);
+    const deleted = await deleteCompany(slug);
     if (!deleted) {
       return NextResponse.json(
         { error: "企業が見つかりません" },

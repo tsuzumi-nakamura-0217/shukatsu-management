@@ -3,7 +3,7 @@ import { getConfig, updateConfig } from "@/lib/data";
 
 export async function GET() {
   try {
-    const config = getConfig();
+    const config = await getConfig();
     return NextResponse.json(config);
   } catch (error) {
     return NextResponse.json(
@@ -16,7 +16,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const config = updateConfig(body);
+    const config = await updateConfig(body);
     return NextResponse.json(config);
   } catch (error) {
     return NextResponse.json(

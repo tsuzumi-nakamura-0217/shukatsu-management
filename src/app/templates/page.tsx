@@ -31,7 +31,6 @@ export default function TemplatesPage() {
   const [editMode, setEditMode] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [newTemplate, setNewTemplate] = useState({
-    filename: "",
     title: "",
     description: "",
   });
@@ -57,7 +56,7 @@ export default function TemplatesPage() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        filename: selected.filename,
+        id: selected.id,
         title: selected.title,
         description: selected.description,
         content: editContent,
@@ -69,8 +68,8 @@ export default function TemplatesPage() {
   };
 
   const handleCreate = async () => {
-    if (!newTemplate.filename || !newTemplate.title) {
-      toast.error("ファイル名とタイトルを入力してください");
+    if (!newTemplate.title) {
+      toast.error("タイトルを入力してください");
       return;
     }
     await fetch("/api/templates", {
@@ -80,19 +79,19 @@ export default function TemplatesPage() {
     });
     toast.success("テンプレートを作成しました");
     setNewOpen(false);
-    setNewTemplate({ filename: "", title: "", description: "" });
+    setNewTemplate({ title: "", description: "" });
     fetchTemplates();
   };
 
-  const handleDelete = async (filename: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("このテンプレートを削除しますか？")) return;
     await fetch("/api/templates", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename }),
+      body: JSON.stringify({ id }),
     });
     toast.success("テンプレートを削除しました");
-    if (selected?.filename === filename) {
+    if (selected?.id === id) {
       setSelected(null);
     }
     fetchTemplates();
@@ -125,16 +124,6 @@ export default function TemplatesPage() {
               <DialogTitle>新しいテンプレート</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label>ファイル名</Label>
-                <Input
-                  value={newTemplate.filename}
-                  onChange={(e) =>
-                    setNewTemplate({ ...newTemplate, filename: e.target.value })
-                  }
-                  placeholder="my-template"
-                />
-              </div>
               <div>
                 <Label>タイトル</Label>
                 <Input
@@ -171,9 +160,9 @@ export default function TemplatesPage() {
         <div className="space-y-3">
           {templates.map((template) => (
             <Card
-              key={template.filename}
+              key={template.id}
               className={`cursor-pointer transition-shadow hover:shadow-md ${
-                selected?.filename === template.filename
+                selected?.id === template.id
                   ? "ring-2 ring-primary"
                   : ""
               }`}
@@ -195,7 +184,7 @@ export default function TemplatesPage() {
                     className="h-6 w-6 p-0 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(template.filename);
+                      handleDelete(template.id);
                     }}
                   >
                     <Trash2 className="h-3 w-3" />

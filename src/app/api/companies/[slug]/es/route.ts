@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const docs = getESDocuments(slug);
+    const docs = await getESDocuments(slug);
     return NextResponse.json(docs);
   } catch (error) {
     return NextResponse.json(
@@ -23,14 +23,14 @@ export async function POST(
 ) {
   try {
     const { slug } = await params;
-    const { filename, title, content } = await request.json();
-    if (!filename || !title) {
+    const { title, content } = await request.json();
+    if (!title) {
       return NextResponse.json(
-        { error: "ファイル名とタイトルは必須です" },
+        { error: "タイトルは必須です" },
         { status: 400 }
       );
     }
-    const doc = saveESDocument(slug, filename, title, content || "");
+    const doc = await saveESDocument(slug, null, title, content || "");
     return NextResponse.json(doc, { status: 201 });
   } catch (error) {
     return NextResponse.json(
@@ -46,8 +46,8 @@ export async function PUT(
 ) {
   try {
     const { slug } = await params;
-    const { filename, title, content } = await request.json();
-    const doc = saveESDocument(slug, filename, title, content);
+    const { id, title, content } = await request.json();
+    const doc = await saveESDocument(slug, id, title, content);
     return NextResponse.json(doc);
   } catch (error) {
     return NextResponse.json(
@@ -63,8 +63,8 @@ export async function DELETE(
 ) {
   try {
     const { slug } = await params;
-    const { filename } = await request.json();
-    const deleted = deleteESDocument(slug, filename);
+    const { id } = await request.json();
+    const deleted = await deleteESDocument(slug, id);
     if (!deleted) {
       return NextResponse.json(
         { error: "ファイルが見つかりません" },

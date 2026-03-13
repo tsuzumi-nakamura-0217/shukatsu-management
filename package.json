@@ -15,6 +15,7 @@
     "@fullcalendar/react": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
     "@notionhq/client": "^5.11.0",
+    "@supabase/supabase-js": "^2.99.1",
     "@uiw/react-md-editor": "^4.0.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

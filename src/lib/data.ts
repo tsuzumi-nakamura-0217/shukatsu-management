@@ -1,8 +1,5 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
+import { supabase } from "./supabase";
 import slugify from "slugify";
-import { v4 as uuidv4 } from "uuid";
 import type {
   Company,
   CompanyCreate,
@@ -16,25 +13,11 @@ import type {
   AppConfig,
 } from "@/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const COMPANIES_DIR = path.join(DATA_DIR, "companies");
-const TASKS_FILE = path.join(DATA_DIR, "tasks.json");
-const CONFIG_FILE = path.join(DATA_DIR, "config.json");
-const SELF_ANALYSIS_DIR = path.join(DATA_DIR, "self-analysis");
-const TEMPLATES_DIR = path.join(DATA_DIR, "templates");
-
 // ============================================================
 // Helper functions
 // ============================================================
 
-function ensureDir(dir: string) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
 function generateSlug(name: string): string {
-  // Japanese text: use timestamp-based slug
   const base = slugify(name, { lower: true, strict: true });
   if (!base) {
     return `company-${Date.now()}`;
@@ -42,31 +25,91 @@ function generateSlug(name: string): string {
   return base;
 }
 
-function now(): string {
+function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-function normalizeConfig(config: Partial<AppConfig> & {
-  tags?: { name?: string }[];
-}): AppConfig {
-  const fallbackIndustries = (config.tags || [])
-    .map((tag) => tag.name || "")
-    .filter(Boolean);
+function toISODate(d: string | null | undefined): string {
+  if (!d) return "";
+  return typeof d === "string" ? d.split("T")[0] : "";
+}
 
+// Convert Supabase snake_case row to camelCase Company
+function rowToCompany(row: Record<string, unknown>): Company {
   return {
-    defaultStages: Array.isArray(config.defaultStages) ? config.defaultStages : [],
-    industries:
-      Array.isArray(config.industries) && config.industries.length > 0
-        ? config.industries
-        : fallbackIndustries,
-    taskCategories: Array.isArray(config.taskCategories)
-      ? config.taskCategories
-      : [],
-    notion: {
-      apiKey: config.notion?.apiKey || "",
-      databaseId: config.notion?.databaseId || "",
-      enabled: Boolean(config.notion?.enabled),
-    },
+    id: row.id as string,
+    slug: row.slug as string,
+    name: row.name as string,
+    industry: (row.industry as string) || "",
+    url: (row.url as string) || "",
+    location: (row.location as string) || "",
+    status: (row.status as string) || "未応募",
+    priority: (row.priority as number) || 3,
+    stages: (row.stages as string[]) || [],
+    createdAt: toISODate(row.created_at as string),
+    updatedAt: toISODate(row.updated_at as string),
+    memo: (row.memo as string) || "",
+  };
+}
+
+function rowToTask(row: Record<string, unknown>): Task {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    companyId: (row.company_id as string) || "",
+    companySlug: (row.company_slug as string) || "",
+    companyName: (row.company_name as string) || "",
+    category: (row.category as string) || "その他",
+    priority: (row.priority as "high" | "medium" | "low") || "medium",
+    deadline: toISODate(row.deadline as string),
+    completed: (row.completed as boolean) || false,
+    memo: (row.memo as string) || "",
+    notionPageId: (row.notion_page_id as string) || undefined,
+    createdAt: toISODate(row.created_at as string),
+    updatedAt: toISODate(row.updated_at as string),
+  };
+}
+
+function rowToInterview(row: Record<string, unknown>): Interview {
+  return {
+    id: row.id as string,
+    companyId: (row.company_id as string) || "",
+    companySlug: (row.company_slug as string) || "",
+    type: (row.type as string) || "",
+    date: toISODate(row.date as string),
+    location: (row.location as string) || "",
+    result: (row.result as string) || "結果待ち",
+    memo: (row.memo as string) || "",
+    createdAt: toISODate(row.created_at as string),
+    updatedAt: toISODate(row.updated_at as string),
+  };
+}
+
+function rowToESDocument(row: Record<string, unknown>): ESDocument {
+  return {
+    id: row.id as string,
+    companyId: (row.company_id as string) || "",
+    companySlug: (row.company_slug as string) || "",
+    title: (row.title as string) || "",
+    content: (row.content as string) || "",
+    updatedAt: toISODate(row.updated_at as string),
+  };
+}
+
+function rowToSelfAnalysis(row: Record<string, unknown>): SelfAnalysis {
+  return {
+    id: row.id as string,
+    title: (row.title as string) || "",
+    content: (row.content as string) || "",
+  };
+}
+
+function rowToTemplate(row: Record<string, unknown>): Template {
+  return {
+    id: row.id as string,
+    title: (row.title as string) || "",
+    description: (row.description as string) || "",
+    content: (row.content as string) || "",
   };
 }
 
@@ -74,18 +117,56 @@ function normalizeConfig(config: Partial<AppConfig> & {
 // Config operations
 // ============================================================
 
-export function getConfig(): AppConfig {
-  const raw = fs.readFileSync(CONFIG_FILE, "utf-8");
-  const parsed = JSON.parse(raw) as AppConfig & {
-    tags?: { name?: string }[];
+export async function getConfig(): Promise<AppConfig> {
+  const { data, error } = await supabase.from("config").select("key, value");
+
+  if (error || !data) {
+    // Return default config on error
+    return {
+      defaultStages: [],
+      industries: [],
+      taskCategories: [],
+      notion: { apiKey: "", databaseId: "", enabled: false },
+    };
+  }
+
+  const configMap: Record<string, unknown> = {};
+  for (const row of data) {
+    configMap[row.key] = row.value;
+  }
+
+  return {
+    defaultStages: (configMap.defaultStages as string[]) || [],
+    industries: (configMap.industries as string[]) || [],
+    taskCategories: (configMap.taskCategories as string[]) || [],
+    notion: (configMap.notion as AppConfig["notion"]) || {
+      apiKey: "",
+      databaseId: "",
+      enabled: false,
+    },
   };
-  return normalizeConfig(parsed);
 }
 
-export function updateConfig(config: Partial<AppConfig>): AppConfig {
-  const current = getConfig();
-  const updated = normalizeConfig({ ...current, ...config });
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2), "utf-8");
+export async function updateConfig(
+  config: Partial<AppConfig>
+): Promise<AppConfig> {
+  const current = await getConfig();
+  const updated = { ...current, ...config };
+
+  // Upsert each key
+  const entries: { key: string; value: unknown }[] = [
+    { key: "defaultStages", value: updated.defaultStages },
+    { key: "industries", value: updated.industries },
+    { key: "taskCategories", value: updated.taskCategories },
+    { key: "notion", value: updated.notion },
+  ];
+
+  for (const entry of entries) {
+    await supabase
+      .from("config")
+      .upsert({ key: entry.key, value: entry.value }, { onConflict: "key" });
+  }
+
   return updated;
 }
 
@@ -93,56 +174,43 @@ export function updateConfig(config: Partial<AppConfig>): AppConfig {
 // Company operations
 // ============================================================
 
-export function getAllCompanies(): Company[] {
-  ensureDir(COMPANIES_DIR);
-  const dirs = fs.readdirSync(COMPANIES_DIR).filter((d) => {
-    const fullPath = path.join(COMPANIES_DIR, d);
-    return fs.statSync(fullPath).isDirectory();
-  });
+export async function getAllCompanies(): Promise<Company[]> {
+  const { data, error } = await supabase
+    .from("companies")
+    .select("*")
+    .order("priority", { ascending: false });
 
-  return dirs
-    .map((slug) => getCompany(slug))
-    .filter((c): c is Company => c !== null);
+  if (error || !data) return [];
+  return data.map(rowToCompany);
 }
 
-export function getCompany(slug: string): Company | null {
-  const companyFile = path.join(COMPANIES_DIR, slug, "company.md");
-  if (!fs.existsSync(companyFile)) return null;
+export async function getCompany(slug: string): Promise<Company | null> {
+  const { data, error } = await supabase
+    .from("companies")
+    .select("*")
+    .eq("slug", slug)
+    .single();
 
-  const raw = fs.readFileSync(companyFile, "utf-8");
-  const { data, content } = matter(raw);
-
-  return {
-    slug,
-    name: data.name || "",
-    industry: data.industry || "",
-    url: data.url || "",
-    location: data.location || "",
-    status: data.status || "未応募",
-    priority: data.priority || 3,
-    stages: data.stages || getConfig().defaultStages,
-    createdAt: data.createdAt || now(),
-    updatedAt: data.updatedAt || now(),
-    memo: content.trim(),
-  };
+  if (error || !data) return null;
+  return rowToCompany(data);
 }
 
-export function createCompany(input: CompanyCreate): Company {
-  const config = getConfig();
+export async function createCompany(input: CompanyCreate): Promise<Company> {
+  const config = await getConfig();
   let slug = generateSlug(input.name);
 
   // Ensure unique slug
-  const companyDir = path.join(COMPANIES_DIR, slug);
-  if (fs.existsSync(companyDir)) {
+  const { data: existing } = await supabase
+    .from("companies")
+    .select("slug")
+    .eq("slug", slug)
+    .single();
+
+  if (existing) {
     slug = `${slug}-${Date.now()}`;
   }
 
-  const dir = path.join(COMPANIES_DIR, slug);
-  ensureDir(dir);
-  ensureDir(path.join(dir, "es"));
-  ensureDir(path.join(dir, "interviews"));
-
-  const company: Company = {
+  const row = {
     slug,
     name: input.name,
     industry: input.industry || "",
@@ -151,414 +219,429 @@ export function createCompany(input: CompanyCreate): Company {
     status: input.status || "未応募",
     priority: input.priority || 3,
     stages: input.stages || config.defaultStages,
-    createdAt: now(),
-    updatedAt: now(),
     memo: "",
   };
 
-  saveCompany(company);
-  return company;
+  const { data, error } = await supabase
+    .from("companies")
+    .insert(row)
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Failed to create company: ${error?.message}`);
+  }
+
+  return rowToCompany(data);
 }
 
-export function saveCompany(company: Company): void {
-  const dir = path.join(COMPANIES_DIR, company.slug);
-  ensureDir(dir);
-
-  const frontmatter = {
-    name: company.name,
-    industry: company.industry,
-    url: company.url,
-    location: company.location,
-    status: company.status,
-    priority: company.priority,
-    stages: company.stages,
-    createdAt: company.createdAt,
-    updatedAt: now(),
-  };
-
-  const content = matter.stringify(company.memo || "", frontmatter);
-  fs.writeFileSync(path.join(dir, "company.md"), content, "utf-8");
+export async function saveCompany(company: Company): Promise<void> {
+  await supabase
+    .from("companies")
+    .update({
+      name: company.name,
+      industry: company.industry,
+      url: company.url,
+      location: company.location,
+      status: company.status,
+      priority: company.priority,
+      stages: company.stages,
+      memo: company.memo,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("slug", company.slug);
 }
 
-export function deleteCompany(slug: string): boolean {
-  const dir = path.join(COMPANIES_DIR, slug);
-  if (!fs.existsSync(dir)) return false;
-  fs.rmSync(dir, { recursive: true, force: true });
+export async function deleteCompany(slug: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("companies")
+    .delete()
+    .eq("slug", slug);
 
-  // Also remove related tasks
-  const tasks = getAllTasks().filter((t) => t.companySlug !== slug);
-  fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), "utf-8");
-
-  return true;
+  return !error;
 }
 
 // ============================================================
 // Task operations
 // ============================================================
 
-export function getAllTasks(): Task[] {
-  if (!fs.existsSync(TASKS_FILE)) return [];
-  const raw = fs.readFileSync(TASKS_FILE, "utf-8");
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
+export async function getAllTasks(): Promise<Task[]> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(rowToTask);
 }
 
-export function getTask(id: string): Task | null {
-  const tasks = getAllTasks();
-  return tasks.find((t) => t.id === id) || null;
+export async function getTask(id: string): Promise<Task | null> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+  return rowToTask(data);
 }
 
-export function createTask(input: TaskCreate): Task {
-  const tasks = getAllTasks();
-  const company = getCompany(input.companySlug);
+export async function createTask(input: TaskCreate): Promise<Task> {
+  const company = await getCompany(input.companySlug);
 
-  const task: Task = {
-    id: uuidv4(),
+  const row = {
+    company_id: company?.id || null,
+    company_slug: input.companySlug,
+    company_name: company?.name || "",
     title: input.title,
-    companySlug: input.companySlug,
-    companyName: company?.name || "",
     category: input.category || "その他",
     priority: input.priority || "medium",
-    deadline: input.deadline || "",
+    deadline: input.deadline || null,
     completed: false,
     memo: input.memo || "",
-    createdAt: now(),
-    updatedAt: now(),
   };
 
-  tasks.push(task);
-  fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), "utf-8");
-  return task;
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert(row)
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Failed to create task: ${error?.message}`);
+  }
+
+  return rowToTask(data);
 }
 
-export function updateTask(id: string, updates: Partial<Task>): Task | null {
-  const tasks = getAllTasks();
-  const idx = tasks.findIndex((t) => t.id === id);
-  if (idx === -1) return null;
+export async function updateTask(
+  id: string,
+  updates: Partial<Task>
+): Promise<Task | null> {
+  // Convert camelCase to snake_case for DB
+  const dbUpdates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
 
-  tasks[idx] = { ...tasks[idx], ...updates, updatedAt: now() };
-  fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2), "utf-8");
-  return tasks[idx];
+  if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.category !== undefined) dbUpdates.category = updates.category;
+  if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
+  if (updates.deadline !== undefined)
+    dbUpdates.deadline = updates.deadline || null;
+  if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
+  if (updates.memo !== undefined) dbUpdates.memo = updates.memo;
+  if (updates.notionPageId !== undefined)
+    dbUpdates.notion_page_id = updates.notionPageId;
+  if (updates.companySlug !== undefined) {
+    dbUpdates.company_slug = updates.companySlug;
+    const company = await getCompany(updates.companySlug);
+    if (company) {
+      dbUpdates.company_id = company.id;
+      dbUpdates.company_name = company.name;
+    }
+  }
+  if (updates.companyName !== undefined)
+    dbUpdates.company_name = updates.companyName;
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .update(dbUpdates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+  return rowToTask(data);
 }
 
-export function deleteTask(id: string): boolean {
-  const tasks = getAllTasks();
-  const filtered = tasks.filter((t) => t.id !== id);
-  if (filtered.length === tasks.length) return false;
-  fs.writeFileSync(TASKS_FILE, JSON.stringify(filtered, null, 2), "utf-8");
-  return true;
+export async function deleteTask(id: string): Promise<boolean> {
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  return !error;
 }
 
 // ============================================================
 // Interview operations
 // ============================================================
 
-export function getInterviews(companySlug: string): Interview[] {
-  const dir = path.join(COMPANIES_DIR, companySlug, "interviews");
-  ensureDir(dir);
+export async function getInterviews(
+  companySlug: string
+): Promise<Interview[]> {
+  const { data, error } = await supabase
+    .from("interviews")
+    .select("*")
+    .eq("company_slug", companySlug)
+    .order("date", { ascending: false });
 
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
-  return files.map((filename) => {
-    const raw = fs.readFileSync(path.join(dir, filename), "utf-8");
-    const { data, content } = matter(raw);
-    return {
-      id: data.id || filename.replace(".md", ""),
-      companySlug,
-      type: data.type || "",
-      date: data.date || "",
-      location: data.location || "",
-      result: data.result || "結果待ち",
-      memo: content.trim(),
-      createdAt: data.createdAt || now(),
-      updatedAt: data.updatedAt || now(),
-    };
-  });
+  if (error || !data) return [];
+  return data.map(rowToInterview);
 }
 
-export function createInterview(
+export async function createInterview(
   companySlug: string,
   input: InterviewCreate
-): Interview {
-  const dir = path.join(COMPANIES_DIR, companySlug, "interviews");
-  ensureDir(dir);
+): Promise<Interview> {
+  const company = await getCompany(companySlug);
 
-  const id = uuidv4();
-  const interview: Interview = {
-    id,
-    companySlug,
+  const row = {
+    company_id: company?.id || null,
+    company_slug: companySlug,
     type: input.type,
     date: input.date,
     location: input.location || "",
     result: input.result || "結果待ち",
     memo: input.memo || "",
-    createdAt: now(),
-    updatedAt: now(),
   };
 
-  const frontmatter = {
-    id: interview.id,
-    type: interview.type,
-    date: interview.date,
-    location: interview.location,
-    result: interview.result,
-    createdAt: interview.createdAt,
-    updatedAt: interview.updatedAt,
-  };
+  const { data, error } = await supabase
+    .from("interviews")
+    .insert(row)
+    .select()
+    .single();
 
-  const fileContent = matter.stringify(interview.memo, frontmatter);
-  const filename = `${interview.date}-${interview.type}.md`.replace(/\//g, "-");
-  fs.writeFileSync(path.join(dir, filename), fileContent, "utf-8");
+  if (error || !data) {
+    throw new Error(`Failed to create interview: ${error?.message}`);
+  }
 
-  return interview;
+  return rowToInterview(data);
 }
 
-export function updateInterview(
+export async function updateInterview(
   companySlug: string,
   id: string,
   updates: Partial<Interview>
-): Interview | null {
-  const interviews = getInterviews(companySlug);
-  const interview = interviews.find((i) => i.id === id);
-  if (!interview) return null;
-
-  // Delete old file
-  const dir = path.join(COMPANIES_DIR, companySlug, "interviews");
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
-  for (const file of files) {
-    const raw = fs.readFileSync(path.join(dir, file), "utf-8");
-    const { data } = matter(raw);
-    if (data.id === id) {
-      fs.unlinkSync(path.join(dir, file));
-      break;
-    }
-  }
-
-  const updated: Interview = {
-    ...interview,
-    ...updates,
-    updatedAt: now(),
+): Promise<Interview | null> {
+  const dbUpdates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
   };
 
-  const frontmatter = {
-    id: updated.id,
-    type: updated.type,
-    date: updated.date,
-    location: updated.location,
-    result: updated.result,
-    createdAt: updated.createdAt,
-    updatedAt: updated.updatedAt,
-  };
+  if (updates.type !== undefined) dbUpdates.type = updates.type;
+  if (updates.date !== undefined) dbUpdates.date = updates.date;
+  if (updates.location !== undefined) dbUpdates.location = updates.location;
+  if (updates.result !== undefined) dbUpdates.result = updates.result;
+  if (updates.memo !== undefined) dbUpdates.memo = updates.memo;
 
-  const fileContent = matter.stringify(updated.memo, frontmatter);
-  const filename = `${updated.date}-${updated.type}.md`.replace(/\//g, "-");
-  fs.writeFileSync(path.join(dir, filename), fileContent, "utf-8");
+  const { data, error } = await supabase
+    .from("interviews")
+    .update(dbUpdates)
+    .eq("id", id)
+    .select()
+    .single();
 
-  return updated;
+  if (error || !data) return null;
+  return rowToInterview(data);
 }
 
-export function deleteInterview(companySlug: string, id: string): boolean {
-  const dir = path.join(COMPANIES_DIR, companySlug, "interviews");
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
-
-  for (const file of files) {
-    const raw = fs.readFileSync(path.join(dir, file), "utf-8");
-    const { data } = matter(raw);
-    if (data.id === id) {
-      fs.unlinkSync(path.join(dir, file));
-      return true;
-    }
-  }
-  return false;
+export async function deleteInterview(
+  companySlug: string,
+  id: string
+): Promise<boolean> {
+  const { error } = await supabase.from("interviews").delete().eq("id", id);
+  return !error;
 }
 
 // ============================================================
 // ES Document operations
 // ============================================================
 
-export function getESDocuments(companySlug: string): ESDocument[] {
-  const dir = path.join(COMPANIES_DIR, companySlug, "es");
-  ensureDir(dir);
+export async function getESDocuments(
+  companySlug: string
+): Promise<ESDocument[]> {
+  const { data, error } = await supabase
+    .from("es_documents")
+    .select("*")
+    .eq("company_slug", companySlug)
+    .order("updated_at", { ascending: false });
 
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
-  return files.map((filename) => {
-    const raw = fs.readFileSync(path.join(dir, filename), "utf-8");
-    const { data, content } = matter(raw);
-    const stat = fs.statSync(path.join(dir, filename));
-    return {
-      filename,
-      title: data.title || filename.replace(".md", ""),
-      content: content.trim(),
-      updatedAt: stat.mtime.toISOString().split("T")[0],
-    };
-  });
+  if (error || !data) return [];
+  return data.map(rowToESDocument);
 }
 
-export function saveESDocument(
+export async function saveESDocument(
   companySlug: string,
-  filename: string,
+  id: string | null,
   title: string,
   content: string
-): ESDocument {
-  const dir = path.join(COMPANIES_DIR, companySlug, "es");
-  ensureDir(dir);
+): Promise<ESDocument> {
+  const company = await getCompany(companySlug);
 
-  const fname = filename.endsWith(".md") ? filename : `${filename}.md`;
-  const fileContent = matter.stringify(content, { title });
-  fs.writeFileSync(path.join(dir, fname), fileContent, "utf-8");
+  if (id) {
+    // Update existing
+    const { data, error } = await supabase
+      .from("es_documents")
+      .update({
+        title,
+        content,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
 
-  return {
-    filename: fname,
-    title,
-    content,
-    updatedAt: now(),
-  };
+    if (error || !data) {
+      throw new Error(`Failed to update ES document: ${error?.message}`);
+    }
+    return rowToESDocument(data);
+  } else {
+    // Create new
+    const row = {
+      company_id: company?.id || null,
+      company_slug: companySlug,
+      title,
+      content,
+    };
+
+    const { data, error } = await supabase
+      .from("es_documents")
+      .insert(row)
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to create ES document: ${error?.message}`);
+    }
+    return rowToESDocument(data);
+  }
 }
 
-export function deleteESDocument(
+export async function deleteESDocument(
   companySlug: string,
-  filename: string
-): boolean {
-  const filePath = path.join(COMPANIES_DIR, companySlug, "es", filename);
-  if (!fs.existsSync(filePath)) return false;
-  fs.unlinkSync(filePath);
-  return true;
+  id: string
+): Promise<boolean> {
+  const { error } = await supabase.from("es_documents").delete().eq("id", id);
+  return !error;
 }
 
 // ============================================================
 // Self-analysis operations
 // ============================================================
 
-export function getAllSelfAnalysis(): SelfAnalysis[] {
-  ensureDir(SELF_ANALYSIS_DIR);
-  const customDir = path.join(SELF_ANALYSIS_DIR, "custom");
-  ensureDir(customDir);
+export async function getAllSelfAnalysis(): Promise<SelfAnalysis[]> {
+  const { data, error } = await supabase
+    .from("self_analysis")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  const results: SelfAnalysis[] = [];
-
-  // Main files
-  const mainFiles = fs
-    .readdirSync(SELF_ANALYSIS_DIR)
-    .filter((f) => f.endsWith(".md"));
-  for (const filename of mainFiles) {
-    const raw = fs.readFileSync(
-      path.join(SELF_ANALYSIS_DIR, filename),
-      "utf-8"
-    );
-    const { data, content } = matter(raw);
-    results.push({
-      filename,
-      title: data.title || filename.replace(".md", ""),
-      content: content.trim(),
-    });
-  }
-
-  // Custom files
-  const customFiles = fs
-    .readdirSync(customDir)
-    .filter((f) => f.endsWith(".md"));
-  for (const filename of customFiles) {
-    const raw = fs.readFileSync(path.join(customDir, filename), "utf-8");
-    const { data, content } = matter(raw);
-    results.push({
-      filename: `custom/${filename}`,
-      title: data.title || filename.replace(".md", ""),
-      content: content.trim(),
-    });
-  }
-
-  return results;
+  if (error || !data) return [];
+  return data.map(rowToSelfAnalysis);
 }
 
-export function saveSelfAnalysis(
-  filename: string,
+export async function saveSelfAnalysis(
+  id: string | null,
   title: string,
   content: string
-): SelfAnalysis {
-  const filePath = path.join(SELF_ANALYSIS_DIR, filename);
-  const dir = path.dirname(filePath);
-  ensureDir(dir);
+): Promise<SelfAnalysis> {
+  if (id) {
+    const { data, error } = await supabase
+      .from("self_analysis")
+      .update({ title, content, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
 
-  const fileContent = matter.stringify(content, { title });
-  fs.writeFileSync(filePath, fileContent, "utf-8");
+    if (error || !data) {
+      throw new Error(`Failed to update self-analysis: ${error?.message}`);
+    }
+    return rowToSelfAnalysis(data);
+  } else {
+    const { data, error } = await supabase
+      .from("self_analysis")
+      .insert({ title, content })
+      .select()
+      .single();
 
-  return { filename, title, content };
+    if (error || !data) {
+      throw new Error(`Failed to create self-analysis: ${error?.message}`);
+    }
+    return rowToSelfAnalysis(data);
+  }
 }
 
-export function deleteSelfAnalysis(filename: string): boolean {
-  const filePath = path.join(SELF_ANALYSIS_DIR, filename);
-  if (!fs.existsSync(filePath)) return false;
-  fs.unlinkSync(filePath);
-  return true;
+export async function deleteSelfAnalysis(id: string): Promise<boolean> {
+  const { error } = await supabase.from("self_analysis").delete().eq("id", id);
+  return !error;
 }
 
 // ============================================================
 // Template operations
 // ============================================================
 
-export function getAllTemplates(): Template[] {
-  ensureDir(TEMPLATES_DIR);
+export async function getAllTemplates(): Promise<Template[]> {
+  const { data, error } = await supabase
+    .from("templates")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  const files = fs.readdirSync(TEMPLATES_DIR).filter((f) => f.endsWith(".md"));
-  return files.map((filename) => {
-    const raw = fs.readFileSync(path.join(TEMPLATES_DIR, filename), "utf-8");
-    const { data, content } = matter(raw);
-    return {
-      filename,
-      title: data.title || filename.replace(".md", ""),
-      description: data.description || "",
-      content: content.trim(),
-    };
-  });
+  if (error || !data) return [];
+  return data.map(rowToTemplate);
 }
 
-export function saveTemplate(
-  filename: string,
+export async function saveTemplate(
+  id: string | null,
   title: string,
   description: string,
   content: string
-): Template {
-  const fname = filename.endsWith(".md") ? filename : `${filename}.md`;
-  const fileContent = matter.stringify(content, { title, description });
-  fs.writeFileSync(path.join(TEMPLATES_DIR, fname), fileContent, "utf-8");
+): Promise<Template> {
+  if (id) {
+    const { data, error } = await supabase
+      .from("templates")
+      .update({
+        title,
+        description,
+        content,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
 
-  return { filename: fname, title, description, content };
+    if (error || !data) {
+      throw new Error(`Failed to update template: ${error?.message}`);
+    }
+    return rowToTemplate(data);
+  } else {
+    const { data, error } = await supabase
+      .from("templates")
+      .insert({ title, description, content })
+      .select()
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to create template: ${error?.message}`);
+    }
+    return rowToTemplate(data);
+  }
 }
 
-export function deleteTemplate(filename: string): boolean {
-  const filePath = path.join(TEMPLATES_DIR, filename);
-  if (!fs.existsSync(filePath)) return false;
-  fs.unlinkSync(filePath);
-  return true;
+export async function deleteTemplate(id: string): Promise<boolean> {
+  const { error } = await supabase.from("templates").delete().eq("id", id);
+  return !error;
 }
 
 // ============================================================
 // Stats operations
 // ============================================================
 
-export function getStats() {
-  const companies = getAllCompanies();
-  const tasks = getAllTasks();
+export async function getStats() {
+  const companies = await getAllCompanies();
+  const tasks = await getAllTasks();
 
   const statusCounts: Record<string, number> = {};
   for (const company of companies) {
     statusCounts[company.status] = (statusCounts[company.status] || 0) + 1;
   }
 
-  const todayStr = now();
+  const today = todayStr();
   const upcomingDeadlines = tasks
-    .filter((t) => !t.completed && t.deadline && t.deadline >= todayStr)
+    .filter((t) => !t.completed && t.deadline && t.deadline >= today)
     .sort((a, b) => a.deadline.localeCompare(b.deadline))
     .slice(0, 5);
 
   // Gather upcoming interviews from all companies
   const allInterviews: (Interview & { companyName: string })[] = [];
   for (const company of companies) {
-    const interviews = getInterviews(company.slug);
+    const interviews = await getInterviews(company.slug);
     for (const interview of interviews) {
-      if (interview.date >= todayStr) {
+      if (interview.date >= today) {
         allInterviews.push({ ...interview, companyName: company.name });
       }
     }
@@ -582,7 +665,10 @@ export function getStats() {
     upcomingInterviews: allInterviews.slice(0, 5),
     completedTasks: tasks.filter((t) => t.completed).length,
     totalTasks: tasks.length,
-    passRate: totalDecided > 0 ? Math.round((passedCount / totalDecided) * 100) : 0,
+    passRate:
+      totalDecided > 0
+        ? Math.round((passedCount / totalDecided) * 100)
+        : 0,
   };
 }
 
@@ -590,17 +676,19 @@ export function getStats() {
 // Calendar event operations
 // ============================================================
 
-export function getCalendarEvents(): {
-  id: string;
-  title: string;
-  date: string;
-  type: string;
-  companySlug: string;
-  companyName: string;
-  color: string;
-}[] {
-  const companies = getAllCompanies();
-  const tasks = getAllTasks();
+export async function getCalendarEvents(): Promise<
+  {
+    id: string;
+    title: string;
+    date: string;
+    type: string;
+    companySlug: string;
+    companyName: string;
+    color: string;
+  }[]
+> {
+  const companies = await getAllCompanies();
+  const tasks = await getAllTasks();
   const events: {
     id: string;
     title: string;
@@ -613,7 +701,7 @@ export function getCalendarEvents(): {
 
   // Interviews
   for (const company of companies) {
-    const interviews = getInterviews(company.slug);
+    const interviews = await getInterviews(company.slug);
     for (const interview of interviews) {
       events.push({
         id: interview.id,
