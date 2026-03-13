@@ -9,6 +9,20 @@ import { Label } from "@/components/ui/label";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { toast } from "sonner";
 
+function getAuthErrorMessage(action: "signin" | "signup", rawMessage: string) {
+  const message = rawMessage.toLowerCase();
+
+  if (message.includes("email rate limit exceeded")) {
+    return "確認メールの送信回数が上限に達しました。しばらく待ってから再度お試しください。開発中は Supabase の Confirm email を一時的にOFFにすると回避できます。";
+  }
+
+  if (action === "signup") {
+    return `アカウント作成に失敗しました: ${rawMessage}`;
+  }
+
+  return `ログインに失敗しました: ${rawMessage}`;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [loadingType, setLoadingType] = useState<"signin" | "signup" | null>(
@@ -32,7 +46,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        toast.error(`ログインに失敗しました: ${error.message}`);
+        toast.error(getAuthErrorMessage("signin", error.message));
         return;
       }
 
@@ -59,7 +73,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        toast.error(`アカウント作成に失敗しました: ${error.message}`);
+        toast.error(getAuthErrorMessage("signup", error.message));
         return;
       }
 
