@@ -17,8 +17,37 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { AppConfig } from "@/types";
 
+const DEFAULT_CONFIG: AppConfig = {
+  defaultStages: [],
+  industries: [],
+  taskCategories: [],
+  notion: {
+    apiKey: "",
+    databaseId: "",
+    enabled: false,
+  },
+};
+
+function normalizeConfig(data: unknown): AppConfig {
+  const config = (data || {}) as Partial<AppConfig>;
+
+  return {
+    defaultStages: Array.isArray(config.defaultStages) ? config.defaultStages : [],
+    industries: Array.isArray(config.industries) ? config.industries : [],
+    taskCategories: Array.isArray(config.taskCategories)
+      ? config.taskCategories
+      : [],
+    notion: {
+      apiKey: config.notion?.apiKey || "",
+      databaseId: config.notion?.databaseId || "",
+      enabled: Boolean(config.notion?.enabled),
+    },
+  };
+}
+
 export default function SettingsPage() {
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
+  const [loading, setLoading] = useState(true);
   const [notionApiKey, setNotionApiKey] = useState("");
   const [notionDbId, setNotionDbId] = useState("");
   const [notionEnabled, setNotionEnabled] = useState(false);
@@ -35,26 +64,42 @@ export default function SettingsPage() {
   const [newIndustry, setNewIndustry] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
+  const safeStages = Array.isArray(stages) ? stages : [];
+  const safeIndustries = Array.isArray(industries) ? industries : [];
+  const safeCategories = Array.isArray(categories) ? categories : [];
 
   useEffect(() => {
     fetch("/api/config")
-      .then((r) => r.json())
-      .then((data: AppConfig) => {
-        setConfig(data);
-        setNotionApiKey(data.notion.apiKey);
-        setNotionDbId(data.notion.databaseId);
-        setNotionEnabled(data.notion.enabled);
-        setStages(data.defaultStages);
-        setIndustries(data.industries || []);
-        setCategories(data.taskCategories);
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error("設定の取得に失敗しました");
+        }
+        return r.json();
+      })
+      .then((data) => {
+        const normalized = normalizeConfig(data);
+        setConfig(normalized);
+        setNotionApiKey(normalized.notion.apiKey);
+        setNotionDbId(normalized.notion.databaseId);
+        setNotionEnabled(normalized.notion.enabled);
+        setStages(normalized.defaultStages);
+        setIndustries(normalized.industries);
+        setCategories(normalized.taskCategories);
+      })
+      .catch(() => {
+        setConfig(DEFAULT_CONFIG);
+        toast.error("設定の読み込みに失敗しました。初期値を表示しています。");
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, []);
 
   const handleSave = async () => {
     const updated: AppConfig = {
-      defaultStages: stages,
-      industries,
-      taskCategories: categories,
+      defaultStages: safeStages,
+      industries: safeIndustries,
+      taskCategories: safeCategories,
       notion: {
         apiKey: notionApiKey,
         databaseId: notionDbId,
@@ -90,7 +135,7 @@ export default function SettingsPage() {
     setTesting(false);
   };
 
-  if (!config) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">読み込み中...</p>
@@ -180,12 +225,12 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {stages.map((stage, i) => (
+            {safeStages.map((stage, i) => (
               <Badge key={i} variant="outline" className="gap-1 py-1">
                 {stage}
                 <button
                   onClick={() =>
-                    setStages(stages.filter((_, idx) => idx !== i))
+                    setStages(safeStages.filter((_, idx) => idx !== i))
                   }
                   className="ml-1 hover:text-red-600"
                 >
@@ -202,7 +247,7 @@ export default function SettingsPage() {
               className="max-w-xs"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newStage) {
-                  setStages([...stages, newStage]);
+                  setStages([...safeStages, newStage]);
                   setNewStage("");
                 }
               }}
@@ -212,7 +257,7 @@ export default function SettingsPage() {
               size="sm"
               onClick={() => {
                 if (newStage) {
-                  setStages([...stages, newStage]);
+                  setStages([...safeStages, newStage]);
                   setNewStage("");
                 }
               }}
@@ -231,12 +276,12 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {industries.map((industry, i) => (
+            {safeIndustries.map((industry, i) => (
               <Badge key={i} variant="outline" className="gap-1 py-1">
                 {industry}
                 <button
                   onClick={() =>
-                    setIndustries(industries.filter((_, idx) => idx !== i))
+                    setIndustries(safeIndustries.filter((_, idx) => idx !== i))
                   }
                   className="ml-1 hover:text-red-600"
                 >
@@ -253,7 +298,7 @@ export default function SettingsPage() {
               className="max-w-xs"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newIndustry) {
-                  setIndustries([...industries, newIndustry]);
+                  setIndustries([...safeIndustries, newIndustry]);
                   setNewIndustry("");
                 }
               }}
@@ -263,7 +308,7 @@ export default function SettingsPage() {
               size="sm"
               onClick={() => {
                 if (newIndustry) {
-                  setIndustries([...industries, newIndustry]);
+                  setIndustries([...safeIndustries, newIndustry]);
                   setNewIndustry("");
                 }
               }}
@@ -282,12 +327,12 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {categories.map((cat, i) => (
+            {safeCategories.map((cat, i) => (
               <Badge key={i} variant="outline" className="gap-1 py-1">
                 {cat}
                 <button
                   onClick={() =>
-                    setCategories(categories.filter((_, idx) => idx !== i))
+                    setCategories(safeCategories.filter((_, idx) => idx !== i))
                   }
                   className="ml-1 hover:text-red-600"
                 >
@@ -304,7 +349,7 @@ export default function SettingsPage() {
               className="max-w-xs"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newCategory) {
-                  setCategories([...categories, newCategory]);
+                  setCategories([...safeCategories, newCategory]);
                   setNewCategory("");
                 }
               }}
@@ -314,7 +359,7 @@ export default function SettingsPage() {
               size="sm"
               onClick={() => {
                 if (newCategory) {
-                  setCategories([...categories, newCategory]);
+                  setCategories([...safeCategories, newCategory]);
                   setNewCategory("");
                 }
               }}

@@ -46,6 +46,30 @@ function now(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function normalizeConfig(config: Partial<AppConfig> & {
+  tags?: { name?: string }[];
+}): AppConfig {
+  const fallbackIndustries = (config.tags || [])
+    .map((tag) => tag.name || "")
+    .filter(Boolean);
+
+  return {
+    defaultStages: Array.isArray(config.defaultStages) ? config.defaultStages : [],
+    industries:
+      Array.isArray(config.industries) && config.industries.length > 0
+        ? config.industries
+        : fallbackIndustries,
+    taskCategories: Array.isArray(config.taskCategories)
+      ? config.taskCategories
+      : [],
+    notion: {
+      apiKey: config.notion?.apiKey || "",
+      databaseId: config.notion?.databaseId || "",
+      enabled: Boolean(config.notion?.enabled),
+    },
+  };
+}
+
 // ============================================================
 // Config operations
 // ============================================================
@@ -55,26 +79,12 @@ export function getConfig(): AppConfig {
   const parsed = JSON.parse(raw) as AppConfig & {
     tags?: { name?: string }[];
   };
-
-  // Backward compatibility: derive industries from old tags field if needed.
-  const fallbackIndustries = (parsed.tags || [])
-    .map((tag) => tag.name || "")
-    .filter(Boolean);
-
-  return {
-    defaultStages: parsed.defaultStages || [],
-    industries:
-      parsed.industries && parsed.industries.length > 0
-        ? parsed.industries
-        : fallbackIndustries,
-    taskCategories: parsed.taskCategories || [],
-    notion: parsed.notion,
-  };
+  return normalizeConfig(parsed);
 }
 
 export function updateConfig(config: Partial<AppConfig>): AppConfig {
   const current = getConfig();
-  const updated = { ...current, ...config };
+  const updated = normalizeConfig({ ...current, ...config });
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2), "utf-8");
   return updated;
 }
