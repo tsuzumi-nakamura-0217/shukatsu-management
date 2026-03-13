@@ -30,18 +30,33 @@ export default function SelfAnalysisPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [newItem, setNewItem] = useState({ title: "" });
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
+  async function fetchItems() {
     const data = await fetch("/api/self-analysis").then((r) => r.json());
     setItems(data);
     if (data.length > 0 && !selected) {
       setSelected(data[0]);
       setEditContent(data[0].content);
     }
-  };
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/self-analysis")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data);
+        if (data.length > 0) {
+          setSelected((prev) => prev ?? data[0]);
+          setEditContent((prev) => prev || data[0].content);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSelect = (item: SelfAnalysis) => {
     setSelected(item);

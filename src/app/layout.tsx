@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/sidebar";
+import { MobileSidebar, Sidebar } from "@/components/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -31,10 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <TooltipProvider>
-          <div className="flex h-screen">
+          <div className="min-h-screen md:flex">
             <Sidebar />
-            <main className="flex-1 overflow-auto bg-background">
-              <div className="container mx-auto p-6">
+            <main className="flex-1 bg-background">
+              <MobileSidebar />
+              <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 md:py-6">
                 {children}
               </div>
             </main>

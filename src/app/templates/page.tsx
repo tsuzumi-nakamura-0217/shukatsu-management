@@ -35,14 +35,25 @@ export default function TemplatesPage() {
     description: "",
   });
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  const fetchTemplates = async () => {
+  async function fetchTemplates() {
     const data = await fetch("/api/templates").then((r) => r.json());
     setTemplates(data);
-  };
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/templates")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        setTemplates(data);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSelect = (template: Template) => {
     setSelected(template);
@@ -106,7 +117,7 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">テンプレート</h1>
           <p className="text-muted-foreground">
@@ -115,7 +126,7 @@ export default function TemplatesPage() {
         </div>
         <Dialog open={newOpen} onOpenChange={setNewOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" /> 新規テンプレート
             </Button>
           </DialogTrigger>
@@ -204,9 +215,9 @@ export default function TemplatesPage() {
         <div>
           {selected ? (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>{selected.title}</CardTitle>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"

@@ -10,14 +10,19 @@
     "不合格",
     "辞退"
   ],
-  "tags": [
-    { "name": "エンジニア", "color": "blue" },
-    { "name": "総合職", "color": "green" },
-    { "name": "自社開発", "color": "purple" },
-    { "name": "SIer", "color": "orange" },
-    { "name": "コンサル", "color": "red" },
-    { "name": "ベンチャー", "color": "pink" },
-    { "name": "大手", "color": "yellow" }
+  "industries": [
+    "IT・通信",
+    "メーカー",
+    "金融",
+    "コンサル",
+    "商社",
+    "広告・マスコミ",
+    "不動産・建設",
+    "インフラ",
+    "小売・流通",
+    "サービス",
+    "公務員・団体",
+    "その他"
   ],
   "taskCategories": ["ES", "面接", "適性検査", "説明会", "OB訪問", "その他"],
   "notion": {

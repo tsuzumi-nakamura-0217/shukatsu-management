@@ -182,17 +182,17 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">タスク管理</h1>
           <p className="text-muted-foreground">
             {tasks.filter((t) => !t.completed).length} 件の未完了タスク
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 タスクを追加
               </Button>
@@ -292,7 +292,7 @@ export default function TasksPage() {
             </DialogContent>
           </Dialog>
           {config?.notion?.enabled && (
-            <Button variant="outline" onClick={handleSyncAll} disabled={syncing}>
+            <Button className="w-full sm:w-auto" variant="outline" onClick={handleSyncAll} disabled={syncing}>
               <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
               Notionに一括同期
             </Button>
@@ -306,10 +306,10 @@ export default function TasksPage() {
           placeholder="タスク名・企業名で検索..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-full sm:w-36">
             <SelectValue placeholder="カテゴリ" />
           </SelectTrigger>
           <SelectContent>
@@ -320,7 +320,7 @@ export default function TasksPage() {
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-full sm:w-32">
             <SelectValue placeholder="優先度" />
           </SelectTrigger>
           <SelectContent>
@@ -349,14 +349,14 @@ export default function TasksPage() {
         <Card>
           <div className="divide-y">
             {filtered.map((task) => (
-              <div key={task.id} className="flex items-center gap-3 p-4 hover:bg-accent/50 transition-colors">
+              <div key={task.id} className="flex flex-col gap-3 p-4 transition-colors hover:bg-accent/50 md:flex-row md:items-center">
                 {editingTask?.id === task.id ? (
                   <div className="flex-1 space-y-3">
                     <Input
                       value={editingTask.title}
                       onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
                     />
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                       <Select
                         value={editingTask.companySlug}
                         onValueChange={(value) => {
@@ -427,7 +427,7 @@ export default function TasksPage() {
                   <>
                     <Checkbox checked={task.completed} onCheckedChange={() => handleToggle(task)} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className={`text-sm font-medium truncate ${task.completed ? "line-through text-muted-foreground" : ""}`}>
                           {task.title}
                         </p>
@@ -435,7 +435,7 @@ export default function TasksPage() {
                           <Badge variant="outline" className="text-xs bg-white">✓ Notion</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2">
                         {task.companyName && (
                           <Link href={`/companies/${task.companySlug}`} className="text-xs text-blue-600 hover:underline">
                             {task.companyName}
@@ -444,7 +444,7 @@ export default function TasksPage() {
                         {task.memo && <span className="text-xs text-muted-foreground truncate">- {task.memo}</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 md:shrink-0">
                       <Badge variant="outline" className="text-xs">{task.category}</Badge>
                       <PriorityBadge priority={task.priority} />
                       {task.deadline && (

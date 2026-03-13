@@ -108,7 +108,7 @@ export default function CompaniesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">企業一覧</h1>
           <p className="text-muted-foreground">
@@ -117,7 +117,7 @@ export default function CompaniesPage() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               企業を追加
             </Button>
@@ -195,8 +195,8 @@ export default function CompaniesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="企業名・業界で検索..."
@@ -206,7 +206,7 @@ export default function CompaniesPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full md:w-40">
             <SelectValue placeholder="ステータス" />
           </SelectTrigger>
           <SelectContent>
@@ -218,7 +218,7 @@ export default function CompaniesPage() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex items-center gap-1 border rounded-md p-1">
+        <div className="flex items-center gap-1 self-start rounded-md border p-1 md:self-auto">
           <Button
             variant={viewMode === "grid" ? "secondary" : "ghost"}
             size="sm"
@@ -296,7 +296,7 @@ export default function CompaniesPage() {
               <Link
                 key={company.slug}
                 href={`/companies/${company.slug}`}
-                className="flex items-center justify-between p-4 hover:bg-accent transition-colors"
+                className="flex flex-col gap-3 p-4 transition-colors hover:bg-accent md:flex-row md:items-center md:justify-between"
               >
                 <div className="flex items-center gap-4">
                   <div>
@@ -307,7 +307,7 @@ export default function CompaniesPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 self-start md:self-auto">
                   <div className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star

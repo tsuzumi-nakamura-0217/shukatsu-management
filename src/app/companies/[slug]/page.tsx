@@ -265,10 +265,10 @@ export default function CompanyDetailPage({
       </div>
 
       {/* Company Info Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{company.name}</h1>
-          <div className="flex items-center gap-3 mt-2 text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-muted-foreground">
             {company.industry && <span>{company.industry}</span>}
             {company.location && (
               <span className="flex items-center gap-1">
@@ -297,7 +297,7 @@ export default function CompanyDetailPage({
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
           <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
             <Edit className="mr-2 h-4 w-4" /> {editMode ? "キャンセル" : "編集"}
           </Button>
@@ -349,7 +349,7 @@ export default function CompanyDetailPage({
             <CardTitle>企業情報編集</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <Label>企業名</Label>
                 <Input value={editingCompany.name || ""} onChange={(e) => setEditingCompany({ ...editingCompany, name: e.target.value })} />
@@ -389,7 +389,7 @@ export default function CompanyDetailPage({
 
       {/* Tabs */}
       <Tabs defaultValue="es" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="es" className="gap-2">
             <FileText className="h-4 w-4" /> ES・志望動機
           </TabsTrigger>
@@ -406,7 +406,7 @@ export default function CompanyDetailPage({
 
         {/* ES Tab */}
         <TabsContent value="es" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">ES・志望動機</h3>
             <Dialog open={newEsOpen} onOpenChange={setNewEsOpen}>
               <DialogTrigger asChild>
@@ -466,7 +466,7 @@ export default function CompanyDetailPage({
 
         {/* Interviews Tab */}
         <TabsContent value="interviews" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">面接記録</h3>
             <Dialog open={newInterviewOpen} onOpenChange={setNewInterviewOpen}>
               <DialogTrigger asChild>
@@ -527,7 +527,7 @@ export default function CompanyDetailPage({
                 <Card key={interview.id}>
                   {editingInterview?.id === interview.id ? (
                     <CardContent className="pt-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                           <Label>面接タイプ</Label>
                           <Input
@@ -610,9 +610,9 @@ export default function CompanyDetailPage({
                   ) : (
                     <>
                       <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <CardTitle className="text-base">{interview.type}</CardTitle>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <StatusBadge status={interview.result} />
                             <span className="text-sm text-muted-foreground">{interview.date}</span>
                             <Button variant="outline" size="sm" onClick={() => setEditingInterview(interview)}>
@@ -642,7 +642,7 @@ export default function CompanyDetailPage({
 
         {/* Tasks Tab */}
         <TabsContent value="tasks" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">タスク</h3>
             <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
               <DialogTrigger asChild>
@@ -708,7 +708,7 @@ export default function CompanyDetailPage({
           ) : (
             <div className="space-y-2">
               {tasks.map((task) => (
-                <div key={task.id} className="flex items-center gap-3 rounded-lg border p-3">
+                <div key={task.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center">
                   {editingTask?.id === task.id ? (
                     <div className="flex-1 space-y-3">
                       <Input
@@ -718,7 +718,7 @@ export default function CompanyDetailPage({
                         }
                         placeholder="タイトル"
                       />
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                         <Select
                           value={editingTask.category}
                           onValueChange={(value) =>
@@ -819,7 +819,7 @@ export default function CompanyDetailPage({
 
         {/* Memo Tab */}
         <TabsContent value="memo" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">企業研究メモ</h3>
             <Button size="sm" onClick={handleSaveCompany}>
               <Save className="mr-2 h-4 w-4" /> 保存
