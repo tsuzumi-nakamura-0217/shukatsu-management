@@ -15,6 +15,7 @@ import type {
   SelfAnalysis,
   Template,
   AppConfig,
+  Stats,
 } from "@/types";
 
 // ============================================================
@@ -661,7 +662,7 @@ export async function deleteTemplate(id: string): Promise<boolean> {
 // Stats operations
 // ============================================================
 
-export async function getStats() {
+export async function getStats(): Promise<Stats> {
   const companies = await getAllCompanies();
   const tasks = await getAllTasks();
 
@@ -676,13 +677,46 @@ export async function getStats() {
     .sort((a, b) => a.deadline.localeCompare(b.deadline))
     .slice(0, 5);
 
-  // Gather upcoming interviews from all companies
+  // Gather upcoming interviews and interview/ES totals from all companies.
   const allInterviews: (Interview & { companyName: string })[] = [];
-  for (const company of companies) {
-    const interviews = await getInterviews(company.slug);
-    for (const interview of interviews) {
+  const interviewResultCounts = {
+    通過: 0,
+    不合格: 0,
+    結果待ち: 0,
+  };
+  let totalInterviews = 0;
+  let totalESDocuments = 0;
+
+  const companyDetails = await Promise.all(
+    companies.map(async (company) => {
+      const [interviews, esDocuments] = await Promise.all([
+        getInterviews(company.slug),
+        getESDocuments(company.slug),
+      ]);
+
+      return {
+        company,
+        interviews,
+        esDocumentCount: esDocuments.length,
+      };
+    })
+  );
+
+  for (const detail of companyDetails) {
+    totalInterviews += detail.interviews.length;
+    totalESDocuments += detail.esDocumentCount;
+
+    for (const interview of detail.interviews) {
+      if (interview.result === "通過") {
+        interviewResultCounts.通過 += 1;
+      } else if (interview.result === "不合格") {
+        interviewResultCounts.不合格 += 1;
+      } else {
+        interviewResultCounts.結果待ち += 1;
+      }
+
       if (interview.date >= today) {
-        allInterviews.push({ ...interview, companyName: company.name });
+        allInterviews.push({ ...interview, companyName: detail.company.name });
       }
     }
   }
@@ -705,6 +739,9 @@ export async function getStats() {
     upcomingInterviews: allInterviews.slice(0, 5),
     completedTasks: tasks.filter((t) => t.completed).length,
     totalTasks: tasks.length,
+    totalInterviews,
+    totalESDocuments,
+    interviewResultCounts,
     passRate:
       totalDecided > 0
         ? Math.round((passedCount / totalDecided) * 100)

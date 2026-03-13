@@ -127,6 +127,13 @@ export interface Stats {
   completedTasks: number;
   totalTasks: number;
   passRate: number;
+  totalInterviews: number;
+  totalESDocuments: number;
+  interviewResultCounts: {
+    通過: number;
+    不合格: number;
+    結果待ち: number;
+  };
 }
 
 // カレンダーイベントの型定義
