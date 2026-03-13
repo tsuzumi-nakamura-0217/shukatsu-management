@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { toast } from "sonner";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [loadingType, setLoadingType] = useState<"signin" | "signup" | null>(
     null
   );
@@ -35,6 +37,8 @@ export default function LoginPage() {
       }
 
       toast.success("ログインしました");
+      router.replace("/");
+      router.refresh();
     } finally {
       setLoadingType(null);
     }
@@ -49,7 +53,7 @@ export default function LoginPage() {
     setLoadingType("signup");
     try {
       const supabaseBrowser = getSupabaseBrowserClient();
-      const { error } = await supabaseBrowser.auth.signUp({
+      const { data, error } = await supabaseBrowser.auth.signUp({
         email,
         password,
       });
@@ -62,6 +66,11 @@ export default function LoginPage() {
       toast.success(
         "アカウントを作成しました。メール確認が有効な場合は確認メールをチェックしてください。"
       );
+
+      if (data.session) {
+        router.replace("/");
+        router.refresh();
+      }
     } finally {
       setLoadingType(null);
     }
