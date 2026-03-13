@@ -134,7 +134,9 @@ function rowToTemplate(row: Record<string, unknown>): Template {
 // ============================================================
 
 export async function getConfig(): Promise<AppConfig> {
-  const { data, error } = await supabase.from("config").select("key, value");
+  const { data, error } = await supabase
+    .from("config")
+    .select("user_id, key, value");
 
   if (error || !data) {
     // Return default config on error
@@ -146,10 +148,26 @@ export async function getConfig(): Promise<AppConfig> {
     };
   }
 
-  const configMap: Record<string, unknown> = {};
-  for (const row of data) {
-    configMap[row.key] = row.value;
+  const globalConfigMap: Record<string, unknown> = {};
+  const userConfigMap: Record<string, unknown> = {};
+
+  for (const row of data as Array<{
+    user_id: string | null;
+    key: string;
+    value: unknown;
+  }>) {
+    if (row.user_id) {
+      userConfigMap[row.key] = row.value;
+      continue;
+    }
+    globalConfigMap[row.key] = row.value;
   }
+
+  // Shared defaults are applied to all users, and user-specific values override them.
+  const configMap: Record<string, unknown> = {
+    ...globalConfigMap,
+    ...userConfigMap,
+  };
 
   return {
     defaultStages: (configMap.defaultStages as string[]) || [],

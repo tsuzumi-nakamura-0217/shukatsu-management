@@ -97,13 +97,14 @@ CREATE TABLE config (
 
 CREATE UNIQUE INDEX companies_user_slug_key ON companies(user_id, slug);
 CREATE UNIQUE INDEX config_user_key_key ON config(user_id, key);
+CREATE UNIQUE INDEX config_global_key_key ON config(key) WHERE user_id IS NULL;
 
 -- 初期設定データの挿入
-INSERT INTO config (key, value) VALUES
-  ('defaultStages', '["未応募","ES提出","適性検査","1次面接","2次面接","最終面接","内定","不合格","辞退"]'),
-  ('industries', '["IT・通信","メーカー","金融","コンサル","商社","広告・マスコミ","不動産・建設","インフラ","小売・流通","サービス","公務員・団体","その他"]'),
-  ('taskCategories', '["ES","面接","適性検査","説明会","OB訪問","その他"]'),
-  ('notion', '{"apiKey":"","databaseId":"","enabled":false}');
+INSERT INTO config (user_id, key, value) VALUES
+  (NULL, 'defaultStages', '["未応募","ES提出","適性検査","1次面接","2次面接","最終面接","内定","不合格","辞退"]'),
+  (NULL, 'industries', '["IT・通信","メーカー","金融","コンサル","商社","広告・マスコミ","不動産・建設","インフラ","小売・流通","サービス","公務員・団体","その他"]'),
+  (NULL, 'taskCategories', '["ES","面接","適性検査","説明会","OB訪問","その他"]'),
+  (NULL, 'notion', '{"apiKey":"","databaseId":"","enabled":false}');
 
 -- ============================================================
 -- Row Level Security (RLS) - 必要に応じて有効化
@@ -142,6 +143,9 @@ CREATE POLICY templates_owner_policy ON templates
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
 
-CREATE POLICY config_owner_policy ON config
+CREATE POLICY config_read_shared_policy ON config
+  FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id);
+
+CREATE POLICY config_write_owner_policy ON config
   FOR ALL USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
+  WITH CHECK (auth.uid() = user_id);
