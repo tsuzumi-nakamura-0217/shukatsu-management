@@ -7,8 +7,6 @@ export interface Company {
   location: string;
   status: string;
   priority: number; // 1-5
-  score: number; // 1-10
-  tags: string[];
   stages: string[];
   createdAt: string;
   updatedAt: string;
@@ -23,8 +21,6 @@ export interface CompanyCreate {
   location?: string;
   status?: string;
   priority?: number;
-  score?: number;
-  tags?: string[];
   stages?: string[];
 }
 
@@ -100,14 +96,9 @@ export interface Template {
 // 設定の型定義
 export interface AppConfig {
   defaultStages: string[];
-  tags: TagConfig[];
+  industries: string[];
   taskCategories: string[];
   notion: NotionConfig;
-}
-
-export interface TagConfig {
-  name: string;
-  color: string;
 }
 
 export interface NotionConfig {

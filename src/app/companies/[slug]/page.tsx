@@ -43,16 +43,14 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusBadge, PriorityBadge, TagBadge } from "@/components/badges";
+import { StatusBadge, PriorityBadge } from "@/components/badges";
 import { MarkdownEditor, MarkdownViewer } from "@/components/markdown-editor";
 import { toast } from "sonner";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
@@ -78,17 +76,15 @@ export default function CompanyDetailPage({
   const [newInterviewOpen, setNewInterviewOpen] = useState(false);
   const [newEsOpen, setNewEsOpen] = useState(false);
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
 
   // New item forms
-  const [newTask, setNewTask] = useState<{ title: string; category: string; priority: string; deadline: string; memo: string }>({ title: "", category: "その他", priority: "medium", deadline: "", memo: "" });
-  const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", memo: "" });
+  const [newTask, setNewTask] = useState<{ title: string; category: string; priority: string; deadline: string; memo: string; completed: boolean }>({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
+  const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
   const [newEs, setNewEs] = useState({ filename: "", title: "", content: "" });
 
-  useEffect(() => {
-    fetchAll();
-  }, [slug]);
-
-  const fetchAll = () => {
+  function fetchAll() {
     Promise.all([
       fetch(`/api/companies/${slug}`).then((r) => r.json()),
       fetch(`/api/tasks?companySlug=${slug}`).then((r) => r.json()),
@@ -104,7 +100,11 @@ export default function CompanyDetailPage({
       setEsDocs(Array.isArray(esData) ? esData : []);
       setConfig(configData);
     });
-  };
+  }
+
+  useEffect(() => {
+    fetchAll();
+  }, [slug]);
 
   const handleSaveCompany = async () => {
     const res = await fetch(`/api/companies/${slug}`, {
@@ -149,7 +149,7 @@ export default function CompanyDetailPage({
     if (res.ok) {
       toast.success("タスクを追加しました");
       setNewTaskOpen(false);
-      setNewTask({ title: "", category: "その他", priority: "medium", deadline: "", memo: "" });
+      setNewTask({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
       fetchAll();
     }
   };
@@ -163,6 +163,29 @@ export default function CompanyDetailPage({
     fetchAll();
   };
 
+  const handleSaveTask = async () => {
+    if (!editingTask) return;
+    await fetch("/api/tasks", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingTask),
+    });
+    toast.success("タスクを更新しました");
+    setEditingTask(null);
+    fetchAll();
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    if (!confirm("このタスクを削除しますか？")) return;
+    await fetch("/api/tasks", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    toast.success("タスクを削除しました");
+    fetchAll();
+  };
+
   const handleCreateInterview = async () => {
     const res = await fetch(`/api/companies/${slug}/interviews`, {
       method: "POST",
@@ -172,9 +195,32 @@ export default function CompanyDetailPage({
     if (res.ok) {
       toast.success("面接記録を追加しました");
       setNewInterviewOpen(false);
-      setNewInterview({ type: "", date: "", location: "", memo: "" });
+      setNewInterview({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
       fetchAll();
     }
+  };
+
+  const handleSaveInterview = async () => {
+    if (!editingInterview) return;
+    await fetch(`/api/companies/${slug}/interviews`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingInterview),
+    });
+    toast.success("面接記録を更新しました");
+    setEditingInterview(null);
+    fetchAll();
+  };
+
+  const handleDeleteInterview = async (id: string) => {
+    if (!confirm("この面接記録を削除しますか？")) return;
+    await fetch(`/api/companies/${slug}/interviews`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    toast.success("面接記録を削除しました");
+    fetchAll();
   };
 
   const handleCreateEs = async () => {
@@ -249,13 +295,7 @@ export default function CompanyDetailPage({
                 }}
               />
             ))}
-            <span className="text-sm text-muted-foreground ml-2">スコア: {company.score}/10</span>
           </div>
-          {company.tags.length > 0 && (
-            <div className="flex gap-1 mt-2">
-              {company.tags.map((tag) => <TagBadge key={tag} name={tag} />)}
-            </div>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
@@ -316,7 +356,23 @@ export default function CompanyDetailPage({
               </div>
               <div>
                 <Label>業界</Label>
-                <Input value={editingCompany.industry || ""} onChange={(e) => setEditingCompany({ ...editingCompany, industry: e.target.value })} />
+                <Select
+                  value={editingCompany.industry || ""}
+                  onValueChange={(value) =>
+                    setEditingCompany({ ...editingCompany, industry: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="業界を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(config?.industries || []).map((industry) => (
+                      <SelectItem key={industry} value={industry}>
+                        {industry}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>URL</Label>
@@ -325,14 +381,6 @@ export default function CompanyDetailPage({
               <div>
                 <Label>所在地</Label>
                 <Input value={editingCompany.location || ""} onChange={(e) => setEditingCompany({ ...editingCompany, location: e.target.value })} />
-              </div>
-              <div>
-                <Label>スコア (1-10)</Label>
-                <Input type="number" min={1} max={10} value={editingCompany.score || 5} onChange={(e) => setEditingCompany({ ...editingCompany, score: parseInt(e.target.value) })} />
-              </div>
-              <div>
-                <Label>タグ (カンマ区切り)</Label>
-                <Input value={(editingCompany.tags || []).join(", ")} onChange={(e) => setEditingCompany({ ...editingCompany, tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })} />
               </div>
             </div>
           </CardContent>
@@ -446,6 +494,25 @@ export default function CompanyDetailPage({
                     <Input value={newInterview.location} onChange={(e) => setNewInterview({ ...newInterview, location: e.target.value })} placeholder="オンライン / 本社" />
                   </div>
                   <div>
+                    <Label>結果</Label>
+                    <Select
+                      value={newInterview.result}
+                      onValueChange={(value) =>
+                        setNewInterview({ ...newInterview, result: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="結果待ち">結果待ち</SelectItem>
+                        <SelectItem value="通過">通過</SelectItem>
+                        <SelectItem value="不合格">不合格</SelectItem>
+                        <SelectItem value="辞退">辞退</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>メモ</Label>
                     <Textarea value={newInterview.memo} onChange={(e) => setNewInterview({ ...newInterview, memo: e.target.value })} placeholder="聞かれたこと、感想など" />
                   </div>
@@ -462,22 +529,114 @@ export default function CompanyDetailPage({
             <div className="space-y-4">
               {interviews.sort((a, b) => b.date.localeCompare(a.date)).map((interview) => (
                 <Card key={interview.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{interview.type}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={interview.result} />
-                        <span className="text-sm text-muted-foreground">{interview.date}</span>
+                  {editingInterview?.id === interview.id ? (
+                    <CardContent className="pt-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>面接タイプ</Label>
+                          <Input
+                            value={editingInterview.type}
+                            onChange={(e) =>
+                              setEditingInterview({
+                                ...editingInterview,
+                                type: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>日付</Label>
+                          <Input
+                            type="date"
+                            value={editingInterview.date}
+                            onChange={(e) =>
+                              setEditingInterview({
+                                ...editingInterview,
+                                date: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>場所</Label>
+                          <Input
+                            value={editingInterview.location}
+                            onChange={(e) =>
+                              setEditingInterview({
+                                ...editingInterview,
+                                location: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label>結果</Label>
+                          <Select
+                            value={editingInterview.result}
+                            onValueChange={(value) =>
+                              setEditingInterview({
+                                ...editingInterview,
+                                result: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="結果待ち">結果待ち</SelectItem>
+                              <SelectItem value="通過">通過</SelectItem>
+                              <SelectItem value="不合格">不合格</SelectItem>
+                              <SelectItem value="辞退">辞退</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
-                    {interview.location && (
-                      <CardDescription>📍 {interview.location}</CardDescription>
-                    )}
-                  </CardHeader>
-                  {interview.memo && (
-                    <CardContent>
-                      <MarkdownViewer content={interview.memo} />
+                      <div>
+                        <Label>メモ</Label>
+                        <Textarea
+                          value={editingInterview.memo}
+                          onChange={(e) =>
+                            setEditingInterview({
+                              ...editingInterview,
+                              memo: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setEditingInterview(null)}>
+                          キャンセル
+                        </Button>
+                        <Button size="sm" onClick={handleSaveInterview}>保存</Button>
+                      </div>
                     </CardContent>
+                  ) : (
+                    <>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <CardTitle className="text-base">{interview.type}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={interview.result} />
+                            <span className="text-sm text-muted-foreground">{interview.date}</span>
+                            <Button variant="outline" size="sm" onClick={() => setEditingInterview(interview)}>
+                              <Edit className="mr-1 h-3 w-3" /> 編集
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteInterview(interview.id)}>
+                              <Trash2 className="mr-1 h-3 w-3" /> 削除
+                            </Button>
+                          </div>
+                        </div>
+                        {interview.location && (
+                          <CardDescription>📍 {interview.location}</CardDescription>
+                        )}
+                      </CardHeader>
+                      {interview.memo && (
+                        <CardContent>
+                          <MarkdownViewer content={interview.memo} />
+                        </CardContent>
+                      )}
+                    </>
                   )}
                 </Card>
               ))}
@@ -532,6 +691,15 @@ export default function CompanyDetailPage({
                     <Label>メモ</Label>
                     <Textarea value={newTask.memo} onChange={(e) => setNewTask({ ...newTask, memo: e.target.value })} />
                   </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={newTask.completed}
+                      onCheckedChange={(v) =>
+                        setNewTask({ ...newTask, completed: !!v })
+                      }
+                    />
+                    完了済みとして作成
+                  </label>
                 </div>
                 <DialogFooter>
                   <Button onClick={handleCreateTask}>追加</Button>
@@ -545,16 +713,108 @@ export default function CompanyDetailPage({
             <div className="space-y-2">
               {tasks.map((task) => (
                 <div key={task.id} className="flex items-center gap-3 rounded-lg border p-3">
-                  <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task)} />
-                  <div className="flex-1">
-                    <p className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
-                    {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                    <PriorityBadge priority={task.priority} />
-                    {task.deadline && <span className="text-xs text-muted-foreground">{task.deadline}</span>}
-                  </div>
+                  {editingTask?.id === task.id ? (
+                    <div className="flex-1 space-y-3">
+                      <Input
+                        value={editingTask.title}
+                        onChange={(e) =>
+                          setEditingTask({ ...editingTask, title: e.target.value })
+                        }
+                        placeholder="タイトル"
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <Select
+                          value={editingTask.category}
+                          onValueChange={(value) =>
+                            setEditingTask({ ...editingTask, category: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(config?.taskCategories || []).map((c) => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={editingTask.priority}
+                          onValueChange={(value) =>
+                            setEditingTask({
+                              ...editingTask,
+                              priority: value as "high" | "medium" | "low",
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="high">高</SelectItem>
+                            <SelectItem value="medium">中</SelectItem>
+                            <SelectItem value="low">低</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="date"
+                          value={editingTask.deadline}
+                          onChange={(e) =>
+                            setEditingTask({
+                              ...editingTask,
+                              deadline: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <Textarea
+                        value={editingTask.memo}
+                        onChange={(e) =>
+                          setEditingTask({ ...editingTask, memo: e.target.value })
+                        }
+                        placeholder="メモ"
+                      />
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={editingTask.completed}
+                            onCheckedChange={(v) =>
+                              setEditingTask({
+                                ...editingTask,
+                                completed: !!v,
+                              })
+                            }
+                          />
+                          完了
+                        </label>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
+                            キャンセル
+                          </Button>
+                          <Button size="sm" onClick={handleSaveTask}>保存</Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task)} />
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
+                        {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                        <PriorityBadge priority={task.priority} />
+                        {task.deadline && <span className="text-xs text-muted-foreground">{task.deadline}</span>}
+                        <Button variant="outline" size="sm" onClick={() => setEditingTask(task)}>
+                          <Edit className="mr-1 h-3 w-3" /> 編集
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteTask(task.id)}>
+                          <Trash2 className="mr-1 h-3 w-3" /> 削除
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

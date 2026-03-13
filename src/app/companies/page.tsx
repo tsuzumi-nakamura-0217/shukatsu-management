@@ -28,7 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { StatusBadge, TagBadge } from "@/components/badges";
+import { StatusBadge } from "@/components/badges";
 import { toast } from "sonner";
 import type { Company, AppConfig } from "@/types";
 
@@ -46,18 +46,24 @@ export default function CompaniesPage() {
     location: "",
   });
 
+  function fetchCompanies() {
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then(setCompanies);
+  }
+
   useEffect(() => {
     fetchCompanies();
     fetch("/api/config")
       .then((r) => r.json())
-      .then(setConfig);
+      .then((data: AppConfig) => {
+        setConfig(data);
+        setNewCompany((prev) => ({
+          ...prev,
+          industry: prev.industry || data.industries?.[0] || "",
+        }));
+      });
   }, []);
-
-  const fetchCompanies = () => {
-    fetch("/api/companies")
-      .then((r) => r.json())
-      .then(setCompanies);
-  };
 
   const handleCreate = async () => {
     if (!newCompany.name) {
@@ -72,7 +78,7 @@ export default function CompaniesPage() {
     if (res.ok) {
       toast.success("企業を追加しました");
       setDialogOpen(false);
-      setNewCompany({ name: "", industry: "", url: "", location: "" });
+      setNewCompany({ name: "", industry: config?.industries?.[0] || "", url: "", location: "" });
       fetchCompanies();
     } else {
       toast.error("企業の追加に失敗しました");
@@ -97,6 +103,7 @@ export default function CompaniesPage() {
     .sort((a, b) => b.priority - a.priority || a.name.localeCompare(b.name));
 
   const allStatuses = config?.defaultStages || [];
+  const allIndustries = config?.industries || [];
 
   return (
     <div className="space-y-6">
@@ -136,14 +143,23 @@ export default function CompaniesPage() {
               </div>
               <div>
                 <Label htmlFor="industry">業界</Label>
-                <Input
-                  id="industry"
+                <Select
                   value={newCompany.industry}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, industry: e.target.value })
+                  onValueChange={(value) =>
+                    setNewCompany({ ...newCompany, industry: value })
                   }
-                  placeholder="IT・通信"
-                />
+                >
+                  <SelectTrigger id="industry">
+                    <SelectValue placeholder="業界を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allIndustries.map((industry) => (
+                      <SelectItem key={industry} value={industry}>
+                        {industry}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="url">企業URL</Label>
@@ -264,13 +280,6 @@ export default function CompaniesPage() {
                         />
                       ))}
                     </div>
-                    {company.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {company.tags.map((tag) => (
-                          <TagBadge key={tag} name={tag} />
-                        ))}
-                      </div>
-                    )}
                     <p className="text-xs text-muted-foreground">
                       更新: {company.updatedAt}
                     </p>
@@ -311,9 +320,6 @@ export default function CompaniesPage() {
                       />
                     ))}
                   </div>
-                  {company.tags.map((tag) => (
-                    <TagBadge key={tag} name={tag} />
-                  ))}
                   <StatusBadge status={company.status} />
                 </div>
               </Link>

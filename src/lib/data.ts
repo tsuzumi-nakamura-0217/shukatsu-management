@@ -52,7 +52,24 @@ function now(): string {
 
 export function getConfig(): AppConfig {
   const raw = fs.readFileSync(CONFIG_FILE, "utf-8");
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw) as AppConfig & {
+    tags?: { name?: string }[];
+  };
+
+  // Backward compatibility: derive industries from old tags field if needed.
+  const fallbackIndustries = (parsed.tags || [])
+    .map((tag) => tag.name || "")
+    .filter(Boolean);
+
+  return {
+    defaultStages: parsed.defaultStages || [],
+    industries:
+      parsed.industries && parsed.industries.length > 0
+        ? parsed.industries
+        : fallbackIndustries,
+    taskCategories: parsed.taskCategories || [],
+    notion: parsed.notion,
+  };
 }
 
 export function updateConfig(config: Partial<AppConfig>): AppConfig {
@@ -93,8 +110,6 @@ export function getCompany(slug: string): Company | null {
     location: data.location || "",
     status: data.status || "未応募",
     priority: data.priority || 3,
-    score: data.score || 5,
-    tags: data.tags || [],
     stages: data.stages || getConfig().defaultStages,
     createdAt: data.createdAt || now(),
     updatedAt: data.updatedAt || now(),
@@ -125,8 +140,6 @@ export function createCompany(input: CompanyCreate): Company {
     location: input.location || "",
     status: input.status || "未応募",
     priority: input.priority || 3,
-    score: input.score || 5,
-    tags: input.tags || [],
     stages: input.stages || config.defaultStages,
     createdAt: now(),
     updatedAt: now(),
@@ -148,8 +161,6 @@ export function saveCompany(company: Company): void {
     location: company.location,
     status: company.status,
     priority: company.priority,
-    score: company.score,
-    tags: company.tags,
     stages: company.stages,
     createdAt: company.createdAt,
     updatedAt: now(),

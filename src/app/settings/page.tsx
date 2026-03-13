@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Plus, Trash2, TestTube, Check, X } from "lucide-react";
+import { Save, Plus, TestTube, Check, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -29,11 +28,11 @@ export default function SettingsPage() {
   } | null>(null);
   const [testing, setTesting] = useState(false);
 
-  // Stages & Tags editing
+  // Stages & industries editing
   const [stages, setStages] = useState<string[]>([]);
   const [newStage, setNewStage] = useState("");
-  const [tags, setTags] = useState<{ name: string; color: string }[]>([]);
-  const [newTag, setNewTag] = useState({ name: "", color: "blue" });
+  const [industries, setIndustries] = useState<string[]>([]);
+  const [newIndustry, setNewIndustry] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
 
@@ -46,7 +45,7 @@ export default function SettingsPage() {
         setNotionDbId(data.notion.databaseId);
         setNotionEnabled(data.notion.enabled);
         setStages(data.defaultStages);
-        setTags(data.tags);
+        setIndustries(data.industries || []);
         setCategories(data.taskCategories);
       });
   }, []);
@@ -54,7 +53,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     const updated: AppConfig = {
       defaultStages: stages,
-      tags,
+      industries,
       taskCategories: categories,
       notion: {
         apiKey: notionApiKey,
@@ -98,16 +97,6 @@ export default function SettingsPage() {
       </div>
     );
   }
-
-  const colorOptions = [
-    "blue",
-    "green",
-    "purple",
-    "orange",
-    "red",
-    "pink",
-    "yellow",
-  ];
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -234,33 +223,21 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Tags */}
+      {/* Industries */}
       <Card>
         <CardHeader>
-          <CardTitle>タグ管理</CardTitle>
-          <CardDescription>企業に付けられるタグを管理</CardDescription>
+          <CardTitle>業界リスト</CardTitle>
+          <CardDescription>企業登録時に選択できる業界を管理</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag, i) => (
+            {industries.map((industry, i) => (
               <Badge key={i} variant="outline" className="gap-1 py-1">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    backgroundColor: {
-                      blue: "#3b82f6",
-                      green: "#22c55e",
-                      purple: "#a855f7",
-                      orange: "#f97316",
-                      red: "#ef4444",
-                      pink: "#ec4899",
-                      yellow: "#eab308",
-                    }[tag.color] || "#9ca3af",
-                  }}
-                />
-                {tag.name}
+                {industry}
                 <button
-                  onClick={() => setTags(tags.filter((_, idx) => idx !== i))}
+                  onClick={() =>
+                    setIndustries(industries.filter((_, idx) => idx !== i))
+                  }
                   className="ml-1 hover:text-red-600"
                 >
                   <X className="h-3 w-3" />
@@ -268,31 +245,26 @@ export default function SettingsPage() {
               </Badge>
             ))}
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2">
             <Input
-              value={newTag.name}
-              onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
-              placeholder="タグ名"
+              value={newIndustry}
+              onChange={(e) => setNewIndustry(e.target.value)}
+              placeholder="新しい業界"
               className="max-w-xs"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newIndustry) {
+                  setIndustries([...industries, newIndustry]);
+                  setNewIndustry("");
+                }
+              }}
             />
-            <select
-              value={newTag.color}
-              onChange={(e) => setNewTag({ ...newTag, color: e.target.value })}
-              className="border rounded px-2 py-1.5 text-sm"
-            >
-              {colorOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                if (newTag.name) {
-                  setTags([...tags, newTag]);
-                  setNewTag({ name: "", color: "blue" });
+                if (newIndustry) {
+                  setIndustries([...industries, newIndustry]);
+                  setNewIndustry("");
                 }
               }}
             >
