@@ -1,0 +1,28 @@
+{
+  "defaultStages": [
+    "未応募",
+    "ES提出",
+    "適性検査",
+    "1次面接",
+    "2次面接",
+    "最終面接",
+    "内定",
+    "不合格",
+    "辞退"
+  ],
+  "tags": [
+    { "name": "エンジニア", "color": "blue" },
+    { "name": "総合職", "color": "green" },
+    { "name": "自社開発", "color": "purple" },
+    { "name": "SIer", "color": "orange" },
+    { "name": "コンサル", "color": "red" },
+    { "name": "ベンチャー", "color": "pink" },
+    { "name": "大手", "color": "yellow" }
+  ],
+  "taskCategories": ["ES", "面接", "適性検査", "説明会", "OB訪問", "その他"],
+  "notion": {
+    "apiKey": "",
+    "databaseId": "",
+    "enabled": false
+  }
+}
