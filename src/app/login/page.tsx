@@ -91,10 +91,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-sky-50/40 px-4 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
-      <div className="pointer-events-none absolute -left-16 top-12 h-56 w-56 rounded-full bg-sky-200/35 blur-3xl dark:bg-sky-500/10" />
-      <div className="pointer-events-none absolute right-0 top-28 h-56 w-56 rounded-full bg-indigo-200/25 blur-3xl dark:bg-indigo-500/10" />
-      <Card className="relative z-10 w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center text-2xl">就活マネージャーにログイン</CardTitle>
         </CardHeader>
