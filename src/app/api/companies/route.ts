@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAllCompanies, createCompany } from "@/lib/data";
 import type { CompanyCreate } from "@/types";
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function GET() {
   try {
     const companies = await getAllCompanies();
@@ -17,12 +26,27 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body: CompanyCreate = await request.json();
-    if (!body.name) {
+    if (!body.name?.trim()) {
       return NextResponse.json(
         { error: "企業名は必須です" },
         { status: 400 }
       );
     }
+
+    if (body.url && !isValidHttpUrl(body.url)) {
+      return NextResponse.json(
+        { error: "企業URLの形式が正しくありません" },
+        { status: 400 }
+      );
+    }
+
+    if (body.mypageUrl && !isValidHttpUrl(body.mypageUrl)) {
+      return NextResponse.json(
+        { error: "マイページURLの形式が正しくありません" },
+        { status: 400 }
+      );
+    }
+
     const company = await createCompany(body);
     return NextResponse.json(company, { status: 201 });
   } catch (error) {

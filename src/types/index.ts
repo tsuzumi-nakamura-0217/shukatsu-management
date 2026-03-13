@@ -5,6 +5,9 @@ export interface Company {
   name: string;
   industry: string;
   url: string;
+  mypageUrl: string;
+  loginId: string;
+  password: string;
   location: string;
   status: string;
   priority: number; // 1-5
@@ -19,6 +22,9 @@ export interface CompanyCreate {
   name: string;
   industry?: string;
   url?: string;
+  mypageUrl?: string;
+  loginId?: string;
+  password?: string;
   location?: string;
   status?: string;
   priority?: number;

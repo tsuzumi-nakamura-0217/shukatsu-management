@@ -15,6 +15,8 @@ import {
   BookOpen,
   Edit,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Card,
@@ -70,6 +72,7 @@ export default function CompanyDetailPage({
   const [editMode, setEditMode] = useState(false);
   const [memoContent, setMemoContent] = useState("");
   const [editingCompany, setEditingCompany] = useState<Partial<Company>>({});
+  const [showPassword, setShowPassword] = useState(false);
 
   // Dialogs
   const [newTaskOpen, setNewTaskOpen] = useState(false);
@@ -302,6 +305,16 @@ export default function CompanyDetailPage({
                 <ExternalLink className="h-3 w-3" /> Webサイト
               </a>
             )}
+            {company.mypageUrl && (
+              <a
+                href={company.mypageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-blue-600 hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" /> マイページ
+              </a>
+            )}
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
@@ -384,6 +397,58 @@ export default function CompanyDetailPage({
               <div>
                 <Label>URL</Label>
                 <Input value={editingCompany.url || ""} onChange={(e) => setEditingCompany({ ...editingCompany, url: e.target.value })} />
+              </div>
+              <div>
+                <Label>マイページURL</Label>
+                <Input
+                  value={editingCompany.mypageUrl || ""}
+                  onChange={(e) =>
+                    setEditingCompany({
+                      ...editingCompany,
+                      mypageUrl: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>ログインID</Label>
+                <Input
+                  value={editingCompany.loginId || ""}
+                  onChange={(e) =>
+                    setEditingCompany({
+                      ...editingCompany,
+                      loginId: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label>パスワード</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={editingCompany.password || ""}
+                    onChange={(e) =>
+                      setEditingCompany({
+                        ...editingCompany,
+                        password: e.target.value,
+                      })
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label="パスワード表示切替"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div>
                 <Label>所在地</Label>

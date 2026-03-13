@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCompany, saveCompany, deleteCompany } from "@/lib/data";
 import type { Company } from "@/types";
 
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -39,6 +48,21 @@ export async function PUT(
     }
 
     const body: Partial<Company> = await request.json();
+
+    if (body.url && !isValidHttpUrl(body.url)) {
+      return NextResponse.json(
+        { error: "企業URLの形式が正しくありません" },
+        { status: 400 }
+      );
+    }
+
+    if (body.mypageUrl && !isValidHttpUrl(body.mypageUrl)) {
+      return NextResponse.json(
+        { error: "マイページURLの形式が正しくありません" },
+        { status: 400 }
+      );
+    }
+
     const updated: Company = { ...company, ...body, slug };
     await saveCompany(updated);
     return NextResponse.json(updated);

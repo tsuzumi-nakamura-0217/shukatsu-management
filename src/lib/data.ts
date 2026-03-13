@@ -1,5 +1,9 @@
 import { supabase } from "./supabase";
 import slugify from "slugify";
+import {
+  decryptCompanyPassword,
+  encryptCompanyPassword,
+} from "./company-credentials";
 import type {
   Company,
   CompanyCreate,
@@ -36,12 +40,24 @@ function toISODate(d: string | null | undefined): string {
 
 // Convert Supabase snake_case row to camelCase Company
 function rowToCompany(row: Record<string, unknown>): Company {
+  let decryptedPassword = "";
+  try {
+    decryptedPassword = decryptCompanyPassword(
+      (row.password_encrypted as string) || ""
+    );
+  } catch {
+    decryptedPassword = "";
+  }
+
   return {
     id: row.id as string,
     slug: row.slug as string,
     name: row.name as string,
     industry: (row.industry as string) || "",
     url: (row.url as string) || "",
+    mypageUrl: (row.mypage_url as string) || "",
+    loginId: (row.login_id as string) || "",
+    password: decryptedPassword,
     location: (row.location as string) || "",
     status: (row.status as string) || "未応募",
     priority: (row.priority as number) || 3,
@@ -215,6 +231,9 @@ export async function createCompany(input: CompanyCreate): Promise<Company> {
     name: input.name,
     industry: input.industry || "",
     url: input.url || "",
+    mypage_url: input.mypageUrl || "",
+    login_id: input.loginId || "",
+    password_encrypted: encryptCompanyPassword(input.password || ""),
     location: input.location || "",
     status: input.status || "未応募",
     priority: input.priority || 3,
@@ -242,6 +261,9 @@ export async function saveCompany(company: Company): Promise<void> {
       name: company.name,
       industry: company.industry,
       url: company.url,
+      mypage_url: company.mypageUrl,
+      login_id: company.loginId,
+      password_encrypted: encryptCompanyPassword(company.password),
       location: company.location,
       status: company.status,
       priority: company.priority,

@@ -44,6 +44,9 @@ export default function CompaniesPage() {
     name: "",
     industry: "",
     url: "",
+    mypageUrl: "",
+    loginId: "",
+    password: "",
     location: "",
   });
 
@@ -82,7 +85,15 @@ export default function CompaniesPage() {
       if (res.ok) {
         toast.success("企業を追加しました");
         setDialogOpen(false);
-        setNewCompany({ name: "", industry: config?.industries?.[0] || "", url: "", location: "" });
+        setNewCompany({
+          name: "",
+          industry: config?.industries?.[0] || "",
+          url: "",
+          mypageUrl: "",
+          loginId: "",
+          password: "",
+          location: "",
+        });
         fetchCompanies();
       } else {
         toast.error("企業の追加に失敗しました");
@@ -177,6 +188,40 @@ export default function CompaniesPage() {
                     setNewCompany({ ...newCompany, url: e.target.value })
                   }
                   placeholder="https://example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="mypage-url">マイページURL</Label>
+                <Input
+                  id="mypage-url"
+                  value={newCompany.mypageUrl}
+                  onChange={(e) =>
+                    setNewCompany({ ...newCompany, mypageUrl: e.target.value })
+                  }
+                  placeholder="https://mypage.example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="login-id">ログインID</Label>
+                <Input
+                  id="login-id"
+                  value={newCompany.loginId}
+                  onChange={(e) =>
+                    setNewCompany({ ...newCompany, loginId: e.target.value })
+                  }
+                  placeholder="your-login-id"
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">パスワード</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newCompany.password}
+                  onChange={(e) =>
+                    setNewCompany({ ...newCompany, password: e.target.value })
+                  }
+                  placeholder="password"
                 />
               </div>
               <div>
