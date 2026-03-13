@@ -1,7 +1,7 @@
 # 🎓 就活マネージャー
 
-就職活動を一元管理するためのローカルWebアプリケーションです。  
-データはすべてMarkdown/JSONファイルとして保存されるため、**Gitでバージョン管理**できます。
+就職活動を一元管理するWebアプリケーションです。  
+データは Supabase に保存され、メールアドレス認証でユーザーごとに分離して利用できます。
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
@@ -61,7 +61,7 @@
 | グラフ | [Recharts](https://recharts.org/) |
 | Markdown | [@uiw/react-md-editor](https://github.com/uiwjs/react-md-editor) + gray-matter |
 | 外部連携 | [Notion API](https://developers.notion.com/) |
-| データ保存 | ファイルシステム（Markdown / JSON） |
+| データ保存 | Supabase (PostgreSQL + Auth + RLS) |
 
 ---
 
@@ -141,6 +141,34 @@ npm run dev
 ```
 
 ブラウザで [http://localhost:3000](http://localhost:3000) にアクセスしてください。
+
+### 環境変数
+
+`.env.local` に以下を設定してください。
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+```
+
+`NEXT_PUBLIC_` はクライアント側ログイン処理用、`SUPABASE_*` はサーバー側API処理用です。
+
+### メールアドレス認証設定（Supabase）
+
+1. Supabase Dashboard の Authentication → Providers → Email を有効化
+2. 必要に応じて「Confirm email」を ON/OFF（本番はON推奨）
+3. Site URL / Redirect URL に以下を追加
+   - 開発: `http://localhost:3000`
+   - 本番: Vercel のURL（例: `https://your-app.vercel.app`）
+4. （任意）Authentication → Email Templates で確認メール文面を調整
+
+### DB反映
+
+RLSとユーザー分離カラムを有効にするため、以下のSQLを適用してください。
+
+- `supabase/migrations/20260313_add_google_auth_rls.sql`
 
 ### ビルド
 

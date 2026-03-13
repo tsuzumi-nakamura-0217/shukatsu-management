@@ -22,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LogoutButton } from "@/components/logout-button";
 
 const navItems = [
   {
@@ -119,6 +120,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t p-4">
+        <LogoutButton />
         <p className="text-xs text-muted-foreground text-center">
           就活管理アプリ v1.0
         </p>
@@ -146,6 +148,9 @@ export function MobileSidebar() {
           </div>
           <nav className="space-y-1 p-4">
             <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+            <div className="pt-2">
+              <LogoutButton />
+            </div>
           </nav>
         </SheetContent>
       </Sheet>

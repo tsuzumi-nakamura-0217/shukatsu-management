@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { MobileSidebar, Sidebar } from "@/components/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthSessionManager } from "@/components/auth-session-manager";
+import { AuthGuard } from "@/components/auth-guard";
+import { AppShell } from "@/components/app-shell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,16 +33,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <TooltipProvider>
-          <div className="min-h-screen md:flex">
-            <Sidebar />
-            <main className="flex-1 bg-background">
-              <MobileSidebar />
-              <div className="mx-auto w-full max-w-7xl px-4 py-4 md:px-6 md:py-6">
-                {children}
-              </div>
-            </main>
-          </div>
-          <Toaster />
+          <AuthSessionManager />
+          <AuthGuard>
+            <AppShell>{children}</AppShell>
+            <Toaster />
+          </AuthGuard>
         </TooltipProvider>
       </body>
     </html>

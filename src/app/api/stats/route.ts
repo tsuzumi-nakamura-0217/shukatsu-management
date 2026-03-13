@@ -1,14 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getStats } from "@/lib/data";
+import { withAuthenticatedUser } from "@/lib/auth-server";
 
-export async function GET() {
-  try {
-    const stats = await getStats();
-    return NextResponse.json(stats);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "統計データの取得に失敗しました" },
-      { status: 500 }
-    );
-  }
+export async function GET(request: NextRequest) {
+  return withAuthenticatedUser(request, async () => {
+    try {
+      const stats = await getStats();
+      return NextResponse.json(stats);
+    } catch {
+      return NextResponse.json(
+        { error: "統計データの取得に失敗しました" },
+        { status: 500 }
+      );
+    }
+  });
 }

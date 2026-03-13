@@ -180,7 +180,7 @@ export async function updateConfig(
   for (const entry of entries) {
     await supabase
       .from("config")
-      .upsert({ key: entry.key, value: entry.value }, { onConflict: "key" });
+      .upsert({ key: entry.key, value: entry.value }, { onConflict: "user_id,key" });
   }
 
   return updated;
