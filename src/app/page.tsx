@@ -1,12 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
   Briefcase,
   CalendarClock,
-  ClipboardCheck,
   FileText,
   ListChecks,
   Loader2,
@@ -77,98 +74,104 @@ export default function Home() {
   }, [stats]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">ダッシュボード</h1>
-          <p className="text-muted-foreground">
-            企業応募から選考進捗まで、今日の状況をまとめて確認できます。
-          </p>
+    <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-b from-sky-50 via-white to-indigo-50/50 p-4 sm:p-6 lg:p-8 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+      <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-cyan-200/45 blur-3xl dark:bg-cyan-500/20" />
+      <div className="pointer-events-none absolute -right-10 top-20 h-56 w-56 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 h-48 w-48 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
+
+      <div className="relative space-y-6">
+        <div className="flex flex-col gap-4 rounded-3xl border border-white/70 bg-white/70 p-5 shadow-[0_8px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl md:flex-row md:items-center md:justify-between dark:border-white/10 dark:bg-slate-900/70">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">ダッシュボード</h1>
+            <p className="text-slate-600 dark:text-slate-300">
+              企業応募から選考進捗まで、今日の状況をまとめて確認できます。
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="border-white/60 bg-white/70 text-slate-700 shadow-sm backdrop-blur hover:bg-white dark:border-white/15 dark:bg-slate-800/70 dark:text-slate-100"
+            onClick={() => fetchStats(true)}
+            disabled={loading || refreshing}
+          >
+            {refreshing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            更新
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => fetchStats(true)}
-          disabled={loading || refreshing}
-        >
-          {refreshing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          更新
-        </Button>
-      </div>
 
-      {error && (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="pt-6 text-sm text-destructive">{error}</CardContent>
-        </Card>
-      )}
+        {error && (
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardContent className="pt-6 text-sm text-destructive">{error}</CardContent>
+          </Card>
+        )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>企業数</CardDescription>
-            <CardTitle className="text-2xl">{stats?.totalCompanies ?? 0}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Briefcase className="h-3.5 w-3.5" />
-              現在管理している企業
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <Card className="border-white/70 bg-gradient-to-br from-cyan-50 to-sky-100/70 shadow-[0_10px_30px_rgba(14,116,144,0.12)] dark:border-white/10 dark:from-slate-900 dark:to-cyan-950/40">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-slate-700 dark:text-slate-300">企業数</CardDescription>
+              <CardTitle className="text-2xl text-slate-900 dark:text-white">{stats?.totalCompanies ?? 0}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <Briefcase className="h-3.5 w-3.5" />
+                現在管理している企業
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>タスク完了率</CardDescription>
-            <CardTitle className="text-2xl">{completionRate}%</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              {stats?.completedTasks ?? 0}/{stats?.totalTasks ?? 0} 件完了
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="border-white/70 bg-gradient-to-br from-emerald-50 to-teal-100/70 shadow-[0_10px_30px_rgba(5,150,105,0.12)] dark:border-white/10 dark:from-slate-900 dark:to-emerald-950/40">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-slate-700 dark:text-slate-300">タスク完了率</CardDescription>
+              <CardTitle className="text-2xl text-slate-900 dark:text-white">{completionRate}%</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs text-slate-700 dark:text-slate-300">
+                {stats?.completedTasks ?? 0}/{stats?.totalTasks ?? 0} 件完了
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>通過率</CardDescription>
-            <CardTitle className="text-2xl">{stats?.passRate ?? 0}%</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">選考結果が出た企業ベース</div>
-          </CardContent>
-        </Card>
+          <Card className="border-white/70 bg-gradient-to-br from-violet-50 to-indigo-100/70 shadow-[0_10px_30px_rgba(99,102,241,0.12)] dark:border-white/10 dark:from-slate-900 dark:to-violet-950/40">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-slate-700 dark:text-slate-300">通過率</CardDescription>
+              <CardTitle className="text-2xl text-slate-900 dark:text-white">{stats?.passRate ?? 0}%</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs text-slate-700 dark:text-slate-300">選考結果が出た企業ベース</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>面接総数</CardDescription>
-            <CardTitle className="text-2xl">{stats?.totalInterviews ?? 0}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground">
-              通過 {stats?.interviewResultCounts.通過 ?? 0} / 不合格 {stats?.interviewResultCounts.不合格 ?? 0}
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="border-white/70 bg-gradient-to-br from-amber-50 to-orange-100/70 shadow-[0_10px_30px_rgba(217,119,6,0.12)] dark:border-white/10 dark:from-slate-900 dark:to-amber-950/40">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-slate-700 dark:text-slate-300">面接総数</CardDescription>
+              <CardTitle className="text-2xl text-slate-900 dark:text-white">{stats?.totalInterviews ?? 0}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs text-slate-700 dark:text-slate-300">
+                通過 {stats?.interviewResultCounts.通過 ?? 0} / 不合格 {stats?.interviewResultCounts.不合格 ?? 0}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>ES件数</CardDescription>
-            <CardTitle className="text-2xl">{stats?.totalESDocuments ?? 0}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <FileText className="h-3.5 w-3.5" />
-              登録済みエントリーシート
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-white/70 bg-gradient-to-br from-rose-50 to-pink-100/70 shadow-[0_10px_30px_rgba(219,39,119,0.12)] dark:border-white/10 dark:from-slate-900 dark:to-rose-950/40">
+            <CardHeader className="pb-2">
+              <CardDescription className="text-slate-700 dark:text-slate-300">ES件数</CardDescription>
+              <CardTitle className="text-2xl text-slate-900 dark:text-white">{stats?.totalESDocuments ?? 0}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <FileText className="h-3.5 w-3.5" />
+                登録済みエントリーシート
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+        <div>
+          <Card className="border-white/70 bg-white/75 shadow-[0_8px_32px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <ListChecks className="h-5 w-5" />
@@ -187,7 +190,7 @@ export default function Home() {
               stats?.upcomingDeadlines.map((task) => (
                 <div
                   key={task.id}
-                  className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-slate-900/65"
                 >
                   <div>
                     <p className="font-medium">{task.title}</p>
@@ -208,41 +211,11 @@ export default function Home() {
               ))
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ClipboardCheck className="h-5 w-5" />
-              クイックリンク
-            </CardTitle>
-            <CardDescription>よく使う操作へ素早く移動</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button asChild className="w-full justify-between">
-              <Link href="/companies">
-                企業を追加・確認
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full justify-between">
-              <Link href="/tasks">
-                タスクを追加・確認
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" className="w-full justify-between">
-              <Link href="/calendar">
-                カレンダーを見る
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="border-white/70 bg-white/75 shadow-[0_8px_32px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <CalendarClock className="h-5 w-5" />
@@ -261,7 +234,7 @@ export default function Home() {
               stats?.upcomingInterviews.map((interview) => (
                 <div
                   key={interview.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/65"
                 >
                   <div>
                     <p className="font-medium">{interview.companyName}</p>
@@ -275,9 +248,9 @@ export default function Home() {
               ))
             )}
           </CardContent>
-        </Card>
+          </Card>
 
-        <Card>
+          <Card className="border-white/70 bg-white/75 shadow-[0_8px_32px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
           <CardHeader>
             <CardTitle className="text-lg">ステータス別企業数</CardTitle>
             <CardDescription>選考段階ごとの分布</CardDescription>
@@ -291,14 +264,18 @@ export default function Home() {
               </div>
             ) : (
               statusEntries.map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between rounded-lg border p-3">
+                <div
+                  key={status}
+                  className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/65"
+                >
                   <StatusBadge status={status} />
                   <span className="font-semibold">{count} 社</span>
                 </div>
               ))
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );
