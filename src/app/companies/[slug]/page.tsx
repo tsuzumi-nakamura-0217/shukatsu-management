@@ -54,6 +54,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge, PriorityBadge } from "@/components/badges";
 import { MarkdownEditor, MarkdownViewer } from "@/components/markdown-editor";
+import { NotionEditor } from "@/components/notion-editor";
 import { toast } from "sonner";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
 
@@ -936,7 +937,7 @@ export default function CompanyDetailPage({
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>
-          <MarkdownEditor value={memoContent} onChange={setMemoContent} height={500} />
+          <NotionEditor content={memoContent} onChange={setMemoContent} />
         </TabsContent>
       </Tabs>
     </div>

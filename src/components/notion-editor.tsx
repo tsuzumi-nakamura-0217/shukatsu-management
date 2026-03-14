@@ -1,0 +1,363 @@
+"use client";
+
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { Image } from "@tiptap/extension-image";
+import { Placeholder } from "@tiptap/extension-placeholder";
+import { useEffect, useRef, useCallback } from "react";
+import {
+  Bold,
+  Italic,
+  Strikethrough,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Table as TableIcon,
+  ImagePlus,
+  Undo,
+  Redo,
+  Code,
+  Quote,
+  Minus,
+  Pilcrow,
+  TableCellsMerge,
+  Plus,
+  Trash2,
+} from "lucide-react";
+
+// ── ツールバーボタン ──────────────────────────────
+function ToolbarButton({
+  onClick,
+  isActive = false,
+  disabled = false,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  isActive?: boolean;
+  disabled?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`notion-toolbar-btn ${isActive ? "is-active" : ""}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ToolbarDivider() {
+  return <div className="notion-toolbar-divider" />;
+}
+
+// ── メインエディタ ──────────────────────────────
+interface NotionEditorProps {
+  content: string;
+  onChange: (json: string) => void;
+}
+
+export function NotionEditor({ content, onChange }: NotionEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isInternalUpdate = useRef(false);
+
+  // JSON or plain-text → Tiptap content の解析
+  const parseContent = useCallback((raw: string) => {
+    if (!raw) return undefined;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.type === "doc") return parsed;
+    } catch {
+      // plain text fallback – 改行ごとに paragraph に変換
+    }
+    // プレーンテキスト → doc 変換
+    const paragraphs = raw.split("\n").map((line) => ({
+      type: "paragraph" as const,
+      content: line ? [{ type: "text" as const, text: line }] : [],
+    }));
+    return { type: "doc" as const, content: paragraphs };
+  }, []);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+      }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      Image.configure({ allowBase64: true, inline: false }),
+      Placeholder.configure({
+        placeholder: "メモを入力してください… (/ でコマンド)",
+      }),
+    ],
+    content: parseContent(content),
+    onUpdate: ({ editor }) => {
+      isInternalUpdate.current = true;
+      onChange(JSON.stringify(editor.getJSON()));
+    },
+    editorProps: {
+      attributes: {
+        class: "notion-editor-content",
+      },
+      handleDrop: (view, event) => {
+        const files = event.dataTransfer?.files;
+        if (files && files.length > 0) {
+          event.preventDefault();
+          Array.from(files).forEach((file) => {
+            if (file.type.startsWith("image/")) {
+              insertImageFromFile(file);
+            }
+          });
+          return true;
+        }
+        return false;
+      },
+      handlePaste: (view, event) => {
+        const items = event.clipboardData?.items;
+        if (items) {
+          for (const item of Array.from(items)) {
+            if (item.type.startsWith("image/")) {
+              event.preventDefault();
+              const file = item.getAsFile();
+              if (file) insertImageFromFile(file);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+    },
+  });
+
+  // 外部からの content 変更を反映（初回ロード後のfetch等）
+  useEffect(() => {
+    if (!editor || isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+    const parsed = parseContent(content);
+    if (parsed) {
+      editor.commands.setContent(parsed);
+    }
+  }, [content, editor, parseContent]);
+
+  // 画像ファイル → base64 → エディタに挿入
+  const insertImageFromFile = useCallback(
+    (file: File) => {
+      if (!editor) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        editor.chain().focus().setImage({ src: base64 }).run();
+      };
+      reader.readAsDataURL(file);
+    },
+    [editor]
+  );
+
+  const handleImageUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      insertImageFromFile(file);
+      e.target.value = "";
+    }
+  };
+
+  if (!editor) return null;
+
+  return (
+    <div className="notion-editor-wrapper">
+      {/* ── ツールバー ── */}
+      <div className="notion-toolbar">
+        {/* テキスト書式 */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          isActive={editor.isActive("paragraph")}
+          title="段落"
+        >
+          <Pilcrow className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 1 })}
+          title="見出し1"
+        >
+          <Heading1 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 2 })}
+          title="見出し2"
+        >
+          <Heading2 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 3 })}
+          title="見出し3"
+        >
+          <Heading3 className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* インラインスタイル */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          isActive={editor.isActive("bold")}
+          title="太字"
+        >
+          <Bold className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          isActive={editor.isActive("italic")}
+          title="イタリック"
+        >
+          <Italic className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          isActive={editor.isActive("strike")}
+          title="取り消し線"
+        >
+          <Strikethrough className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          isActive={editor.isActive("code")}
+          title="コード"
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* リスト */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive("bulletList")}
+          title="箇条書き"
+        >
+          <List className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive("orderedList")}
+          title="番号付きリスト"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive("blockquote")}
+          title="引用"
+        >
+          <Quote className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          title="水平線"
+        >
+          <Minus className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* テーブル */}
+        <ToolbarButton
+          onClick={() =>
+            editor
+              .chain()
+              .focus()
+              .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+              .run()
+          }
+          title="テーブル挿入"
+        >
+          <TableIcon className="h-4 w-4" />
+        </ToolbarButton>
+        {editor.isActive("table") && (
+          <>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              title="列を追加"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              title="行を追加"
+            >
+              <TableCellsMerge className="h-3.5 w-3.5" />
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              title="テーブル削除"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </ToolbarButton>
+          </>
+        )}
+
+        <ToolbarDivider />
+
+        {/* 画像 */}
+        <ToolbarButton onClick={handleImageUpload} title="画像を挿入">
+          <ImagePlus className="h-4 w-4" />
+        </ToolbarButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        <ToolbarDivider />
+
+        {/* Undo / Redo */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          title="元に戻す"
+        >
+          <Undo className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          title="やり直す"
+        >
+          <Redo className="h-4 w-4" />
+        </ToolbarButton>
+      </div>
+
+      {/* ── エディタ本体 ── */}
+      <EditorContent editor={editor} />
+    </div>
+  );
+}

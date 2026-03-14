@@ -124,3 +124,257 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Notion-like Tiptap Editor
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.notion-editor-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--card);
+  overflow: hidden;
+}
+
+/* ── ツールバー ── */
+.notion-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.notion-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.notion-toolbar-btn:hover {
+  background: var(--accent);
+}
+
+.notion-toolbar-btn.is-active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.notion-toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.notion-toolbar-divider {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* ── エディタ本体 ── */
+.notion-editor-content {
+  padding: 1.25rem 1.5rem;
+  min-height: 400px;
+  outline: none;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--foreground);
+}
+
+.notion-editor-content > *:first-child {
+  margin-top: 0;
+}
+
+/* 見出し */
+.notion-editor-content h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+  line-height: 1.3;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.notion-editor-content h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  line-height: 1.35;
+}
+
+.notion-editor-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 1rem 0 0.375rem;
+  line-height: 1.4;
+}
+
+/* 段落 */
+.notion-editor-content p {
+  margin: 0.5rem 0;
+}
+
+/* リスト */
+.notion-editor-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.notion-editor-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.notion-editor-content li {
+  margin: 0.15rem 0;
+}
+
+.notion-editor-content li > ul,
+.notion-editor-content li > ol {
+  margin: 0.15rem 0;
+}
+
+/* インラインコード */
+.notion-editor-content code {
+  background: var(--muted);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875em;
+  font-family: var(--font-mono), monospace;
+}
+
+/* コードブロック */
+.notion-editor-content pre {
+  background: var(--muted);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.notion-editor-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* 引用 */
+.notion-editor-content blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* 区切り線 */
+.notion-editor-content hr {
+  border: none;
+  border-top: 2px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* テーブル */
+.notion-editor-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+}
+
+.notion-editor-content th,
+.notion-editor-content td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  min-width: 80px;
+  vertical-align: top;
+  position: relative;
+}
+
+.notion-editor-content th {
+  background: var(--muted);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.notion-editor-content td {
+  font-size: 0.875rem;
+}
+
+/* テーブル選択ハイライト */
+.notion-editor-content .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: oklch(0.6 0.15 250 / 12%);
+  pointer-events: none;
+}
+
+/* 画像 */
+.notion-editor-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.75rem 0;
+  cursor: default;
+}
+
+.notion-editor-content img.ProseMirror-selectednode {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* プレースホルダー */
+.notion-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  height: 0;
+}
+
+/* 太字 / イタリック / 取り消し線 */
+.notion-editor-content strong {
+  font-weight: 700;
+}
+.notion-editor-content em {
+  font-style: italic;
+}
+.notion-editor-content s {
+  text-decoration: line-through;
+}
+
+/* テーブルリサイズカラムハンドル */
+.notion-editor-content .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--primary);
+  cursor: col-resize;
+}
+
+.notion-editor-content .tableWrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.notion-editor-content .resize-cursor {
+  cursor: col-resize;
+}
