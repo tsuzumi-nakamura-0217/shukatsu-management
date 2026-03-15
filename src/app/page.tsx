@@ -9,6 +9,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { ExportButtons } from "@/components/export-buttons";
 import { StatusBadge } from "@/components/badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,8 @@ export default function Home() {
             )}
             更新
           </Button>
-      </div>
+          <ExportButtons />
+        </div>
 
       {error && (
         <Card className="border-destructive/40 bg-destructive/5">

@@ -810,3 +810,50 @@ export async function getCalendarEvents(): Promise<
 
   return events;
 }
+
+// ============================================================
+// Export operations
+// ============================================================
+
+export async function getExportData() {
+  const [
+    companies,
+    tasks,
+    selfAnalysis,
+    templates,
+    config,
+  ] = await Promise.all([
+    getAllCompanies(),
+    getAllTasks(),
+    getAllSelfAnalysis(),
+    getAllTemplates(),
+    getConfig(),
+  ]);
+
+  // Gather all interviews and ES documents for all companies
+  const companyInterviews: Record<string, Interview[]> = {};
+  const companyESDocuments: Record<string, ESDocument[]> = {};
+
+  await Promise.all(
+    companies.map(async (company) => {
+      const [interviews, esDocs] = await Promise.all([
+        getInterviews(company.slug),
+        getESDocuments(company.slug),
+      ]);
+      companyInterviews[company.slug] = interviews;
+      companyESDocuments[company.slug] = esDocs;
+    })
+  );
+
+  return {
+    companies,
+    tasks,
+    selfAnalysis,
+    templates,
+    config,
+    interviews: Object.values(companyInterviews).flat(),
+    esDocuments: Object.values(companyESDocuments).flat(),
+    version: "1.0.0",
+    exportedAt: new Date().toISOString(),
+  };
+}
