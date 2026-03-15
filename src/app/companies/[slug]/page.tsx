@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusBadge, PriorityBadge } from "@/components/badges";
+import { StatusBadge } from "@/components/badges";
 import { MarkdownEditor, MarkdownViewer } from "@/components/markdown-editor";
 import { NotionEditor } from "@/components/notion-editor";
 import { toast } from "sonner";
@@ -87,7 +87,7 @@ export default function CompanyDetailPage({
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
 
   // New item forms
-  const [newTask, setNewTask] = useState<{ title: string; category: string; priority: string; deadline: string; memo: string; completed: boolean }>({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
+  const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; completed: boolean }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", completed: false });
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
   const [newEs, setNewEs] = useState({ title: "", content: "" });
 
@@ -159,7 +159,7 @@ export default function CompanyDetailPage({
       if (res.ok) {
         toast.success("タスクを追加しました");
         setNewTaskOpen(false);
-        setNewTask({ title: "", category: "その他", priority: "medium", deadline: "", memo: "", completed: false });
+        setNewTask({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", completed: false });
         fetchAll();
       }
     } finally {
@@ -768,15 +768,12 @@ export default function CompanyDetailPage({
                     </Select>
                   </div>
                   <div>
-                    <Label>優先度</Label>
-                    <Select value={newTask.priority} onValueChange={(v) => setNewTask({ ...newTask, priority: v as "high" | "medium" | "low" })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="high">高</SelectItem>
-                        <SelectItem value="medium">中</SelectItem>
-                        <SelectItem value="low">低</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>実施日</Label>
+                    <Input
+                      type="date"
+                      value={newTask.executionDate}
+                      onChange={(e) => setNewTask({ ...newTask, executionDate: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label>締切</Label>
@@ -846,24 +843,16 @@ export default function CompanyDetailPage({
                             ))}
                           </SelectContent>
                         </Select>
-                        <Select
-                          value={editingTask.priority}
-                          onValueChange={(value) =>
+                        <Input
+                          type="date"
+                          value={editingTask.executionDate}
+                          onChange={(e) =>
                             setEditingTask({
                               ...editingTask,
-                              priority: value as "high" | "medium" | "low",
+                              executionDate: e.target.value,
                             })
                           }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="high">高</SelectItem>
-                            <SelectItem value="medium">中</SelectItem>
-                            <SelectItem value="low">低</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        />
                         <Input
                           type="date"
                           value={editingTask.deadline}
@@ -912,7 +901,12 @@ export default function CompanyDetailPage({
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                        <PriorityBadge priority={task.priority} />
+                        {task.executionDate && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
+                            <span className="font-medium text-[10px] uppercase text-slate-400">実施</span>
+                            <span>{task.executionDate}</span>
+                          </div>
+                        )}
                         {task.deadline && <span className="text-xs text-muted-foreground">{task.deadline}</span>}
                         <Button variant="outline" size="sm" onClick={() => setEditingTask(task)}>
                           <Edit className="mr-1 h-3 w-3" /> 編集
