@@ -31,9 +31,9 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
           "カテゴリ": {
             select: { name: task.category },
           },
-          "優先度": {
-            select: { name: task.priority },
-          },
+          "日付": task.executionDate
+            ? { date: { start: task.executionDate } }
+            : { date: null },
           "締切": task.deadline
             ? { date: { start: task.deadline } }
             : { date: null },
@@ -60,9 +60,9 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
           "カテゴリ": {
             select: { name: task.category },
           },
-          "優先度": {
-            select: { name: task.priority },
-          },
+          "日付": task.executionDate
+            ? { date: { start: task.executionDate } }
+            : { date: null },
           "締切": task.deadline
             ? { date: { start: task.deadline } }
             : { date: null },

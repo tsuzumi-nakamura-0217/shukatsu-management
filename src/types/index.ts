@@ -39,7 +39,7 @@ export interface Task {
   companySlug: string;
   companyName?: string;
   category: string;
-  priority: "high" | "medium" | "low";
+  executionDate: string;
   deadline: string;
   completed: boolean;
   memo: string;
@@ -52,7 +52,7 @@ export interface TaskCreate {
   title: string;
   companySlug: string;
   category?: string;
-  priority?: "high" | "medium" | "low";
+  executionDate?: string;
   deadline?: string;
   memo?: string;
 }

@@ -31,7 +31,7 @@ CREATE TABLE tasks (
   company_name TEXT DEFAULT '',
   title TEXT NOT NULL,
   category TEXT DEFAULT 'その他',
-  priority TEXT NOT NULL DEFAULT 'medium',
+  execution_date DATE,
   deadline DATE,
   completed BOOLEAN DEFAULT FALSE,
   memo TEXT DEFAULT '',

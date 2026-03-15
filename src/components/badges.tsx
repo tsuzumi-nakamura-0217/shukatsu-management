@@ -15,17 +15,6 @@ const statusColors: Record<string, string> = {
   "辞退": "bg-slate-100 text-slate-800 border-slate-200",
 };
 
-const priorityColors: Record<string, string> = {
-  high: "bg-red-100 text-red-800 border-red-200",
-  medium: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  low: "bg-green-100 text-green-800 border-green-200",
-};
-
-const priorityLabels: Record<string, string> = {
-  high: "高",
-  medium: "中",
-  low: "低",
-};
 
 export function StatusBadge({ status }: { status: string }) {
   return (
@@ -41,19 +30,6 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function PriorityBadge({ priority }: { priority: string }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "font-medium",
-        priorityColors[priority] || "bg-gray-100 text-gray-800"
-      )}
-    >
-      {priorityLabels[priority] || priority}
-    </Badge>
-  );
-}
 
 const tagColors: Record<string, string> = {
   blue: "bg-blue-50 text-blue-700 border-blue-200",

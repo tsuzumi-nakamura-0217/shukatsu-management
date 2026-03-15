@@ -77,7 +77,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     companySlug: (row.company_slug as string) || "",
     companyName: (row.company_name as string) || "",
     category: (row.category as string) || "その他",
-    priority: (row.priority as "high" | "medium" | "low") || "medium",
+    executionDate: toISODate(row.execution_date as string),
     deadline: toISODate(row.deadline as string),
     completed: (row.completed as boolean) || false,
     memo: (row.memo as string) || "",
@@ -336,7 +336,7 @@ export async function createTask(input: TaskCreate): Promise<Task> {
     company_name: company?.name || "",
     title: input.title,
     category: input.category || "その他",
-    priority: input.priority || "medium",
+    execution_date: input.executionDate || null,
     deadline: input.deadline || null,
     completed: false,
     memo: input.memo || "",
@@ -366,7 +366,8 @@ export async function updateTask(
 
   if (updates.title !== undefined) dbUpdates.title = updates.title;
   if (updates.category !== undefined) dbUpdates.category = updates.category;
-  if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
+  if (updates.executionDate !== undefined)
+    dbUpdates.execution_date = updates.executionDate || null;
   if (updates.deadline !== undefined)
     dbUpdates.deadline = updates.deadline || null;
   if (updates.completed !== undefined) dbUpdates.completed = updates.completed;

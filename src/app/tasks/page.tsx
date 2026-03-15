@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PriorityBadge } from "@/components/badges";
+import { StatusBadge } from "@/components/badges";
 import { toast } from "sonner";
 import type { Task, AppConfig, Company } from "@/types";
 
@@ -37,7 +37,6 @@ export default function TasksPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
   const [showCompleted, setShowCompleted] = useState(true);
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -48,7 +47,7 @@ export default function TasksPage() {
     title: "",
     companySlug: "",
     category: "その他",
-    priority: "medium" as "high" | "medium" | "low",
+    executionDate: "",
     deadline: "",
     memo: "",
     completed: false,
@@ -118,7 +117,7 @@ export default function TasksPage() {
           title: "",
           companySlug: companies[0]?.slug || "",
           category: config?.taskCategories?.[0] || "その他",
-          priority: "medium",
+          executionDate: "",
           deadline: "",
           memo: "",
           completed: false,
@@ -168,7 +167,6 @@ export default function TasksPage() {
     .filter((t) => {
       if (!showCompleted && t.completed) return false;
       if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
-      if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return t.title.toLowerCase().includes(q) || (t.companyName || "").toLowerCase().includes(q);
@@ -177,10 +175,6 @@ export default function TasksPage() {
     })
     .sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
       if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);
       if (a.deadline) return -1;
       if (b.deadline) return 1;
@@ -252,22 +246,12 @@ export default function TasksPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>優先度</Label>
-                  <Select
-                    value={newTask.priority}
-                    onValueChange={(value) =>
-                      setNewTask({ ...newTask, priority: value as "high" | "medium" | "low" })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">高</SelectItem>
-                      <SelectItem value="medium">中</SelectItem>
-                      <SelectItem value="low">低</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>実施日</Label>
+                  <Input
+                    type="date"
+                    value={newTask.executionDate}
+                    onChange={(e) => setNewTask({ ...newTask, executionDate: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>締切</Label>
@@ -339,17 +323,6 @@ export default function TasksPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-full sm:w-32">
-            <SelectValue placeholder="優先度" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全優先度</SelectItem>
-            <SelectItem value="high">高</SelectItem>
-            <SelectItem value="medium">中</SelectItem>
-            <SelectItem value="low">低</SelectItem>
-          </SelectContent>
-        </Select>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={showCompleted} onCheckedChange={(v) => setShowCompleted(!!v)} />
           完了済みも表示
@@ -406,19 +379,12 @@ export default function TasksPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Select
-                        value={editingTask.priority}
-                        onValueChange={(value) =>
-                          setEditingTask({ ...editingTask, priority: value as "high" | "medium" | "low" })
-                        }
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="high">高</SelectItem>
-                          <SelectItem value="medium">中</SelectItem>
-                          <SelectItem value="low">低</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        type="date"
+                        value={editingTask.executionDate}
+                        onChange={(e) => setEditingTask({ ...editingTask, executionDate: e.target.value })}
+                        placeholder="実施日"
+                      />
                       <Input
                         type="date"
                         value={editingTask.deadline}
@@ -466,11 +432,19 @@ export default function TasksPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 md:shrink-0">
                       <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                      <PriorityBadge priority={task.priority} />
+                      {task.executionDate && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
+                          <span className="font-medium text-[10px] uppercase text-slate-400">実施</span>
+                          <span>{task.executionDate}</span>
+                        </div>
+                      )}
                       {task.deadline && (
-                        <span className={`text-xs ${new Date(task.deadline) < new Date() && !task.completed ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
-                          {task.deadline}
-                        </span>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
+                           <span className="font-medium text-[10px] uppercase text-slate-400">締切</span>
+                          <span className={new Date(task.deadline) < new Date() && !task.completed ? "text-red-600 font-medium" : ""}>
+                            {task.deadline}
+                          </span>
+                        </div>
                       )}
                       <Button variant="ghost" size="sm" onClick={() => setEditingTask(task)}>
                         <Edit className="h-3 w-3 text-muted-foreground" />

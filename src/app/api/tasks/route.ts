@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
       const { searchParams } = new URL(request.url);
       const companySlug = searchParams.get("companySlug");
       const category = searchParams.get("category");
-      const priority = searchParams.get("priority");
       const completed = searchParams.get("completed");
 
       let filtered = tasks;
@@ -26,9 +25,6 @@ export async function GET(request: NextRequest) {
       }
       if (category) {
         filtered = filtered.filter((t) => t.category === category);
-      }
-      if (priority) {
-        filtered = filtered.filter((t) => t.priority === priority);
       }
       if (completed !== null && completed !== undefined) {
         filtered = filtered.filter(

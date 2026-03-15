@@ -171,7 +171,7 @@ export default function Home() {
               <ListChecks className="h-5 w-5" />
               近日締切タスク
             </CardTitle>
-            <CardDescription>期限が近い未完了タスクを優先度順で確認</CardDescription>
+            <CardDescription>期限が近い未完了タスクを確認</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {loading ? (
@@ -192,13 +192,6 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{task.category}</Badge>
-                    <Badge variant="outline" className="font-medium">
-                      {task.priority === "high"
-                        ? "優先度: 高"
-                        : task.priority === "low"
-                        ? "優先度: 低"
-                        : "優先度: 中"}
-                    </Badge>
                     <Badge variant="secondary">{formatDate(task.deadline)}</Badge>
                   </div>
                 </div>
