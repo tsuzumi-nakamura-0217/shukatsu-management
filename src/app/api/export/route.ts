@@ -1,15 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getExportData } from "@/lib/data";
+import { withAuthenticatedUser } from "@/lib/auth-server";
 
-export async function GET() {
-  try {
-    const data = await getExportData();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Export error:", error);
-    return NextResponse.json(
-      { error: "Failed to export data" },
-      { status: 500 }
-    );
-  }
+export async function GET(request: NextRequest) {
+  return withAuthenticatedUser(request, async () => {
+    try {
+      const data = await getExportData();
+      return NextResponse.json(data);
+    } catch (error) {
+      console.error("Export error:", error);
+      return NextResponse.json(
+        { error: "Failed to export data" },
+        { status: 500 }
+      );
+    }
+  });
 }

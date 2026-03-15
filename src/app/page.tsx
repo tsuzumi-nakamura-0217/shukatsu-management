@@ -6,8 +6,6 @@ import {
   CalendarClock,
   FileText,
   ListChecks,
-  Loader2,
-  RefreshCw,
 } from "lucide-react";
 import { ExportButtons } from "@/components/export-buttons";
 import { StatusBadge } from "@/components/badges";
@@ -36,13 +34,10 @@ function formatDate(value: string): string {
 export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchStats(showRefreshing = false) {
-    if (showRefreshing) setRefreshing(true);
-    else setLoading(true);
-
+  async function fetchStats() {
+    setLoading(true);
     setError(null);
     try {
       const response = await fetch("/api/stats");
@@ -56,7 +51,6 @@ export default function Home() {
       setError("ダッシュボードデータの取得に失敗しました。時間をおいて再試行してください。");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
@@ -83,18 +77,6 @@ export default function Home() {
               企業応募から選考進捗まで、今日の状況をまとめて確認できます。
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => fetchStats(true)}
-            disabled={loading || refreshing}
-          >
-            {refreshing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            更新
-          </Button>
           <ExportButtons />
         </div>
 
