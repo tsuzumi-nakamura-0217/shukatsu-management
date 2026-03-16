@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Briefcase,
   CalendarClock,
@@ -87,65 +88,75 @@ export default function Home() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>企業数</CardDescription>
-              <CardTitle className="text-2xl">{stats?.totalCompanies ?? 0}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Briefcase className="h-3.5 w-3.5" />
-                現在管理している企業
-              </div>
-            </CardContent>
-        </Card>
+        <Link href="/companies">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription>企業数</CardDescription>
+                <CardTitle className="text-2xl">{stats?.totalCompanies ?? 0}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  現在管理している企業
+                </div>
+              </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>タスク完了率</CardDescription>
-              <CardTitle className="text-2xl">{completionRate}%</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs text-muted-foreground">
-                {stats?.completedTasks ?? 0}/{stats?.totalTasks ?? 0} 件完了
-              </div>
-            </CardContent>
-        </Card>
+        <Link href="/tasks">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription>タスク完了率</CardDescription>
+                <CardTitle className="text-2xl">{completionRate}%</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xs text-muted-foreground">
+                  {stats?.completedTasks ?? 0}/{stats?.totalTasks ?? 0} 件完了
+                </div>
+              </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>通過率</CardDescription>
-              <CardTitle className="text-2xl">{stats?.passRate ?? 0}%</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs text-muted-foreground">選考結果が出た企業ベース</div>
-            </CardContent>
-        </Card>
+        <Link href="/companies">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription>通過率</CardDescription>
+                <CardTitle className="text-2xl">{stats?.passRate ?? 0}%</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xs text-muted-foreground">選考結果が出た企業ベース</div>
+              </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>面接総数</CardDescription>
-              <CardTitle className="text-2xl">{stats?.totalInterviews ?? 0}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs text-muted-foreground">
-                通過 {stats?.interviewResultCounts.通過 ?? 0} / 不合格 {stats?.interviewResultCounts.不合格 ?? 0}
-              </div>
-            </CardContent>
-        </Card>
+        <Link href="/calendar">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription>面接総数</CardDescription>
+                <CardTitle className="text-2xl">{stats?.totalInterviews ?? 0}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xs text-muted-foreground">
+                  通過 {stats?.interviewResultCounts.通過 ?? 0} / 不合格 {stats?.interviewResultCounts.不合格 ?? 0}
+                </div>
+              </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>ES件数</CardDescription>
-              <CardTitle className="text-2xl">{stats?.totalESDocuments ?? 0}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileText className="h-3.5 w-3.5" />
-                登録済みエントリーシート
-              </div>
-            </CardContent>
-        </Card>
+        <Link href="/companies">
+          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardDescription>ES件数</CardDescription>
+                <CardTitle className="text-2xl">{stats?.totalESDocuments ?? 0}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5" />
+                  登録済みエントリーシート
+                </div>
+              </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div>
@@ -166,9 +177,10 @@ export default function Home() {
               </div>
             ) : (
               stats?.upcomingDeadlines.map((task) => (
-                <div
+                <Link
                   key={task.id}
-                  className="flex flex-col gap-2 rounded-xl border bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+                  href={`/companies/${task.companySlug}?tab=tasks`}
+                  className="flex flex-col gap-2 rounded-xl border bg-background p-3 transition-colors hover:bg-accent sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
                     <p className="font-medium">{task.title}</p>
@@ -178,7 +190,7 @@ export default function Home() {
                     <Badge variant="outline">{task.category}</Badge>
                     <Badge variant="secondary">{formatDate(task.deadline)}</Badge>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>
@@ -203,9 +215,10 @@ export default function Home() {
               </div>
             ) : (
               stats?.upcomingInterviews.map((interview) => (
-                <div
+                <Link
                   key={interview.id}
-                  className="flex items-center justify-between rounded-xl border bg-background p-3"
+                  href={`/companies/${interview.companySlug}?tab=interviews`}
+                  className="flex items-center justify-between rounded-xl border bg-background p-3 transition-colors hover:bg-accent"
                 >
                   <div>
                     <p className="font-medium">{interview.companyName}</p>
@@ -215,7 +228,7 @@ export default function Home() {
                     <Badge variant="outline">{interview.result}</Badge>
                     <Badge variant="secondary">{formatDate(interview.date)}</Badge>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>
@@ -235,13 +248,14 @@ export default function Home() {
               </div>
             ) : (
               statusEntries.map(([status, count]) => (
-                <div
+                <Link
                   key={status}
-                  className="flex items-center justify-between rounded-xl border bg-background p-3"
+                  href={`/companies?status=${encodeURIComponent(status)}`}
+                  className="flex items-center justify-between rounded-xl border bg-background p-3 transition-colors hover:bg-accent"
                 >
                   <StatusBadge status={status} />
                   <span className="font-semibold">{count} 社</span>
-                </div>
+                </Link>
               ))
             )}
           </CardContent>

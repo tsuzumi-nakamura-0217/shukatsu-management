@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Plus, Search, LayoutGrid, List, Loader2 } from "lucide-react";
 import {
   Card,
@@ -33,10 +34,13 @@ import { toast } from "sonner";
 import type { Company, AppConfig } from "@/types";
 
 export default function CompaniesPage() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status") || "all";
+
   const [companies, setCompanies] = useState<Company[]>([]);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);

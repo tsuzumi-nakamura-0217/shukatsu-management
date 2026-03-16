@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ExternalLink,
@@ -65,6 +65,8 @@ export default function CompanyDetailPage({
 }) {
   const { slug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "es";
   const [company, setCompany] = useState<Company | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -461,7 +463,7 @@ export default function CompanyDetailPage({
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="es" className="space-y-4">
+      <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="es" className="gap-2">
             <FileText className="h-4 w-4" /> ES・志望動機
