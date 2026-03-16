@@ -22,14 +22,9 @@ export async function POST(request: NextRequest) {
       // Ensure the sync directory exists
       await fs.mkdir(syncDir, { recursive: true });
       
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const backupPath = path.join(syncDir, `backup-${timestamp}.json`);
       const latestPath = path.join(syncDir, "latest.json");
       
-      // Write the full backup
-      await fs.writeFile(backupPath, JSON.stringify(data, null, 2));
-      
-      // Update the 'latest' symlink or file
+      // Update the 'latest' file
       await fs.writeFile(latestPath, JSON.stringify(data, null, 2));
 
       // Also write individual files for easier browsing
@@ -42,8 +37,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ 
         message: "Local synchronization successful",
-        path: syncDir,
-        timestamp 
+        path: syncDir
       });
     } catch (error) {
       console.error("Local sync error:", error);
