@@ -37,7 +37,7 @@ export default function TasksPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [showCompleted, setShowCompleted] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("incomplete"); // all, incomplete, 未着手, 進行中, 完了
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
@@ -50,7 +50,7 @@ export default function TasksPage() {
     executionDate: "",
     deadline: "",
     memo: "",
-    completed: false,
+    status: "未着手" as "未着手" | "進行中" | "完了",
   });
 
   function fetchTasks() {
@@ -69,11 +69,11 @@ export default function TasksPage() {
     });
   }, []);
 
-  const handleToggle = async (task: Task) => {
+  const handleStatusChange = async (task: Task, newStatus: "未着手" | "進行中" | "完了") => {
     await fetch("/api/tasks", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: task.id, completed: !task.completed }),
+      body: JSON.stringify({ id: task.id, status: newStatus }),
     });
     fetchTasks();
   };
@@ -103,14 +103,6 @@ export default function TasksPage() {
         body: JSON.stringify(newTask),
       });
       if (res.ok) {
-        const created = await res.json();
-        if (newTask.completed) {
-          await fetch("/api/tasks", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: created.id, completed: true }),
-          });
-        }
         toast.success("タスクを作成しました");
         setNewTaskOpen(false);
         setNewTask({
@@ -120,7 +112,7 @@ export default function TasksPage() {
           executionDate: "",
           deadline: "",
           memo: "",
-          completed: false,
+          status: "未着手",
         });
         fetchTasks();
       } else {
@@ -165,7 +157,8 @@ export default function TasksPage() {
 
   const filtered = tasks
     .filter((t) => {
-      if (!showCompleted && t.completed) return false;
+      if (statusFilter === "incomplete" && t.status === "完了") return false;
+      if (statusFilter !== "all" && statusFilter !== "incomplete" && t.status !== statusFilter) return false;
       if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -174,7 +167,8 @@ export default function TasksPage() {
       return true;
     })
     .sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      if (a.status === "完了" && b.status !== "完了") return 1;
+      if (a.status !== "完了" && b.status === "完了") return -1;
       if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);
       if (a.deadline) return -1;
       if (b.deadline) return 1;
@@ -187,7 +181,7 @@ export default function TasksPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">タスク管理</h1>
           <p className="text-muted-foreground">
-            {tasks.filter((t) => !t.completed).length} 件の未完了タスク
+            {tasks.filter((t) => t.status !== "完了").length} 件の未完了タスク
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
@@ -268,13 +262,22 @@ export default function TasksPage() {
                     onChange={(e) => setNewTask({ ...newTask, memo: e.target.value })}
                   />
                 </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={newTask.completed}
-                    onCheckedChange={(v) => setNewTask({ ...newTask, completed: !!v })}
-                  />
-                  完了済みとして作成
-                </label>
+                <div>
+                  <Label>ステータス</Label>
+                  <Select
+                    value={newTask.status}
+                    onValueChange={(value: any) => setNewTask({ ...newTask, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="未着手">未着手</SelectItem>
+                      <SelectItem value="進行中">進行中</SelectItem>
+                      <SelectItem value="完了">完了</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" disabled={isCreatingTask} onClick={() => setNewTaskOpen(false)}>キャンセル</Button>
@@ -314,7 +317,7 @@ export default function TasksPage() {
         />
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="カテゴリ" />
+            <SelectValue placeholder="カテゴリ固定" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">全カテゴリ</SelectItem>
@@ -323,10 +326,18 @@ export default function TasksPage() {
             ))}
           </SelectContent>
         </Select>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={showCompleted} onCheckedChange={(v) => setShowCompleted(!!v)} />
-          完了済みも表示
-        </label>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="ステータス" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべて表示</SelectItem>
+            <SelectItem value="incomplete">未完了のみ</SelectItem>
+            <SelectItem value="未着手">未着手</SelectItem>
+            <SelectItem value="進行中">進行中</SelectItem>
+            <SelectItem value="完了">完了</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Task List */}
@@ -396,13 +407,19 @@ export default function TasksPage() {
                       onChange={(e) => setEditingTask({ ...editingTask, memo: e.target.value })}
                     />
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={editingTask.completed}
-                          onCheckedChange={(v) => setEditingTask({ ...editingTask, completed: !!v })}
-                        />
-                        完了
-                      </label>
+                      <div className="w-32">
+                        <Select
+                          value={editingTask.status}
+                          onValueChange={(value: any) => setEditingTask({ ...editingTask, status: value })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="未着手">未着手</SelectItem>
+                            <SelectItem value="進行中">進行中</SelectItem>
+                            <SelectItem value="完了">完了</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>キャンセル</Button>
                         <Button size="sm" onClick={handleSaveTask}>保存</Button>
@@ -411,10 +428,22 @@ export default function TasksPage() {
                   </div>
                 ) : (
                   <>
-                    <Checkbox checked={task.completed} onCheckedChange={() => handleToggle(task)} />
-                    <div className="flex-1 min-w-0">
+                    <Select
+                      value={task.status}
+                      onValueChange={(value: any) => handleStatusChange(task, value)}
+                    >
+                      <SelectTrigger className="w-[100px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="未着手">未着手</SelectItem>
+                        <SelectItem value="進行中">進行中</SelectItem>
+                        <SelectItem value="完了">完了</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex-1 min-w-0 md:ml-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className={`text-sm font-medium truncate ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+                        <p className={`text-sm font-medium truncate ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>
                           {task.title}
                         </p>
                         {task.notionPageId && (
@@ -441,7 +470,7 @@ export default function TasksPage() {
                       {task.deadline && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
                            <span className="font-medium text-[10px] uppercase text-slate-400">締切</span>
-                          <span className={new Date(task.deadline) < new Date() && !task.completed ? "text-red-600 font-medium" : ""}>
+                          <span className={new Date(task.deadline) < new Date() && task.status !== "完了" ? "text-red-600 font-medium" : ""}>
                             {task.deadline}
                           </span>
                         </div>

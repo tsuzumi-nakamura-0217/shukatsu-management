@@ -37,8 +37,8 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
           "締切": task.deadline
             ? { date: { start: task.deadline } }
             : { date: null },
-          "完了": {
-            checkbox: task.completed,
+          "ステータス": {
+            select: { name: task.status },
           },
           "メモ": {
             rich_text: [{ text: { content: task.memo || "" } }],
@@ -66,8 +66,8 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
           "締切": task.deadline
             ? { date: { start: task.deadline } }
             : { date: null },
-          "完了": {
-            checkbox: task.completed,
+          "ステータス": {
+            select: { name: task.status },
           },
           "メモ": {
             rich_text: [{ text: { content: task.memo || "" } }],

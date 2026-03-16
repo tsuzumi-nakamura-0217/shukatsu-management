@@ -87,7 +87,7 @@ export default function CompanyDetailPage({
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
 
   // New item forms
-  const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; completed: boolean }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", completed: false });
+  const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
   const [newEs, setNewEs] = useState({ title: "", content: "" });
 
@@ -159,7 +159,7 @@ export default function CompanyDetailPage({
       if (res.ok) {
         toast.success("タスクを追加しました");
         setNewTaskOpen(false);
-        setNewTask({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", completed: false });
+        setNewTask({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
         fetchAll();
       }
     } finally {
@@ -167,11 +167,11 @@ export default function CompanyDetailPage({
     }
   };
 
-  const handleToggleTask = async (task: Task) => {
+  const handleStatusChangeTask = async (task: Task, newStatus: "未着手" | "進行中" | "完了") => {
     await fetch("/api/tasks", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: task.id, completed: !task.completed }),
+      body: JSON.stringify({ id: task.id, status: newStatus }),
     });
     fetchAll();
   };
@@ -783,15 +783,17 @@ export default function CompanyDetailPage({
                     <Label>メモ</Label>
                     <Textarea value={newTask.memo} onChange={(e) => setNewTask({ ...newTask, memo: e.target.value })} />
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={newTask.completed}
-                      onCheckedChange={(v) =>
-                        setNewTask({ ...newTask, completed: !!v })
-                      }
-                    />
-                    完了済みとして作成
-                  </label>
+                  <div className="space-y-2 pt-2">
+                    <Label>ステータス</Label>
+                    <Select value={newTask.status} onValueChange={(v: any) => setNewTask({ ...newTask, status: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="未着手">未着手</SelectItem>
+                        <SelectItem value="進行中">進行中</SelectItem>
+                        <SelectItem value="完了">完了</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
@@ -872,18 +874,24 @@ export default function CompanyDetailPage({
                         placeholder="メモ"
                       />
                       <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={editingTask.completed}
-                            onCheckedChange={(v) =>
+                        <div className="w-32">
+                          <Select
+                            value={editingTask.status}
+                            onValueChange={(v: any) =>
                               setEditingTask({
                                 ...editingTask,
-                                completed: !!v,
+                                status: v,
                               })
                             }
-                          />
-                          完了
-                        </label>
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="未着手">未着手</SelectItem>
+                              <SelectItem value="進行中">進行中</SelectItem>
+                              <SelectItem value="完了">完了</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
                             キャンセル
@@ -894,11 +902,23 @@ export default function CompanyDetailPage({
                     </div>
                   ) : (
                     <>
-                      <Checkbox checked={task.completed} onCheckedChange={() => handleToggleTask(task)} />
-                      <div className="flex-1">
-                        <p className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
-                        {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
-                      </div>
+                    <div className="w-24">
+                      <Select
+                        value={task.status}
+                        onValueChange={(v: any) => handleStatusChangeTask(task, v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="未着手">未着手</SelectItem>
+                          <SelectItem value="進行中">進行中</SelectItem>
+                          <SelectItem value="完了">完了</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
+                      {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
+                    </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{task.category}</Badge>
                         {task.executionDate && (

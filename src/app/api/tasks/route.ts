@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       const { searchParams } = new URL(request.url);
       const companySlug = searchParams.get("companySlug");
       const category = searchParams.get("category");
-      const completed = searchParams.get("completed");
+      const status = searchParams.get("status");
 
       let filtered = tasks;
 
@@ -26,10 +26,8 @@ export async function GET(request: NextRequest) {
       if (category) {
         filtered = filtered.filter((t) => t.category === category);
       }
-      if (completed !== null && completed !== undefined) {
-        filtered = filtered.filter(
-          (t) => t.completed === (completed === "true")
-        );
+      if (status) {
+        filtered = filtered.filter((t) => t.status === status);
       }
 
       return NextResponse.json(filtered);

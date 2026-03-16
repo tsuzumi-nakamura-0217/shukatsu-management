@@ -41,7 +41,7 @@ export interface Task {
   category: string;
   executionDate: string;
   deadline: string;
-  completed: boolean;
+  status: "未着手" | "進行中" | "完了";
   memo: string;
   notionPageId?: string;
   createdAt: string;
@@ -54,6 +54,7 @@ export interface TaskCreate {
   category?: string;
   executionDate?: string;
   deadline?: string;
+  status?: "未着手" | "進行中" | "完了";
   memo?: string;
 }
 

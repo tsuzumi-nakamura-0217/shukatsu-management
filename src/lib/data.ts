@@ -79,7 +79,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     category: (row.category as string) || "その他",
     executionDate: toISODate(row.execution_date as string),
     deadline: toISODate(row.deadline as string),
-    completed: (row.completed as boolean) || false,
+    status: (row.status as "未着手" | "進行中" | "完了") || "未着手",
     memo: (row.memo as string) || "",
     notionPageId: (row.notion_page_id as string) || undefined,
     createdAt: toISODate(row.created_at as string),
@@ -338,7 +338,7 @@ export async function createTask(input: TaskCreate): Promise<Task> {
     category: input.category || "その他",
     execution_date: input.executionDate || null,
     deadline: input.deadline || null,
-    completed: false,
+    status: input.status || "未着手",
     memo: input.memo || "",
   };
 
@@ -370,7 +370,7 @@ export async function updateTask(
     dbUpdates.execution_date = updates.executionDate || null;
   if (updates.deadline !== undefined)
     dbUpdates.deadline = updates.deadline || null;
-  if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
   if (updates.memo !== undefined) dbUpdates.memo = updates.memo;
   if (updates.notionPageId !== undefined)
     dbUpdates.notion_page_id = updates.notionPageId;
@@ -674,7 +674,7 @@ export async function getStats(): Promise<Stats> {
 
   const today = todayStr();
   const upcomingDeadlines = tasks
-    .filter((t) => !t.completed && t.deadline && t.deadline >= today)
+    .filter((t) => t.status !== "完了" && t.deadline && t.deadline >= today)
     .sort((a, b) => a.deadline.localeCompare(b.deadline))
     .slice(0, 5);
 
@@ -738,7 +738,7 @@ export async function getStats(): Promise<Stats> {
     statusCounts,
     upcomingDeadlines,
     upcomingInterviews: allInterviews.slice(0, 5),
-    completedTasks: tasks.filter((t) => t.completed).length,
+    completedTasks: tasks.filter((t) => t.status === "完了").length,
     totalTasks: tasks.length,
     totalInterviews,
     totalESDocuments,
@@ -795,7 +795,7 @@ export async function getCalendarEvents(): Promise<
 
   // Task deadlines
   for (const task of tasks) {
-    if (task.deadline && !task.completed) {
+    if (task.deadline && task.status !== "完了") {
       events.push({
         id: task.id,
         title: `${task.companyName || ""} - ${task.title}`,
