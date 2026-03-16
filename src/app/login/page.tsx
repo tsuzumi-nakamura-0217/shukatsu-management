@@ -51,6 +51,25 @@ export default function LoginPage() {
       }
 
       toast.success("ログインしました");
+
+      // Trigger local synchronization in development mode
+      if (process.env.NODE_ENV === "development") {
+        try {
+          const { data: sessionData } = await supabaseBrowser.auth.getSession();
+          if (sessionData.session) {
+            await fetch("/api/local-sync", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sessionData.session.access_token}`,
+              },
+            });
+            toast.info("ローカルデータを同期しました");
+          }
+        } catch (syncError) {
+          console.error("Local sync failed:", syncError);
+        }
+      }
+
       router.replace("/");
       router.refresh();
     } finally {

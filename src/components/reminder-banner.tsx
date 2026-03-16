@@ -13,7 +13,7 @@ export function ReminderBanner({ tasks }: ReminderBannerProps) {
 
   const today = new Date();
   const urgentTasks = tasks.filter((t) => {
-    if (t.completed || !t.deadline) return false;
+    if (t.status === "完了" || !t.deadline) return false;
     const deadline = new Date(t.deadline);
     const diffDays = Math.ceil(
       (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
@@ -22,7 +22,7 @@ export function ReminderBanner({ tasks }: ReminderBannerProps) {
   });
 
   const overdueTasks = tasks.filter((t) => {
-    if (t.completed || !t.deadline) return false;
+    if (t.status === "完了" || !t.deadline) return false;
     const deadline = new Date(t.deadline);
     return deadline < today;
   });

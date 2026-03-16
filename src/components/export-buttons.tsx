@@ -70,7 +70,7 @@ export function ExportButtons() {
         csvContent = convertToCsv(data.companies, headers);
         fileName = `companies-${new Date().toISOString().split("T")[0]}.csv`;
       } else if (type === "tasks") {
-        const headers = ["title", "companyName", "category", "deadline", "completed"];
+        const headers = ["title", "companyName", "category", "deadline", "status"];
         csvContent = convertToCsv(data.tasks, headers);
         fileName = `tasks-${new Date().toISOString().split("T")[0]}.csv`;
       } else if (type === "interviews") {
