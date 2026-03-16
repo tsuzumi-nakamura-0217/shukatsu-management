@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
+import { useLocalSync } from "@/hooks/use-local-sync";
+
 function updateTokenCookie(accessToken: string | null) {
   if (typeof document === "undefined") return;
 
@@ -16,6 +18,8 @@ function updateTokenCookie(accessToken: string | null) {
 }
 
 export function AuthSessionManager() {
+  useLocalSync();
+
   useEffect(() => {
     const supabaseBrowser = getSupabaseBrowserClient();
     const originalFetch = window.fetch.bind(window);
