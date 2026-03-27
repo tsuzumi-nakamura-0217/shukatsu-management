@@ -6,7 +6,7 @@ import {
   deleteTask,
   getConfig,
 } from "@/lib/data";
-import { syncTaskToNotion } from "@/lib/notion";
+import { syncTaskToNotion, deleteTaskFromNotion } from "@/lib/notion";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 export async function GET(request: NextRequest) {
@@ -86,7 +86,11 @@ export async function PUT(request: NextRequest) {
 
       const config = await getConfig();
       if (config.notion.enabled) {
-        await syncTaskToNotion(task);
+        const notionPageId = await syncTaskToNotion(task);
+        if (notionPageId && notionPageId !== task.notionPageId) {
+          await updateTask(task.id, { notionPageId });
+          task.notionPageId = notionPageId;
+        }
       }
 
       return NextResponse.json(task);
@@ -103,6 +107,11 @@ export async function DELETE(request: NextRequest) {
   return withAuthenticatedUser(request, async () => {
     try {
       const { id } = await request.json();
+      
+      // Fetch task before deletion to get Notion Page ID
+      const tasks = await getAllTasks();
+      const task = tasks.find(t => t.id === id);
+      
       const deleted = await deleteTask(id);
       if (!deleted) {
         return NextResponse.json(
@@ -110,6 +119,15 @@ export async function DELETE(request: NextRequest) {
           { status: 404 }
         );
       }
+
+      // Sync deletion to Notion if enabled and page exists
+      if (task?.notionPageId) {
+        const config = await getConfig();
+        if (config.notion.enabled) {
+          await deleteTaskFromNotion(task.notionPageId, config.notion.apiKey);
+        }
+      }
+
       return NextResponse.json({ success: true });
     } catch {
       return NextResponse.json(

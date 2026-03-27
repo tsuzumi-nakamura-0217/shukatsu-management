@@ -24,6 +24,7 @@ const DEFAULT_CONFIG: AppConfig = {
   notion: {
     apiKey: "",
     databaseId: "",
+    databaseType: "database",
     enabled: false,
   },
 };
@@ -40,6 +41,7 @@ function normalizeConfig(data: unknown): AppConfig {
     notion: {
       apiKey: config.notion?.apiKey || "",
       databaseId: config.notion?.databaseId || "",
+      databaseType: (config.notion?.databaseType as any) || "database",
       enabled: Boolean(config.notion?.enabled),
     },
   };
@@ -50,12 +52,15 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [notionApiKey, setNotionApiKey] = useState("");
   const [notionDbId, setNotionDbId] = useState("");
+  const [notionDbType, setNotionDbType] = useState<"database" | "data_source">("database");
   const [notionEnabled, setNotionEnabled] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
   const [testing, setTesting] = useState(false);
+  const [databases, setDatabases] = useState<{ id: string; title: string; type: string }[]>([]);
+  const [searchingDbs, setSearchingDbs] = useState(false);
 
   // Stages & industries editing
   const [stages, setStages] = useState<string[]>([]);
@@ -81,6 +86,7 @@ export default function SettingsPage() {
         setConfig(normalized);
         setNotionApiKey(normalized.notion.apiKey);
         setNotionDbId(normalized.notion.databaseId);
+        setNotionDbType(normalized.notion.databaseType || "database");
         setNotionEnabled(normalized.notion.enabled);
         setStages(normalized.defaultStages);
         setIndustries(normalized.industries);
@@ -103,6 +109,7 @@ export default function SettingsPage() {
       notion: {
         apiKey: notionApiKey,
         databaseId: notionDbId,
+        databaseType: notionDbType,
         enabled: notionEnabled,
       },
     };
@@ -133,6 +140,31 @@ export default function SettingsPage() {
       setTestResult({ success: false, message: "接続テストに失敗しました" });
     }
     setTesting(false);
+  };
+
+  const handleSearchDatabases = async () => {
+    setSearchingDbs(true);
+    try {
+      const res = await fetch("/api/notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "search-databases", apiKey: notionApiKey }),
+      });
+      const data = await res.json();
+      if (data.success && data.databases) {
+        setDatabases(data.databases);
+        if (data.databases.length === 0) {
+          toast.info("データベースが見つかりませんでした");
+        } else {
+          toast.success(`${data.databases.length}件のデータベースが見つかりました`);
+        }
+      } else {
+        toast.error(data.error || "データベースの検索に失敗しました");
+      }
+    } catch {
+      toast.error("データベースの検索に失敗しました");
+    }
+    setSearchingDbs(false);
   };
 
   if (loading) {
@@ -180,13 +212,52 @@ export default function SettingsPage() {
               placeholder="secret_..."
             />
           </div>
-          <div>
-            <Label>データベースID</Label>
-            <Input
-              value={notionDbId}
-              onChange={(e) => setNotionDbId(e.target.value)}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            />
+          <div className="space-y-2">
+            <Label>データベース</Label>
+            <div className="flex gap-2">
+              <Input
+                value={notionDbId}
+                onChange={(e) => setNotionDbId(e.target.value)}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                className="flex-1"
+              />
+              <Button 
+                variant="secondary" 
+                onClick={handleSearchDatabases}
+                disabled={searchingDbs || !notionApiKey}
+              >
+                {searchingDbs ? "検索中..." : "検索"}
+              </Button>
+            </div>
+            {databases.length > 0 && (
+              <div className="mt-2 border rounded-md divide-y overflow-hidden max-h-60 overflow-y-auto">
+                {databases.map(db => (
+                  <div 
+                    key={db.id} 
+                    className="p-3 hover:bg-muted cursor-pointer flex justify-between items-center group"
+                    onClick={() => {
+                      setNotionDbId(db.id);
+                      setNotionDbType(db.type as any);
+                      setDatabases([]);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">{db.title}</span>
+                        <Badge variant="secondary" className="text-[10px] py-0 h-4 bg-slate-100 text-slate-600 border-none font-normal">
+                          {db.type === "data_source" ? "テーブル(Data Source)" : "共通(Database)"}
+                        </Badge>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground font-mono">{db.id}</span>
+                    </div>
+                    <span className="text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">選択</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              ※ 同期に失敗する場合は、別のデータベース（またはテーブル）を選択してみてください。
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button

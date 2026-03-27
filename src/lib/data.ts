@@ -405,6 +405,16 @@ export async function deleteTask(id: string): Promise<boolean> {
 // Interview operations
 // ============================================================
 
+export async function getAllInterviews(): Promise<Interview[]> {
+  const { data, error } = await supabase
+    .from("interviews")
+    .select("*")
+    .order("date", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(rowToInterview);
+}
+
 export async function getInterviews(
   companySlug: string
 ): Promise<Interview[]> {
@@ -484,6 +494,16 @@ export async function deleteInterview(
 // ============================================================
 // ES Document operations
 // ============================================================
+
+export async function getAllESDocuments(): Promise<ESDocument[]> {
+  const { data, error } = await supabase
+    .from("es_documents")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(rowToESDocument);
+}
 
 export async function getESDocuments(
   companySlug: string
@@ -685,40 +705,33 @@ export async function getStats(): Promise<Stats> {
     不合格: 0,
     結果待ち: 0,
   };
-  let totalInterviews = 0;
-  let totalESDocuments = 0;
 
-  const companyDetails = await Promise.all(
-    companies.map(async (company) => {
-      const [interviews, esDocuments] = await Promise.all([
-        getInterviews(company.slug),
-        getESDocuments(company.slug),
-      ]);
+  const [rawAllInterviews, rawAllESDocuments] = await Promise.all([
+    getAllInterviews(),
+    getAllESDocuments(),
+  ]);
 
-      return {
-        company,
-        interviews,
-        esDocumentCount: esDocuments.length,
-      };
-    })
-  );
+  const companyMap = new Map(companies.map(c => [c.slug, c]));
 
-  for (const detail of companyDetails) {
-    totalInterviews += detail.interviews.length;
-    totalESDocuments += detail.esDocumentCount;
+  const validInterviews = rawAllInterviews.filter(i => companyMap.has(i.companySlug));
+  const validESDocuments = rawAllESDocuments.filter(es => companyMap.has(es.companySlug));
 
-    for (const interview of detail.interviews) {
-      if (interview.result === "通過") {
-        interviewResultCounts.通過 += 1;
-      } else if (interview.result === "不合格") {
-        interviewResultCounts.不合格 += 1;
-      } else {
-        interviewResultCounts.結果待ち += 1;
-      }
+  const totalInterviews = validInterviews.length;
+  const totalESDocuments = validESDocuments.length;
 
-      if (interview.date >= today) {
-        allInterviews.push({ ...interview, companyName: detail.company.name });
-      }
+  for (const interview of validInterviews) {
+    const company = companyMap.get(interview.companySlug)!;
+
+    if (interview.result === "通過") {
+      interviewResultCounts.通過 += 1;
+    } else if (interview.result === "不合格") {
+      interviewResultCounts.不合格 += 1;
+    } else {
+      interviewResultCounts.結果待ち += 1;
+    }
+
+    if (interview.date >= today) {
+      allInterviews.push({ ...interview, companyName: company.name });
     }
   }
   allInterviews.sort((a, b) => a.date.localeCompare(b.date));
@@ -778,19 +791,22 @@ export async function getCalendarEvents(): Promise<
   }[] = [];
 
   // Interviews
-  for (const company of companies) {
-    const interviews = await getInterviews(company.slug);
-    for (const interview of interviews) {
-      events.push({
-        id: interview.id,
-        title: `${company.name} - ${interview.type}`,
-        date: interview.date,
-        type: "interview",
-        companySlug: company.slug,
-        companyName: company.name,
-        color: "#3b82f6", // blue
-      });
-    }
+  const allInterviews = await getAllInterviews();
+  const companyMap = new Map(companies.map(c => [c.slug, c]));
+
+  for (const interview of allInterviews) {
+    const company = companyMap.get(interview.companySlug);
+    if (!company) continue;
+
+    events.push({
+      id: interview.id,
+      title: `${company.name} - ${interview.type}`,
+      date: interview.date,
+      type: "interview",
+      companySlug: company.slug,
+      companyName: company.name,
+      color: "#3b82f6", // blue
+    });
   }
 
   // Task deadlines
@@ -831,19 +847,30 @@ export async function getExportData() {
   ]);
 
   // Gather all interviews and ES documents for all companies
+  const [allInterviews, allESDocuments] = await Promise.all([
+    getAllInterviews(),
+    getAllESDocuments(),
+  ]);
+
   const companyInterviews: Record<string, Interview[]> = {};
   const companyESDocuments: Record<string, ESDocument[]> = {};
 
-  await Promise.all(
-    companies.map(async (company) => {
-      const [interviews, esDocs] = await Promise.all([
-        getInterviews(company.slug),
-        getESDocuments(company.slug),
-      ]);
-      companyInterviews[company.slug] = interviews;
-      companyESDocuments[company.slug] = esDocs;
-    })
-  );
+  for (const company of companies) {
+    companyInterviews[company.slug] = [];
+    companyESDocuments[company.slug] = [];
+  }
+
+  for (const interview of allInterviews) {
+    if (companyInterviews[interview.companySlug]) {
+      companyInterviews[interview.companySlug].push(interview);
+    }
+  }
+
+  for (const esDoc of allESDocuments) {
+    if (companyESDocuments[esDoc.companySlug]) {
+      companyESDocuments[esDoc.companySlug].push(esDoc);
+    }
+  }
 
   return {
     companies,

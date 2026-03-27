@@ -29,7 +29,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { StatusBadge } from "@/components/badges";
+import { StatusBadge, statusColors } from "@/components/badges";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Company, AppConfig } from "@/types";
 
@@ -275,7 +276,7 @@ export default function CompaniesPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-40">
+          <SelectTrigger className={cn("w-full md:w-40", statusFilter !== "all" ? statusColors[statusFilter] : "")}>
             <SelectValue placeholder="ステータス" />
           </SelectTrigger>
           <SelectContent>

@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge } from "@/components/badges";
+import { StatusBadge, statusColors } from "@/components/badges";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Task, AppConfig, Company } from "@/types";
 
@@ -40,6 +41,7 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState("incomplete"); // all, incomplete, 未着手, 進行中, 完了
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [pulling, setPulling] = useState(false);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -155,6 +157,35 @@ export default function TasksPage() {
     setSyncing(false);
   };
 
+  const handlePullFromNotion = async () => {
+    setPulling(true);
+    try {
+      const res = await fetch("/api/notion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync-from-notion" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        let msg = "";
+        if (data.importedCount > 0 && data.updatedCount > 0) {
+          msg = `${data.updatedCount} 件更新、${data.importedCount} 件新規作成しました`;
+        } else if (data.importedCount > 0) {
+          msg = `${data.importedCount} 件新規作成しました`;
+        } else {
+          msg = `${data.updatedCount} 件更新しました`;
+        }
+        toast.success(msg);
+        fetchTasks();
+      } else {
+        toast.error(data.error || "同期に失敗しました");
+      }
+    } catch {
+      toast.error("同期に失敗しました");
+    }
+    setPulling(false);
+  };
+
   const filtered = tasks
     .filter((t) => {
       if (statusFilter === "incomplete" && t.status === "完了") return false;
@@ -268,7 +299,7 @@ export default function TasksPage() {
                     value={newTask.status}
                     onValueChange={(value: any) => setNewTask({ ...newTask, status: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={cn("h-9", statusColors[newTask.status])}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -299,10 +330,16 @@ export default function TasksPage() {
             </DialogContent>
           </Dialog>
           {config?.notion?.enabled && (
-            <Button className="w-full sm:w-auto" variant="outline" onClick={handleSyncAll} disabled={syncing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-              Notionに一括同期
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button className="flex-1 sm:flex-initial" variant="outline" onClick={handlePullFromNotion} disabled={pulling || syncing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${pulling ? "animate-spin" : ""}`} />
+                Notionから取得
+              </Button>
+              <Button className="flex-1 sm:flex-initial" variant="outline" onClick={handleSyncAll} disabled={syncing || pulling}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                Notionに一括同期
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -327,7 +364,7 @@ export default function TasksPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-36">
+          <SelectTrigger className={cn("w-full sm:w-36", statusFilter !== "all" && statusFilter !== "incomplete" ? statusColors[statusFilter] : "")}>
             <SelectValue placeholder="ステータス" />
           </SelectTrigger>
           <SelectContent>
@@ -412,7 +449,7 @@ export default function TasksPage() {
                           value={editingTask.status}
                           onValueChange={(value: any) => setEditingTask({ ...editingTask, status: value })}
                         >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectTrigger className={cn("h-9", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="未着手">未着手</SelectItem>
                             <SelectItem value="進行中">進行中</SelectItem>
@@ -432,7 +469,7 @@ export default function TasksPage() {
                       value={task.status}
                       onValueChange={(value: any) => handleStatusChange(task, value)}
                     >
-                      <SelectTrigger className="w-[100px] h-8 text-xs">
+                      <SelectTrigger className={cn("w-[100px] h-8 text-xs", statusColors[task.status])}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

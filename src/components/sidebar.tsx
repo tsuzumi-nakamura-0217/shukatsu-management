@@ -106,7 +106,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
+    <aside className="hidden sticky top-0 h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b px-6">
         <GraduationCap className="h-6 w-6 text-primary" />

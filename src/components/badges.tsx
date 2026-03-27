@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const statusColors: Record<string, string> = {
+export const statusColors: Record<string, string> = {
   "未応募": "bg-gray-100 text-gray-800 border-gray-200",
   "ES提出": "bg-blue-100 text-blue-800 border-blue-200",
   "適性検査": "bg-indigo-100 text-indigo-800 border-indigo-200",

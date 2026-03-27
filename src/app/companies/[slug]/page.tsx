@@ -52,7 +52,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusBadge } from "@/components/badges";
+import { StatusBadge, statusColors } from "@/components/badges";
+import { cn } from "@/lib/utils";
 import { MarkdownEditor, MarkdownViewer } from "@/components/markdown-editor";
 import { NotionEditor } from "@/components/notion-editor";
 import { toast } from "sonner";
@@ -585,7 +586,7 @@ export default function CompanyDetailPage({
                         setNewInterview({ ...newInterview, result: value })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={cn(statusColors[newInterview.result])}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -677,7 +678,7 @@ export default function CompanyDetailPage({
                               })
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={cn(statusColors[editingInterview.result])}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -788,7 +789,7 @@ export default function CompanyDetailPage({
                   <div className="space-y-2 pt-2">
                     <Label>ステータス</Label>
                     <Select value={newTask.status} onValueChange={(v: any) => setNewTask({ ...newTask, status: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className={cn(statusColors[newTask.status])}><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="未着手">未着手</SelectItem>
                         <SelectItem value="進行中">進行中</SelectItem>
@@ -886,7 +887,7 @@ export default function CompanyDetailPage({
                               })
                             }
                           >
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className={cn("h-9", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="未着手">未着手</SelectItem>
                               <SelectItem value="進行中">進行中</SelectItem>
@@ -909,7 +910,7 @@ export default function CompanyDetailPage({
                         value={task.status}
                         onValueChange={(v: any) => handleStatusChangeTask(task, v)}
                       >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className={cn("h-8 text-xs", statusColors[task.status])}><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="未着手">未着手</SelectItem>
                           <SelectItem value="進行中">進行中</SelectItem>

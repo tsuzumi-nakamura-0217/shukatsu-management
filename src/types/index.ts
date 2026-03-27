@@ -116,6 +116,7 @@ export interface AppConfig {
 export interface NotionConfig {
   apiKey: string;
   databaseId: string;
+  databaseType?: "database" | "data_source";
   enabled: boolean;
 }
 
