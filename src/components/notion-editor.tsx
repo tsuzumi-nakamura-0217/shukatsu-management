@@ -66,9 +66,10 @@ function ToolbarDivider() {
 interface NotionEditorProps {
   content: string;
   onChange: (json: string) => void;
+  readOnly?: boolean;
 }
 
-export function NotionEditor({ content, onChange }: NotionEditorProps) {
+export function NotionEditor({ content, onChange, readOnly = false }: NotionEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isInternalUpdate = useRef(false);
 
@@ -104,6 +105,8 @@ export function NotionEditor({ content, onChange }: NotionEditorProps) {
       }),
     ],
     content: parseContent(content),
+    editable: !readOnly,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       isInternalUpdate.current = true;
       onChange(JSON.stringify(editor.getJSON()));
@@ -183,9 +186,10 @@ export function NotionEditor({ content, onChange }: NotionEditorProps) {
   if (!editor) return null;
 
   return (
-    <div className="notion-editor-wrapper">
+    <div className={`notion-editor-wrapper ${readOnly ? "is-readonly" : ""}`}>
       {/* ── ツールバー ── */}
-      <div className="notion-toolbar">
+      {!readOnly && (
+        <div className="notion-toolbar">
         {/* テキスト書式 */}
         <ToolbarButton
           onClick={() => editor.chain().focus().setParagraph().run()}
@@ -355,6 +359,7 @@ export function NotionEditor({ content, onChange }: NotionEditorProps) {
           <Redo className="h-4 w-4" />
         </ToolbarButton>
       </div>
+      )}
 
       {/* ── エディタ本体 ── */}
       <EditorContent editor={editor} />

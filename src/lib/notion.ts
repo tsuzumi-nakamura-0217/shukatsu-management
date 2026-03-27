@@ -126,7 +126,7 @@ export async function deleteTaskFromNotion(pageId: string, apiKey: string): Prom
 export async function fetchTasksFromNotion(
   apiKey: string,
   databaseId: string
-): Promise<{ success: boolean; tasks?: Partial<Task>[]; error?: string }> {
+): Promise<{ success: boolean; tasks?: (Partial<Task> & { notionUpdatedAt: string })[]; error?: string }> {
   try {
     const client = new Client({ auth: apiKey });
     let results: any[] = [];
@@ -183,6 +183,7 @@ export async function fetchTasksFromNotion(
 
       return {
         notionPageId: page.id,
+        notionUpdatedAt: page.last_edited_time || new Date().toISOString(),
         title: getString(findProp(["title", "Name", "タイトル", "名前"])),
         companyName: getString(findProp(["企業名", "Company"])),
         category: getStatus(findProp(["カテゴリ", "Category"])),
@@ -191,7 +192,7 @@ export async function fetchTasksFromNotion(
         status: (normalizedStatus as any) || "未着手",
         memo: getString(findProp(["メモ", "Memo", "Notes"])),
       };
-    }) as Partial<Task>[];
+    }) as (Partial<Task> & { notionUpdatedAt: string })[];
 
     return { success: true, tasks };
   } catch (error: any) {

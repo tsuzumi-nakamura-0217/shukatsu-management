@@ -54,8 +54,9 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge, statusColors } from "@/components/badges";
 import { cn } from "@/lib/utils";
-import { MarkdownEditor, MarkdownViewer } from "@/components/markdown-editor";
-import { NotionEditor } from "@/components/notion-editor";
+// Markdown components were replaced by NotionEditor
+import dynamic from "next/dynamic";
+const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
 
@@ -88,6 +89,8 @@ export default function CompanyDetailPage({
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
+  const [isSavingEs, setIsSavingEs] = useState(false);
 
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
@@ -117,17 +120,35 @@ export default function CompanyDetailPage({
   }, [slug]);
 
   const handleSaveCompany = async () => {
-    const res = await fetch(`/api/companies/${slug}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...editingCompany, memo: memoContent }),
-    });
-    if (res.ok) {
-      toast.success("企業情報を保存しました");
-      setEditMode(false);
-      fetchAll();
+    if (isSavingMemo) return;
+    setIsSavingMemo(true);
+    try {
+      const res = await fetch(`/api/companies/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...editingCompany, memo: memoContent }),
+      });
+      if (res.ok) {
+        // toast.success("保存しました");
+        setEditMode(false);
+        fetchAll();
+      }
+    } finally {
+      setIsSavingMemo(false);
     }
   };
+
+  // Auto-save memo
+  useEffect(() => {
+    if (!company) return;
+    if (memoContent === company.memo) return;
+
+    const timer = setTimeout(() => {
+      handleSaveCompany();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [memoContent, company]);
 
   const handleDeleteCompany = async () => {
     if (!confirm("この企業を削除しますか？関連するタスクも削除されます。")) return;
@@ -171,12 +192,30 @@ export default function CompanyDetailPage({
   };
 
   const handleStatusChangeTask = async (task: Task, newStatus: "未着手" | "進行中" | "完了") => {
-    await fetch("/api/tasks", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: task.id, status: newStatus }),
-    });
-    fetchAll();
+    const oldStatus = task.status;
+    
+    // 楽観的アップデート: UIを即座に更新
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: task.id, status: newStatus }),
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to update task status");
+      }
+      
+      // 成功時は最新データをバックグラウンドで取得（任意）
+      fetchAll();
+    } catch (error) {
+      // エラー時は元のステータスに戻す
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
+      toast.error("タスクの更新に失敗しました");
+      console.error(error);
+    }
   };
 
   const handleSaveTask = async () => {
@@ -266,15 +305,33 @@ export default function CompanyDetailPage({
   };
 
   const handleSaveEs = async (doc: ESDocument) => {
-    await fetch(`/api/companies/${slug}/es`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: doc.id, title: doc.title, content: doc.content }),
-    });
-    toast.success("文書を保存しました");
-    setEditEsDoc(null);
-    fetchAll();
+    if (isSavingEs) return;
+    setIsSavingEs(true);
+    try {
+      await fetch(`/api/companies/${slug}/es`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: doc.id, title: doc.title, content: doc.content }),
+      });
+      // toast.success("文書を保存しました");
+      fetchAll();
+    } finally {
+      setIsSavingEs(false);
+    }
   };
+
+  // Auto-save ES doc
+  useEffect(() => {
+    if (!editEsDoc) return;
+    const originalDoc = esDocs.find(d => d.id === editEsDoc.id);
+    if (!originalDoc || editEsDoc.content === originalDoc.content) return;
+
+    const timer = setTimeout(() => {
+      handleSaveEs(editEsDoc);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [editEsDoc, esDocs]);
 
   if (!company) {
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">読み込み中...</p></div>;
@@ -537,14 +594,15 @@ export default function CompanyDetailPage({
                   <CardContent>
                     {editEsDoc?.id === doc.id ? (
                       <div className="space-y-2">
-                        <MarkdownEditor value={editEsDoc.content} onChange={(val) => setEditEsDoc({ ...editEsDoc, content: val })} />
-                        <div className="flex gap-2 justify-end">
+                        <NotionEditor content={editEsDoc.content} onChange={(val) => setEditEsDoc({ ...editEsDoc, content: val })} />
+                        <div className="flex items-center gap-2 justify-end">
+                          {isSavingEs && <span className="text-xs text-muted-foreground animate-pulse">保存中...</span>}
                           <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>キャンセル</Button>
-                          <Button size="sm" onClick={() => handleSaveEs(editEsDoc)}>保存</Button>
+                          <Button size="sm" onClick={() => handleSaveEs(editEsDoc)} disabled={isSavingEs}>保存</Button>
                         </div>
                       </div>
                     ) : (
-                      <MarkdownViewer content={doc.content} />
+                      <NotionEditor readOnly content={doc.content} onChange={() => {}} />
                     )}
                   </CardContent>
                 </Card>
@@ -731,7 +789,7 @@ export default function CompanyDetailPage({
                       </CardHeader>
                       {interview.memo && (
                         <CardContent>
-                          <MarkdownViewer content={interview.memo} />
+                        <NotionEditor readOnly content={interview.memo} onChange={() => {}} />
                         </CardContent>
                       )}
                     </>
@@ -950,11 +1008,16 @@ export default function CompanyDetailPage({
         <TabsContent value="memo" className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">企業研究メモ</h3>
-            <Button size="sm" onClick={handleSaveCompany}>
-              <Save className="mr-2 h-4 w-4" /> 保存
-            </Button>
+            <div className="flex items-center gap-3">
+              {isSavingMemo && <span className="text-xs text-muted-foreground animate-pulse">保存中...</span>}
+              <Button size="sm" onClick={handleSaveCompany} disabled={isSavingMemo}>
+                <Save className="mr-2 h-4 w-4" /> 保存
+              </Button>
+            </div>
           </div>
-          <NotionEditor content={memoContent} onChange={setMemoContent} />
+          <div className="min-h-[400px]">
+            <NotionEditor content={memoContent} onChange={setMemoContent} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

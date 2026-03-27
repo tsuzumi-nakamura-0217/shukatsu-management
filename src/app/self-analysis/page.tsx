@@ -19,7 +19,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { MarkdownEditor } from "@/components/markdown-editor";
+import dynamic from "next/dynamic";
+const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
 import type { SelfAnalysis } from "@/types";
 
@@ -29,6 +30,7 @@ export default function SelfAnalysisPage() {
   const [editContent, setEditContent] = useState("");
   const [newOpen, setNewOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [newItem, setNewItem] = useState({ title: "" });
 
   async function fetchItems() {
@@ -65,19 +67,37 @@ export default function SelfAnalysisPage() {
   };
 
   const handleSave = async () => {
-    if (!selected) return;
-    await fetch("/api/self-analysis", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: selected.id,
-        title: selected.title,
-        content: editContent,
-      }),
-    });
-    toast.success("保存しました");
-    fetchItems();
+    if (!selected || isSaving) return;
+    setIsSaving(true);
+    try {
+      await fetch("/api/self-analysis", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selected.id,
+          title: selected.title,
+          content: editContent,
+        }),
+      });
+      // 自動保存時はトーストを表示しないか、控えめにする
+      // toast.success("保存しました");
+      fetchItems();
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  // Auto-save useEffect
+  useEffect(() => {
+    if (!selected) return;
+    if (editContent === selected.content) return;
+
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 1500); // 1.5秒のディレイ
+
+    return () => clearTimeout(timer);
+  }, [editContent, selected]);
 
   const handleCreate = async () => {
     if (isCreating) return;
@@ -207,16 +227,20 @@ export default function SelfAnalysisPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>{selected.title}</CardTitle>
-                <Button size="sm" onClick={handleSave}>
-                  <Save className="mr-2 h-4 w-4" /> 保存
-                </Button>
+                <div className="flex items-center gap-3">
+                  {isSaving && <span className="text-xs text-muted-foreground animate-pulse">保存中...</span>}
+                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                    <Save className="mr-2 h-4 w-4" /> 保存
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <MarkdownEditor
-                  value={editContent}
-                  onChange={setEditContent}
-                  height={500}
-                />
+                <div className="min-h-[500px]">
+                  <NotionEditor
+                    content={editContent}
+                    onChange={setEditContent}
+                  />
+                </div>
               </CardContent>
             </Card>
           ) : (

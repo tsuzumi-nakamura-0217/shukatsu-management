@@ -54,11 +54,12 @@ export async function POST(request: NextRequest) {
 
       const config = await getConfig();
       if (config.notion.enabled) {
-        const notionPageId = await syncTaskToNotion(task);
-        if (notionPageId) {
-          await updateTask(task.id, { notionPageId });
-          task.notionPageId = notionPageId;
-        }
+        // Notion同期をバックグラウンドで実行（レスポンスを待たせない）
+        syncTaskToNotion(task).then(async (notionPageId) => {
+          if (notionPageId) {
+            await updateTask(task.id, { notionPageId });
+          }
+        }).catch(err => console.error("Background Notion sync failed:", err));
       }
 
       return NextResponse.json(task, { status: 201 });
@@ -86,11 +87,12 @@ export async function PUT(request: NextRequest) {
 
       const config = await getConfig();
       if (config.notion.enabled) {
-        const notionPageId = await syncTaskToNotion(task);
-        if (notionPageId && notionPageId !== task.notionPageId) {
-          await updateTask(task.id, { notionPageId });
-          task.notionPageId = notionPageId;
-        }
+        // Notion同期をバックグラウンドで実行（レスポンスを待たせない）
+        syncTaskToNotion(task).then(async (notionPageId) => {
+          if (notionPageId && notionPageId !== task.notionPageId) {
+            await updateTask(task.id, { notionPageId });
+          }
+        }).catch(err => console.error("Background Notion sync failed:", err));
       }
 
       return NextResponse.json(task);

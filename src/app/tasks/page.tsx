@@ -72,12 +72,30 @@ export default function TasksPage() {
   }, []);
 
   const handleStatusChange = async (task: Task, newStatus: "未着手" | "進行中" | "完了") => {
-    await fetch("/api/tasks", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: task.id, status: newStatus }),
-    });
-    fetchTasks();
+    const oldStatus = task.status;
+    
+    // 楽観的アップデート: UIを即座に更新
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: task.id, status: newStatus }),
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to update status");
+      }
+      
+      // 成功時は最新データをバックグラウンドで取得（任意）
+      fetchTasks();
+    } catch (error) {
+      // エラー時は元のステータスに戻す
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
+      toast.error("ステータスの更新に失敗しました");
+      console.error(error);
+    }
   };
 
   const handleDelete = async (id: string) => {
