@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
       await fs.writeFile(path.join(syncDir, "companies.json"), JSON.stringify(data.companies, null, 2));
       await fs.writeFile(path.join(syncDir, "tasks.json"), JSON.stringify(data.tasks, null, 2));
       await fs.writeFile(path.join(syncDir, "self-analysis.json"), JSON.stringify(data.selfAnalysis, null, 2));
-      await fs.writeFile(path.join(syncDir, "templates.json"), JSON.stringify(data.templates, null, 2));
       await fs.writeFile(path.join(syncDir, "interviews.json"), JSON.stringify(data.interviews, null, 2));
       await fs.writeFile(path.join(syncDir, "es-documents.json"), JSON.stringify(data.esDocuments, null, 2));
 

@@ -18,14 +18,19 @@ export function MarkdownEditor({
   onChange,
   height = 400,
 }: MarkdownEditorProps) {
+  const charCount = value?.length || 0;
+
   return (
-    <div data-color-mode="light">
+    <div data-color-mode="light" className="flex flex-col">
       <MDEditor
         value={value}
         onChange={(val) => onChange(val || "")}
         height={height}
         preview="edit"
       />
+      <div className="text-right text-xs text-muted-foreground mt-1.5 px-1 font-medium select-none">
+        {charCount} 文字
+      </div>
     </div>
   );
 }

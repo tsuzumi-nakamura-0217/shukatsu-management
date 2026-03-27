@@ -85,6 +85,7 @@ export interface ESDocument {
   id: string;
   companyId: string;
   companySlug: string;
+  companyName?: string;
   title: string;
   content: string;
   updatedAt: string;
@@ -94,14 +95,6 @@ export interface ESDocument {
 export interface SelfAnalysis {
   id: string;
   title: string;
-  content: string;
-}
-
-// テンプレートの型定義
-export interface Template {
-  id: string;
-  title: string;
-  description: string;
   content: string;
 }
 

@@ -13,7 +13,6 @@ import type {
   InterviewCreate,
   ESDocument,
   SelfAnalysis,
-  Template,
   AppConfig,
   Stats,
 } from "@/types";
@@ -103,10 +102,13 @@ function rowToInterview(row: Record<string, unknown>): Interview {
 }
 
 function rowToESDocument(row: Record<string, unknown>): ESDocument {
+  const companyData = row.companies as { name: string } | undefined;
+
   return {
     id: row.id as string,
     companyId: (row.company_id as string) || "",
     companySlug: (row.company_slug as string) || "",
+    companyName: companyData?.name || "",
     title: (row.title as string) || "",
     content: (row.content as string) || "",
     updatedAt: toISODate(row.updated_at as string),
@@ -121,14 +123,6 @@ function rowToSelfAnalysis(row: Record<string, unknown>): SelfAnalysis {
   };
 }
 
-function rowToTemplate(row: Record<string, unknown>): Template {
-  return {
-    id: row.id as string,
-    title: (row.title as string) || "",
-    description: (row.description as string) || "",
-    content: (row.content as string) || "",
-  };
-}
 
 // ============================================================
 // Config operations
@@ -498,7 +492,7 @@ export async function deleteInterview(
 export async function getAllESDocuments(): Promise<ESDocument[]> {
   const { data, error } = await supabase
     .from("es_documents")
-    .select("*")
+    .select("*, companies(name)")
     .order("updated_at", { ascending: false });
 
   if (error || !data) return [];
@@ -510,7 +504,7 @@ export async function getESDocuments(
 ): Promise<ESDocument[]> {
   const { data, error } = await supabase
     .from("es_documents")
-    .select("*")
+    .select("*, companies(name)")
     .eq("company_slug", companySlug)
     .order("updated_at", { ascending: false });
 
@@ -536,7 +530,7 @@ export async function saveESDocument(
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
-      .select()
+      .select("*, companies(name)")
       .single();
 
     if (error || !data) {
@@ -555,7 +549,7 @@ export async function saveESDocument(
     const { data, error } = await supabase
       .from("es_documents")
       .insert(row)
-      .select()
+      .select("*, companies(name)")
       .single();
 
     if (error || !data) {
@@ -623,61 +617,6 @@ export async function deleteSelfAnalysis(id: string): Promise<boolean> {
   return !error;
 }
 
-// ============================================================
-// Template operations
-// ============================================================
-
-export async function getAllTemplates(): Promise<Template[]> {
-  const { data, error } = await supabase
-    .from("templates")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error || !data) return [];
-  return data.map(rowToTemplate);
-}
-
-export async function saveTemplate(
-  id: string | null,
-  title: string,
-  description: string,
-  content: string
-): Promise<Template> {
-  if (id) {
-    const { data, error } = await supabase
-      .from("templates")
-      .update({
-        title,
-        description,
-        content,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to update template: ${error?.message}`);
-    }
-    return rowToTemplate(data);
-  } else {
-    const { data, error } = await supabase
-      .from("templates")
-      .insert({ title, description, content })
-      .select()
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Failed to create template: ${error?.message}`);
-    }
-    return rowToTemplate(data);
-  }
-}
-
-export async function deleteTemplate(id: string): Promise<boolean> {
-  const { error } = await supabase.from("templates").delete().eq("id", id);
-  return !error;
-}
 
 // ============================================================
 // Stats operations
@@ -836,13 +775,11 @@ export async function getExportData() {
     companies,
     tasks,
     selfAnalysis,
-    templates,
     config,
   ] = await Promise.all([
     getAllCompanies(),
     getAllTasks(),
     getAllSelfAnalysis(),
-    getAllTemplates(),
     getConfig(),
   ]);
 
@@ -876,7 +813,6 @@ export async function getExportData() {
     companies,
     tasks,
     selfAnalysis,
-    templates,
     config,
     interviews: Object.values(companyInterviews).flat(),
     esDocuments: Object.values(companyESDocuments).flat(),

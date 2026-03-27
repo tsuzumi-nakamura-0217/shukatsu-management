@@ -51,8 +51,8 @@ const navItems = [
     icon: Search,
   },
   {
-    href: "/templates",
-    label: "テンプレート",
+    href: "/es",
+    label: "ES一覧",
     icon: FileText,
   },
   {
