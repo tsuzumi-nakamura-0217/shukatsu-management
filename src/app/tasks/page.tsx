@@ -408,9 +408,13 @@ export default function TasksPage() {
         <Card>
           <div className="divide-y">
             {filtered.map((task) => (
-              <div key={task.id} className="flex flex-col gap-3 p-4 transition-colors hover:bg-accent/50 md:flex-row md:items-center">
+              <div
+                key={task.id}
+                className="flex flex-col gap-3 p-4 transition-colors hover:bg-accent/50 md:flex-row md:items-center cursor-pointer"
+                onClick={() => setEditingTask(task)}
+              >
                 {editingTask?.id === task.id ? (
-                  <div className="flex-1 space-y-3">
+                  <div className="flex-1 space-y-3" onClick={(e) => e.stopPropagation()}>
                     <Input
                       value={editingTask.title}
                       onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
@@ -483,19 +487,21 @@ export default function TasksPage() {
                   </div>
                 ) : (
                   <>
-                    <Select
-                      value={task.status}
-                      onValueChange={(value: any) => handleStatusChange(task, value)}
-                    >
-                      <SelectTrigger className={cn("w-[100px] h-8 text-xs", statusColors[task.status])}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="未着手">未着手</SelectItem>
-                        <SelectItem value="進行中">進行中</SelectItem>
-                        <SelectItem value="完了">完了</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="w-[100px]" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={task.status}
+                        onValueChange={(value: any) => handleStatusChange(task, value)}
+                      >
+                        <SelectTrigger className={cn("w-full h-8 text-xs", statusColors[task.status])}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="未着手">未着手</SelectItem>
+                          <SelectItem value="進行中">進行中</SelectItem>
+                          <SelectItem value="完了">完了</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="flex-1 min-w-0 md:ml-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className={`text-sm font-medium truncate ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>
@@ -507,7 +513,11 @@ export default function TasksPage() {
                       </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2">
                         {task.companyName && (
-                          <Link href={`/companies/${task.companySlug}`} className="text-xs text-blue-600 hover:underline">
+                          <Link
+                            href={`/companies/${task.companySlug}`}
+                            className="text-xs text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {task.companyName}
                           </Link>
                         )}
@@ -530,10 +540,24 @@ export default function TasksPage() {
                           </span>
                         </div>
                       )}
-                      <Button variant="ghost" size="sm" onClick={() => setEditingTask(task)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTask(task);
+                        }}
+                      >
                         <Edit className="h-3 w-3 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(task.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(task.id);
+                        }}
+                      >
                         <Trash2 className="h-3 w-3 text-muted-foreground" />
                       </Button>
                     </div>

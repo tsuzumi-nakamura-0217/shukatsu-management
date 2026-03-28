@@ -894,9 +894,13 @@ export default function CompanyDetailPage({
           ) : (
             <div className="space-y-2">
               {tasks.map((task) => (
-                <div key={task.id} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center">
+                <div
+                  key={task.id}
+                  className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setEditingTask(task)}
+                >
                   {editingTask?.id === task.id ? (
-                    <div className="flex-1 space-y-3">
+                    <div className="flex-1 space-y-3" onClick={(e) => e.stopPropagation()}>
                       <Input
                         value={editingTask.title}
                         onChange={(e) =>
@@ -977,7 +981,7 @@ export default function CompanyDetailPage({
                     </div>
                   ) : (
                     <>
-                    <div className="w-24">
+                    <div className="w-24" onClick={(e) => e.stopPropagation()}>
                       <Select
                         value={task.status}
                         onValueChange={(v: any) => handleStatusChangeTask(task, v)}
@@ -1003,10 +1007,24 @@ export default function CompanyDetailPage({
                           </div>
                         )}
                         {task.deadline && <span className="text-xs text-muted-foreground">{task.deadline}</span>}
-                        <Button variant="outline" size="sm" onClick={() => setEditingTask(task)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTask(task);
+                          }}
+                        >
                           <Edit className="mr-1 h-3 w-3" /> 編集
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteTask(task.id)}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(task.id);
+                          }}
+                        >
                           <Trash2 className="mr-1 h-3 w-3" /> 削除
                         </Button>
                       </div>
