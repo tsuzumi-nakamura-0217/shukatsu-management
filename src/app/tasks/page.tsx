@@ -70,7 +70,6 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState("incomplete"); // all, incomplete, 未着手, 進行中, 完了
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [pulling, setPulling] = useState(false);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
@@ -218,26 +217,6 @@ export default function TasksPage() {
     setSyncing(false);
   };
 
-  const handlePullFromNotion = async () => {
-    setPulling(true);
-    try {
-      const res = await fetch("/api/notion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sync-from-notion" }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`${data.updatedCount} 件更新、${data.importedCount} 件新規作成しました`);
-        fetchTasks();
-      } else {
-        toast.error(data.error || "同期に失敗しました");
-      }
-    } catch {
-      toast.error("同期に失敗しました");
-    }
-    setPulling(false);
-  };
 
   const filtered = tasks
     .filter((t) => {

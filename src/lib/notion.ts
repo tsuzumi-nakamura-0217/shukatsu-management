@@ -2,15 +2,6 @@ import { Client } from "@notionhq/client";
 import { getConfig } from "./data/config";
 import type { Task } from "@/types";
 
-const STATUS_MAP: Record<string, string> = {
-  "Done": "完了",
-  "完了": "完了",
-  "In progress": "進行中",
-  "進行中": "進行中",
-  "Not started": "未着手",
-  "未着手": "未着手",
-  "ToDo": "未着手",
-};
 
 async function getNotionClient(): Promise<Client | null> {
   const config = await getConfig();
@@ -123,83 +114,6 @@ export async function deleteTaskFromNotion(pageId: string, apiKey: string): Prom
   }
 }
 
-export async function fetchTasksFromNotion(
-  apiKey: string,
-  databaseId: string
-): Promise<{ success: boolean; tasks?: (Partial<Task> & { notionUpdatedAt: string })[]; error?: string }> {
-  try {
-    const client = new Client({ auth: apiKey });
-    let results: any[] = [];
-    let hasMore = true;
-    let nextCursor: string | undefined = undefined;
-    let iterations = 0;
-
-    while (hasMore && iterations < 50) { // Limit to 5000 items (50 pages)
-      const queryParams: any = {
-        data_source_id: databaseId,
-        filter: {
-          property: "企業名",
-          rich_text: {
-            is_not_empty: true
-          }
-        }
-      };
-      if (nextCursor) queryParams.start_cursor = nextCursor;
-
-      const response: any = await client.dataSources.query(queryParams);
-
-      results = [...results, ...response.results];
-      hasMore = response.has_more;
-      nextCursor = response.next_cursor || undefined;
-      iterations++;
-    }
-
-    const tasks = results.map((page: any) => {
-      const props = page.properties;
-
-      // Flexible property lookup
-      const findProp = (names: string[]) => {
-        for (const name of names) {
-          const lowerName = name.toLowerCase();
-          const match = Object.keys(props).find(k => k.toLowerCase().trim() === lowerName);
-          if (match) return props[match];
-        }
-        return null;
-      };
-
-      // Safety map for different property types
-      const getString = (p: any) => p?.rich_text?.[0]?.plain_text || p?.title?.[0]?.plain_text || "";
-      const getDate = (p: any) => p?.date?.start || "";
-      const getStatus = (p: any) => p?.status?.name || p?.select?.name || "";
-
-      const rawStatus = getStatus(findProp(["ステータス", "Status"]));
-      const normalizedStatus = STATUS_MAP[rawStatus] || rawStatus;
-
-      // Debug log for the first page
-      if (results.length > 0 && page.id === results[0].id) {
-        console.log("Sample Notion Page Properties:", JSON.stringify(props, null, 2));
-        console.log(`Mapped Status: Raw="${rawStatus}", Normalized="${normalizedStatus}"`);
-      }
-
-      return {
-        notionPageId: page.id,
-        notionUpdatedAt: page.last_edited_time || new Date().toISOString(),
-        title: getString(findProp(["title", "Name", "タイトル", "名前"])),
-        companyName: getString(findProp(["企業名", "Company"])),
-        category: getStatus(findProp(["カテゴリ", "Category"])),
-        executionDate: getDate(findProp(["日付", "Date"])),
-        deadline: getDate(findProp(["締切", "Deadline"])),
-        status: (normalizedStatus as any) || "未着手",
-        memo: getString(findProp(["メモ", "Memo", "Notes"])),
-      };
-    }) as (Partial<Task> & { notionUpdatedAt: string })[];
-
-    return { success: true, tasks };
-  } catch (error: any) {
-    console.error("Notion fetch error:", error);
-    return { success: false, error: error.message };
-  }
-}
 
 export async function testNotionConnection(
   apiKey: string,
