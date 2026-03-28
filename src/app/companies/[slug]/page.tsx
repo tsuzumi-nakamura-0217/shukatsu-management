@@ -57,7 +57,7 @@ import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
-import { countCharacters, formatDate, getSectionCharacterCounts } from "@/lib/utils";
+import { countCharacters, formatDate, getSectionCharacterCounts, getPlainText } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { format } from "date-fns";
@@ -1227,7 +1227,7 @@ export default function CompanyDetailPage({
                       </div>
                       <div className="flex-1">
                         <p className={`text-sm font-medium ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
-                        {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
+                        {task.memo && <p className="text-xs text-muted-foreground">{getPlainText(task.memo)}</p>}
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{task.category}</Badge>

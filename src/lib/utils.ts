@@ -86,3 +86,42 @@ export function formatDate(value: string | null | undefined): string {
     ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
   }).format(date);
 }
+
+/**
+ * TiptapのJSON形式またはプレーンテキストからプレーンテキストを抽出するユーティリティ
+ */
+export function getPlainText(content: string | null | undefined): string {
+  if (!content) return "";
+
+  // 高速パス: JSONぽくない場合はすぐにテキストとして扱う
+  if (!content.trim().startsWith('{')) {
+    return content;
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object") {
+      return getTiptapPlainText(parsed);
+    }
+  } catch {
+    // JSONでない場合は通常の文字列として扱う
+  }
+
+  return content;
+}
+
+function getTiptapPlainText(node: any): string {
+  let text = "";
+  if (node.text) {
+    text += node.text;
+  }
+  if (node.content && Array.isArray(node.content)) {
+    for (const child of node.content) {
+      const childText = getTiptapPlainText(child);
+      if (childText) {
+        text += childText + (child.type === 'paragraph' || child.type === 'heading' ? ' ' : '');
+      }
+    }
+  }
+  return text.trim();
+}

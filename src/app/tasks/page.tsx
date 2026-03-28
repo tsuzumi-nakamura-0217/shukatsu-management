@@ -32,7 +32,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, TagBadge, statusColors } from "@/components/badges";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, getPlainText } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import dynamic from "next/dynamic";
@@ -502,7 +502,7 @@ export default function TasksPage() {
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs">
                       {task.companyName && <span className="text-blue-500 font-bold">{task.companyName}</span>}
-                      {task.memo && <span className="text-muted-foreground truncate opacity-60">/ {task.memo}</span>}
+                      {task.memo && <span className="text-muted-foreground truncate opacity-60">/ {getPlainText(task.memo)}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
