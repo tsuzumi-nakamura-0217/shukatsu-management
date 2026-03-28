@@ -75,20 +75,30 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
 
   // JSON or plain-text → Tiptap content の解析
   const parseContent = useCallback((raw: string) => {
-    if (!raw) return undefined;
+    if (!raw) return { type: "doc" as const, content: [] };
+    
+    // 高速パス: JSONぽくない場合はすぐにテキストとして扱う
+    if (!raw.trim().startsWith('{')) {
+      return convertPlainTextToDoc(raw);
+    }
+
     try {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.type === "doc") return parsed;
     } catch {
-      // plain text fallback – 改行ごとに paragraph に変換
+      // JSON形式だがdocタイプでない、またはパース失敗
     }
-    // プレーンテキスト → doc 変換
-    const paragraphs = raw.split("\n").map((line) => ({
+    
+    return convertPlainTextToDoc(raw);
+  }, []);
+
+  const convertPlainTextToDoc = (text: string) => {
+    const paragraphs = text.split("\n").map((line) => ({
       type: "paragraph" as const,
       content: line ? [{ type: "text" as const, text: line }] : [],
     }));
     return { type: "doc" as const, content: paragraphs };
-  }, []);
+  };
 
   const editor = useEditor({
     extensions: [

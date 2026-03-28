@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useDeferredValue, memo } from "react";
 import { Copy, FileText, Search, Loader2, Edit, Save, X } from "lucide-react";
 import {
   Card,
@@ -18,10 +18,51 @@ import { toast } from "sonner";
 import type { ESDocument } from "@/types";
 import { countCharacters } from "@/lib/utils";
 
+// リストアイテムをメモ化して再レンダリングを抑制
+const DocumentListItem = memo(({ 
+  doc, 
+  isSelected, 
+  onClick 
+}: { 
+  doc: ESDocument; 
+  isSelected: boolean; 
+  onClick: (doc: ESDocument) => void;
+}) => {
+  return (
+    <button
+      onClick={() => onClick(doc)}
+      className={`flex flex-col text-left px-4 py-3 border-b border-border/40 transition-colors hover:bg-muted/50 ${
+        isSelected
+          ? "bg-primary/5 border-l-4 border-l-primary"
+          : "border-l-4 border-l-transparent"
+      }`}
+    >
+      <div className="font-medium text-sm text-foreground mb-1 line-clamp-1">
+        {doc.title || "無題のES"}
+      </div>
+      <div className="text-xs text-muted-foreground flex justify-between items-center w-full">
+        <span className="truncate">
+          {doc.companyName || doc.companySlug}
+        </span>
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <span className="bg-muted px-1.5 py-0.5 rounded-sm">
+            {doc.charCount ?? 0}文字
+          </span>
+          <span>
+            {new Date(doc.updatedAt).toLocaleDateString("ja-JP")}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+});
+DocumentListItem.displayName = "DocumentListItem";
+
 export default function ESListPage() {
   const [esDocs, setEsDocs] = useState<ESDocument[]>([]);
   const [selected, setSelected] = useState<ESDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState("");
@@ -32,11 +73,18 @@ export default function ESListPage() {
     try {
       const r = await fetch("/api/es");
       const data = await r.json();
-      setEsDocs(data);
+      
+      // 文字数を事前に計算して保持（リスト表示の高速化）
+      const docsWithCharCount = data.map((doc: ESDocument) => ({
+        ...doc,
+        charCount: countCharacters(doc.content)
+      }));
+      
+      setEsDocs(docsWithCharCount);
       
       // 選択中のドキュメントを更新
       if (selected) {
-        const updatedDoc = data.find((d: ESDocument) => d.id === selected.id);
+        const updatedDoc = docsWithCharCount.find((d: ESDocument) => d.id === selected.id);
         if (updatedDoc) setSelected(updatedDoc);
       }
     } catch (error) {
@@ -51,15 +99,15 @@ export default function ESListPage() {
   }, []);
 
   const filteredDocs = useMemo(() => {
-    if (!searchQuery) return esDocs;
-    const lowerQuery = searchQuery.toLowerCase();
+    if (!deferredSearchQuery) return esDocs;
+    const lowerQuery = deferredSearchQuery.toLowerCase();
     return esDocs.filter(
       (doc) =>
         doc.title.toLowerCase().includes(lowerQuery) ||
         (doc.companyName && doc.companyName.toLowerCase().includes(lowerQuery)) ||
         doc.companySlug.toLowerCase().includes(lowerQuery)
     );
-  }, [esDocs, searchQuery]);
+  }, [esDocs, deferredSearchQuery]);
 
   const handleCopy = async () => {
     if (!selected) return;
@@ -109,6 +157,11 @@ export default function ESListPage() {
     }
   };
 
+  const handleSelect = (doc: ESDocument) => {
+    setSelected(doc);
+    setIsEditing(false);
+  };
+
   return (
     <div className="flex h-full gap-4 relative">
       {/* 左サイドのリスト */}
@@ -144,35 +197,12 @@ export default function ESListPage() {
             ) : (
               <div className="flex flex-col">
                 {filteredDocs.map((doc) => (
-                  <button
+                  <DocumentListItem
                     key={doc.id}
-                    onClick={() => {
-                      setSelected(doc);
-                      setIsEditing(false);
-                    }}
-                    className={`flex flex-col text-left px-4 py-3 border-b border-border/40 transition-colors hover:bg-muted/50 ${
-                      selected?.id === doc.id
-                        ? "bg-primary/5 border-l-4 border-l-primary"
-                        : "border-l-4 border-l-transparent"
-                    }`}
-                  >
-                    <div className="font-medium text-sm text-foreground mb-1 line-clamp-1">
-                      {doc.title || "無題のES"}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex justify-between items-center w-full">
-                      <span className="truncate">
-                        {doc.companyName || doc.companySlug}
-                      </span>
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span className="bg-muted px-1.5 py-0.5 rounded-sm">
-                          {countCharacters(doc.content)}文字
-                        </span>
-                        <span>
-                          {new Date(doc.updatedAt).toLocaleDateString("ja-JP")}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
+                    doc={doc}
+                    isSelected={selected?.id === doc.id}
+                    onClick={handleSelect}
+                  />
                 ))}
               </div>
             )}
@@ -191,7 +221,9 @@ export default function ESListPage() {
                     {selected.companyName || selected.companySlug}
                   </span>
                   <span className="bg-muted px-2 py-0.5 rounded-md text-xs font-medium">
-                    {countCharacters(isEditing ? editedContent : selected.content)}文字
+                    {isEditing 
+                      ? countCharacters(editedContent) 
+                      : (selected.charCount ?? countCharacters(selected.content))}文字
                   </span>
                   {!isEditing && (
                     <span>
@@ -244,6 +276,7 @@ export default function ESListPage() {
                 <div className="p-6 md:p-8 w-full">
                   {selected.content || isEditing ? (
                     <NotionEditor
+                      key={selected.id}
                       readOnly={!isEditing}
                       content={isEditing ? editedContent : selected.content}
                       onChange={(val) => isEditing && setEditedContent(val)}

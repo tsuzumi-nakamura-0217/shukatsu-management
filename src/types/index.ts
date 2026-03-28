@@ -89,6 +89,7 @@ export interface ESDocument {
   title: string;
   content: string;
   updatedAt: string;
+  charCount?: number;
 }
 
 // 自己分析メモの型定義
