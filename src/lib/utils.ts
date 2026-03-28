@@ -38,6 +38,37 @@ function countTiptapCharacters(node: any): number {
 }
 
 /**
+ * TiptapのJSON形式から見出しごとの文字数を抽出するユーティリティ
+ */
+export function getSectionCharacterCounts(content: string | null | undefined): { title: string, count: number }[] {
+  if (!content) return [];
+
+  try {
+    const parsed = JSON.parse(content);
+    if (!parsed || parsed.type !== "doc" || !Array.isArray(parsed.content)) {
+      return [];
+    }
+
+    const sections: { title: string, count: number }[] = [];
+    let currentSection: { title: string, count: number } | null = null;
+
+    for (const node of parsed.content) {
+      if (node.type === "heading") {
+        const title = node.content?.map((c: any) => c.text || "").join("") || "見出し";
+        currentSection = { title, count: 0 };
+        sections.push(currentSection);
+      } else if (currentSection) {
+        currentSection.count += countTiptapCharacters(node);
+      }
+    }
+
+    return sections;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * 日付と時刻を指定された形式でフォーマットするユーティリティ
  */
 export function formatDate(value: string | null | undefined): string {

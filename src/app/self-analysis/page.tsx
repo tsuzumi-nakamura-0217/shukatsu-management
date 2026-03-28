@@ -228,7 +228,7 @@ export default function SelfAnalysisPage() {
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="flex-grow min-w-0">
-                        <div className="font-bold truncate text-sm">
+                        <div className="font-bold text-sm whitespace-normal wrap-break-word leading-snug">
                           {item.title || "無題の分析"}
                         </div>
                         <div className={cn(

@@ -226,15 +226,15 @@ export default function ESListPage() {
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="flex-grow min-w-0">
-                        <div className="font-bold truncate text-sm">
+                        <div className="font-bold text-sm whitespace-normal wrap-break-word leading-snug">
                           {doc.title || "無題のES"}
                         </div>
                         <div className={cn(
-                          "text-[10px] uppercase tracking-widest font-bold mt-1 flex justify-between",
+                          "text-[10px] uppercase tracking-widest font-bold mt-1 flex flex-wrap items-center gap-x-2 gap-y-1",
                           selected?.id === doc.id ? "text-primary-foreground/60" : "text-muted-foreground"
                         )}>
-                          <span>{doc.companyName || doc.companySlug}</span>
-                          <span>{doc.charCount ?? 0}文字</span>
+                          <span className="whitespace-normal break-all">{doc.companyName || doc.companySlug}</span>
+                          <span className="ml-auto shrink-0">{doc.charCount ?? 0}文字</span>
                         </div>
                       </div>
                       <ChevronRight className={cn(
@@ -256,7 +256,7 @@ export default function ESListPage() {
               <div className="border-b border-white/10 px-6 py-2 flex flex-row items-center justify-between shrink-0 min-h-[56px]">
                 <div className="flex-grow mr-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">
+                    <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-tight whitespace-normal break-all max-w-[60%]">
                       {selected.companyName || selected.companySlug}
                     </div>
                     <div className="bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">

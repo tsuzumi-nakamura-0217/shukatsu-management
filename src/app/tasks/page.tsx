@@ -39,6 +39,28 @@ import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import type { Task, AppConfig, Company } from "@/types";
 
+function normalizeDateTimeForCompare(value: string): string {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString();
+}
+
+function hasTaskChanges(current: Task | null, original?: Task): boolean {
+  if (!current || !original) return false;
+
+  return (
+    current.title !== original.title ||
+    current.companySlug !== original.companySlug ||
+    (current.companyName || "") !== (original.companyName || "") ||
+    current.category !== original.category ||
+    current.executionDate !== original.executionDate ||
+    normalizeDateTimeForCompare(current.deadline) !== normalizeDateTimeForCompare(original.deadline) ||
+    current.status !== original.status ||
+    current.memo !== original.memo
+  );
+}
+
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -166,12 +188,14 @@ export default function TasksPage() {
     }
   };
 
+  const originalEditingTask = editingTask ? tasks.find((t) => t.id === editingTask.id) : undefined;
+
   useAutoSave({
     enabled: !!editingTask,
-    hasChanges: !!editingTask && JSON.stringify(editingTask) !== JSON.stringify(tasks.find(t => t.id === editingTask.id)),
+    hasChanges: hasTaskChanges(editingTask, originalEditingTask),
     onSave: () => handleSaveTask(),
     delay: 1500,
-    deps: [editingTask],
+    deps: [editingTask, originalEditingTask],
   });
 
   const handleSyncAll = async () => {
@@ -280,7 +304,7 @@ export default function TasksPage() {
                       </Label>
                       <DatePicker
                         date={newTask.executionDate ? new Date(newTask.executionDate) : undefined}
-                        onChange={(d) => setNewTask({ ...newTask, executionDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                        onChange={(d) => setNewTask((prev) => ({ ...prev, executionDate: d ? format(d, "yyyy-MM-dd") : "" }))}
                       />
                     </div>
                     <div className="grid gap-2">
@@ -290,7 +314,7 @@ export default function TasksPage() {
                       </Label>
                       <DateTimePicker
                         date={newTask.deadline ? new Date(newTask.deadline) : undefined}
-                        onChange={(d) => setNewTask({ ...newTask, deadline: d ? format(d, "yyyy-MM-dd'T'HH:mm") : "" })}
+                        onChange={(d) => setNewTask((prev) => ({ ...prev, deadline: d ? d.toISOString() : "" }))}
                       />
                     </div>
                   </div>
@@ -418,11 +442,11 @@ export default function TasksPage() {
                     </Select>
                     <DatePicker
                       date={editingTask.executionDate ? new Date(editingTask.executionDate) : undefined}
-                      onChange={(d) => setEditingTask({ ...editingTask, executionDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                      onChange={(d) => setEditingTask((prev) => prev ? { ...prev, executionDate: d ? format(d, "yyyy-MM-dd") : "" } : prev)}
                     />
                     <DateTimePicker
                       date={editingTask.deadline ? new Date(editingTask.deadline) : undefined}
-                      onChange={(d) => setEditingTask({ ...editingTask, deadline: d ? format(d, "yyyy-MM-dd'T'HH:mm") : "" })}
+                      onChange={(d) => setEditingTask((prev) => prev ? { ...prev, deadline: d ? d.toISOString() : "" } : prev)}
                     />
                   </div>
                   <div className="min-h-[150px]">

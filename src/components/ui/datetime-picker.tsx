@@ -23,16 +23,18 @@ interface DateTimePickerProps {
 }
 
 export function DateTimePicker({ date, onChange, placeholder = "日時を選択", className }: DateTimePickerProps) {
+  const [open, setOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(date);
 
   React.useEffect(() => {
-    setSelectedDate(date);
-  }, [date]);
+    if (!open) {
+      setSelectedDate(date);
+    }
+  }, [date, open]);
 
   const handleDateSelect = (d: Date | undefined) => {
     if (!d) {
       setSelectedDate(undefined);
-      onChange?.(undefined);
       return;
     }
 
@@ -41,18 +43,27 @@ export function DateTimePicker({ date, onChange, placeholder = "日時を選択"
       setHours(setMinutes(d, 0), 9); // Default to 9:00 AM if no time set
 
     setSelectedDate(newDate);
-    onChange?.(newDate);
   };
 
   const handleTimeChange = (type: "hour" | "minute", value: number) => {
     if (!selectedDate) return;
     const newDate = type === "hour" ? setHours(selectedDate, value) : setMinutes(selectedDate, value);
     setSelectedDate(newDate);
-    onChange?.(newDate);
+  };
+
+  const handleApply = () => {
+    onChange?.(selectedDate);
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    setSelectedDate(undefined);
+    onChange?.(undefined);
+    setOpen(false);
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant={"outline"}
@@ -66,57 +77,63 @@ export function DateTimePicker({ date, onChange, placeholder = "日時を選択"
           {selectedDate ? format(selectedDate, "yyyy/MM/dd HH:mm", { locale: ja }) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-2xl flex" align="start">
-        <div className="p-1">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={handleDateSelect}
-            initialFocus
-            locale={ja}
-            className="rounded-2xl"
-          />
-        </div>
-        <div className="flex flex-col border-l border-white/10 p-2 gap-2 bg-muted/30">
-          <div className="flex items-center gap-1.5 px-2 py-1 mb-1 border-b border-border/50">
-            <Clock className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Time</span>
+      <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-2xl" align="start">
+        <div className="flex">
+          <div className="p-1">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDateSelect}
+              initialFocus
+              locale={ja}
+              className="rounded-2xl"
+            />
           </div>
-          <div className="flex h-[280px] gap-1">
-            <ScrollArea className="w-12 h-full rounded-md bg-background/50">
-              <div className="flex flex-col p-1 gap-1">
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <Button
-                    key={i}
-                    variant={selectedDate?.getHours() === i ? "default" : "ghost"}
-                    size="sm"
-                    className="h-8 w-full p-0 text-xs font-bold"
-                    onClick={() => handleTimeChange("hour", i)}
-                  >
-                    {i.toString().padStart(2, "0")}
-                  </Button>
-                ))}
-              </div>
-            </ScrollArea>
-            <ScrollArea className="w-12 h-full rounded-md bg-background/50">
-              <div className="flex flex-col p-1 gap-1">
-                {Array.from({ length: 12 }).map((_, i) => {
-                   const minute = i * 5;
-                   return (
+          <div className="flex flex-col border-l border-white/10 p-2 gap-2 bg-muted/30">
+            <div className="flex items-center gap-1.5 px-2 py-1 mb-1 border-b border-border/50">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Time</span>
+            </div>
+            <div className="flex h-[280px] gap-1">
+              <ScrollArea className="w-12 h-full rounded-md bg-background/50">
+                <div className="flex flex-col p-1 gap-1">
+                  {Array.from({ length: 24 }).map((_, i) => (
                     <Button
-                      key={minute}
-                      variant={selectedDate?.getMinutes() === minute ? "default" : "ghost"}
+                      key={i}
+                      variant={selectedDate?.getHours() === i ? "default" : "ghost"}
                       size="sm"
                       className="h-8 w-full p-0 text-xs font-bold"
-                      onClick={() => handleTimeChange("minute", minute)}
+                      onClick={() => handleTimeChange("hour", i)}
                     >
-                      {minute.toString().padStart(2, "0")}
+                      {i.toString().padStart(2, "0")}
                     </Button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+                  ))}
+                </div>
+              </ScrollArea>
+              <ScrollArea className="w-12 h-full rounded-md bg-background/50">
+                <div className="flex flex-col p-1 gap-1">
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const minute = i * 5;
+                    return (
+                      <Button
+                        key={minute}
+                        variant={selectedDate?.getMinutes() === minute ? "default" : "ghost"}
+                        size="sm"
+                        className="h-8 w-full p-0 text-xs font-bold"
+                        onClick={() => handleTimeChange("minute", minute)}
+                      >
+                        {minute.toString().padStart(2, "0")}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-border/40 p-2">
+          <Button type="button" size="sm" variant="ghost" onClick={handleClear}>クリア</Button>
+          <Button type="button" size="sm" onClick={handleApply}>完了</Button>
         </div>
       </PopoverContent>
     </Popover>

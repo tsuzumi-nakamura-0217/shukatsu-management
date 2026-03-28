@@ -57,13 +57,35 @@ import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
-import { countCharacters, formatDate } from "@/lib/utils";
+import { countCharacters, formatDate, getSectionCharacterCounts } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
+
+function normalizeDateTimeForCompare(value: string): string {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString();
+}
+
+function hasTaskChanges(current: Task | null, original?: Task): boolean {
+  if (!current || !original) return false;
+
+  return (
+    current.title !== original.title ||
+    current.companySlug !== original.companySlug ||
+    (current.companyName || "") !== (original.companyName || "") ||
+    current.category !== original.category ||
+    current.executionDate !== original.executionDate ||
+    normalizeDateTimeForCompare(current.deadline) !== normalizeDateTimeForCompare(original.deadline) ||
+    current.status !== original.status ||
+    current.memo !== original.memo
+  );
+}
 
 export default function CompanyDetailPage({
   params,
@@ -102,7 +124,7 @@ export default function CompanyDetailPage({
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
-  const [newEs, setNewEs] = useState({ title: "", content: "" });
+  const [newEs, setNewEs] = useState({ title: "", content: "", characterLimit: undefined as number | undefined, characterLimitType: "" as "程度" | "以下" | "未満" | "" });
 
   function fetchAll() {
     Promise.all([
@@ -240,12 +262,14 @@ export default function CompanyDetailPage({
     }
   };
 
+  const originalEditingTask = editingTask ? tasks.find((t) => t.id === editingTask.id) : undefined;
+
   useAutoSave({
     enabled: !!editingTask,
-    hasChanges: !!editingTask && JSON.stringify(editingTask) !== JSON.stringify(tasks.find(t => t.id === editingTask.id)),
+    hasChanges: hasTaskChanges(editingTask, originalEditingTask),
     onSave: () => handleSaveTask(),
     delay: 1500,
-    deps: [editingTask],
+    deps: [editingTask, originalEditingTask],
   });
 
   const handleDeleteTask = async (id: string) => {
@@ -330,7 +354,7 @@ export default function CompanyDetailPage({
       if (res.ok) {
         toast.success("文書を作成しました");
         setNewEsOpen(false);
-        setNewEs({ title: "", content: "" });
+        setNewEs({ title: "", content: "", characterLimit: undefined, characterLimitType: "" });
         fetchAll();
       }
     } finally {
@@ -346,7 +370,13 @@ export default function CompanyDetailPage({
       await fetch(`/api/companies/${slug}/es`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: doc.id, title: doc.title, content: doc.content }),
+        body: JSON.stringify({
+          id: doc.id,
+          title: doc.title,
+          content: doc.content,
+          characterLimit: doc.characterLimit,
+          characterLimitType: doc.characterLimitType
+        }),
       });
       fetchAll();
     } finally {
@@ -354,9 +384,28 @@ export default function CompanyDetailPage({
     }
   };
 
+  const handleDeleteEs = async (id: string) => {
+    if (!confirm("この文書を削除しますか？")) return;
+    const res = await fetch(`/api/companies/${slug}/es`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      toast.success("文書を削除しました");
+      if (editEsDoc?.id === id) setEditEsDoc(null);
+      fetchAll();
+    }
+  };
+
   useAutoSave({
     enabled: !!editEsDoc,
-    hasChanges: !!editEsDoc && (editEsDoc.content !== esDocs.find(d => d.id === editEsDoc.id)?.content || editEsDoc.title !== esDocs.find(d => d.id === editEsDoc.id)?.title),
+    hasChanges: !!editEsDoc && (
+      editEsDoc.content !== esDocs.find(d => d.id === editEsDoc.id)?.content ||
+      editEsDoc.title !== esDocs.find(d => d.id === editEsDoc.id)?.title ||
+      editEsDoc.characterLimit !== esDocs.find(d => d.id === editEsDoc.id)?.characterLimit ||
+      editEsDoc.characterLimitType !== esDocs.find(d => d.id === editEsDoc.id)?.characterLimitType
+    ),
     onSave: () => handleSaveEs(),
     delay: 1500,
     deps: [editEsDoc],
@@ -458,10 +507,10 @@ export default function CompanyDetailPage({
                   key={stage}
                   onClick={() => handleUpdateStatus(stage)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isCurrent
-                      ? "bg-primary text-primary-foreground"
-                      : isPast
-                        ? "bg-green-100 text-green-800"
-                        : "bg-muted text-muted-foreground hover:bg-accent"
+                    ? "bg-primary text-primary-foreground"
+                    : isPast
+                      ? "bg-green-100 text-green-800"
+                      : "bg-muted text-muted-foreground hover:bg-accent"
                     }`}
                 >
                   {stage}
@@ -623,6 +672,32 @@ export default function CompanyDetailPage({
                     <Label>タイトル</Label>
                     <Input value={newEs.title} onChange={(e) => setNewEs({ ...newEs, title: e.target.value })} placeholder="エントリーシート" />
                   </div>
+                  <div>
+                    <Label>字数指定（目標字数）</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        className="flex-1"
+                        value={newEs.characterLimit || ""}
+                        onChange={(e) => setNewEs({ ...newEs, characterLimit: e.target.value ? parseInt(e.target.value) : undefined })}
+                        placeholder="400"
+                      />
+                      <Select
+                        value={newEs.characterLimitType}
+                        onValueChange={(val: any) => setNewEs({ ...newEs, characterLimitType: val })}
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="種別" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value=" ">指定なし</SelectItem>
+                          <SelectItem value="程度">程度</SelectItem>
+                          <SelectItem value="以下">以下</SelectItem>
+                          <SelectItem value="未満">未満</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
@@ -651,12 +726,26 @@ export default function CompanyDetailPage({
                 <Card key={doc.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex flex-col gap-1">
-                        <CardTitle className="text-base">{doc.title}</CardTitle>
+                      <div className="flex flex-col gap-1 flex-1">
+                        {editEsDoc?.id === doc.id ? (
+                          <Input
+                            className="text-base font-semibold h-8"
+                            value={editEsDoc.title}
+                            onChange={(e) => setEditEsDoc({ ...editEsDoc, title: e.target.value })}
+                          />
+                        ) : (
+                          <CardTitle className="text-base">{doc.title}</CardTitle>
+                        )}
                         <CardDescription className="flex items-center gap-2">
                           <span>更新: {new Date(doc.updatedAt).toLocaleString("ja-JP")}</span>
-                          <span className="bg-muted px-1.5 py-0.5 rounded-sm text-xs font-medium">
-                            {countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content)}文字
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded-sm text-xs font-medium",
+                            doc.characterLimit
+                              ? (countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content) > doc.characterLimit ? "bg-red-100 text-red-800" : "bg-muted text-muted-foreground")
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content)}
+                            {doc.characterLimit ? ` / ${doc.characterLimit}文字${doc.characterLimitType || ""}` : "文字"}
                           </span>
                         </CardDescription>
                       </div>
@@ -670,24 +759,72 @@ export default function CompanyDetailPage({
                               </div>
                             )}
                             <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>完了</Button>
-                            <Button size="sm" onClick={() => handleSaveEs()} disabled={isSavingEs}>保存</Button>
                           </div>
                         ) : (
-                          <Button variant="outline" size="sm" onClick={() => setEditEsDoc(doc)}>
-                            <Edit className="mr-1 h-3 w-3" /> 編集
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(doc)}>
+                              <Edit className="mr-1 h-3 w-3" /> 編集
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEs(doc.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     {doc.content || editEsDoc?.id === doc.id ? (
-                      <div className="space-y-2">
+                      <div className="space-y-4">
+                        {editEsDoc?.id === doc.id && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs whitespace-nowrap">字数指定:</Label>
+                            <Input
+                              type="number"
+                              className="h-8 text-xs w-20"
+                              value={editEsDoc.characterLimit || ""}
+                              onChange={(e) => setEditEsDoc({ ...editEsDoc, characterLimit: e.target.value ? parseInt(e.target.value) : undefined })}
+                              placeholder="制限なし"
+                            />
+                            <Select
+                              value={editEsDoc.characterLimitType || ""}
+                              onValueChange={(val: any) => setEditEsDoc({ ...editEsDoc, characterLimitType: val === " " ? "" : val })}
+                            >
+                              <SelectTrigger className="h-8 text-xs w-24">
+                                <SelectValue placeholder="種別" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value=" ">指定なし</SelectItem>
+                                <SelectItem value="程度">程度</SelectItem>
+                                <SelectItem value="以下">以下</SelectItem>
+                                <SelectItem value="未満">未満</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                         <NotionEditor
                           readOnly={editEsDoc?.id !== doc.id}
                           content={editEsDoc?.id === doc.id ? editEsDoc.content : doc.content}
                           onChange={(val) => editEsDoc?.id === doc.id && setEditEsDoc({ ...editEsDoc, content: val })}
                         />
+
+                        {/* Section Character Counts */}
+                        <div className="mt-4 pt-4 border-t border-dashed">
+                          <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).map((section, idx) => (
+                              <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
+                                <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
+                                <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
+                              </div>
+                            ))}
+                            {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).length === 0 && (
+                              <p className="text-[10px] text-muted-foreground italic col-span-2">
+                                * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center text-muted-foreground italic py-4">
@@ -925,14 +1062,14 @@ export default function CompanyDetailPage({
                     <Label>実施日</Label>
                     <DatePicker
                       date={newTask.executionDate ? new Date(newTask.executionDate) : undefined}
-                      onChange={(d) => setNewTask({ ...newTask, executionDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                      onChange={(d) => setNewTask((prev) => ({ ...prev, executionDate: d ? format(d, "yyyy-MM-dd") : "" }))}
                     />
                   </div>
                   <div>
                     <Label>締切</Label>
                     <DateTimePicker
                       date={newTask.deadline ? new Date(newTask.deadline) : undefined}
-                      onChange={(d) => setNewTask({ ...newTask, deadline: d ? format(d, "yyyy-MM-dd'T'HH:mm") : "" })}
+                      onChange={(d) => setNewTask((prev) => ({ ...prev, deadline: d ? d.toISOString() : "" }))}
                     />
                   </div>
                   <div>
@@ -1008,19 +1145,27 @@ export default function CompanyDetailPage({
                         <DatePicker
                           date={editingTask.executionDate ? new Date(editingTask.executionDate) : undefined}
                           onChange={(d) =>
-                            setEditingTask({
-                              ...editingTask,
-                              executionDate: d ? format(d, "yyyy-MM-dd") : "",
-                            })
+                            setEditingTask((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    executionDate: d ? format(d, "yyyy-MM-dd") : "",
+                                  }
+                                : prev
+                            )
                           }
                         />
                         <DateTimePicker
                           date={editingTask.deadline ? new Date(editingTask.deadline) : undefined}
                           onChange={(d) =>
-                            setEditingTask({
-                              ...editingTask,
-                              deadline: d ? format(d, "yyyy-MM-dd'T'HH:mm") : "",
-                            })
+                            setEditingTask((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    deadline: d ? d.toISOString() : "",
+                                  }
+                                : prev
+                            )
                           }
                         />
                       </div>
@@ -1051,18 +1196,18 @@ export default function CompanyDetailPage({
                             </SelectContent>
                           </Select>
                         </div>
-                         <div className="flex gap-2 items-center">
-                           {isSavingTask && (
-                             <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
-                               <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                               <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                             </div>
-                           )}
-                           <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
-                             完了
-                           </Button>
-                           <Button size="sm" onClick={() => handleSaveTask()}>保存</Button>
-                         </div>
+                        <div className="flex gap-2 items-center">
+                          {isSavingTask && (
+                            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                            </div>
+                          )}
+                          <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
+                            完了
+                          </Button>
+                          <Button size="sm" onClick={() => handleSaveTask()}>保存</Button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -1131,17 +1276,17 @@ export default function CompanyDetailPage({
         <TabsContent value="memo" className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">企業研究メモ</h3>
-             <div className="flex items-center gap-3">
-               {isSavingMemo && (
-                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
-                   <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                 </div>
-               )}
-               <Button size="sm" onClick={() => handleSaveCompany()} disabled={isSavingMemo}>
-                 <Save className="mr-2 h-4 w-4" /> 保存
-               </Button>
-             </div>
+            <div className="flex items-center gap-3">
+              {isSavingMemo && (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                </div>
+              )}
+              <Button size="sm" onClick={() => handleSaveCompany()} disabled={isSavingMemo}>
+                <Save className="mr-2 h-4 w-4" /> 保存
+              </Button>
+            </div>
           </div>
           <div className="min-h-[400px]">
             <NotionEditor content={memoContent} onChange={setMemoContent} />

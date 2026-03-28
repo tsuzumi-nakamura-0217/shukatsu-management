@@ -90,6 +90,8 @@ export interface ESDocument {
   content: string;
   updatedAt: string;
   charCount?: number;
+  characterLimit?: number;
+  characterLimitType?: "程度" | "以下" | "未満" | "";
 }
 
 // 自己分析メモの型定義

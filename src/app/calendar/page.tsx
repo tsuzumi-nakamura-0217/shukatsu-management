@@ -106,12 +106,40 @@ export default function CalendarPage() {
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
             border: none !important;
           }
+          .fc .fc-event.calendar-event-deadline {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+            border: 1px solid #dc2626 !important;
+          }
+          .fc .fc-event.calendar-event-es {
+            background: #f59e0b !important;
+            color: #111827 !important;
+            border: 1px solid #d97706 !important;
+          }
+          .fc .fc-event.calendar-event-interview {
+            background: #2563eb !important;
+            color: #ffffff !important;
+            border: 1px solid #1d4ed8 !important;
+          }
           .dark .fc {
             --fc-border-color: rgba(255, 255, 255, 0.05);
             --fc-today-bg-color: var(--muted);
           }
           .dark .fc .fc-button {
             background: rgba(255, 255, 255, 0.05) !important;
+          }
+          .dark .fc .fc-event.calendar-event-deadline {
+            background: #b91c1c !important;
+            border-color: #991b1b !important;
+          }
+          .dark .fc .fc-event.calendar-event-es {
+            background: #ca8a04 !important;
+            color: #111827 !important;
+            border-color: #a16207 !important;
+          }
+          .dark .fc .fc-event.calendar-event-interview {
+            background: #1d4ed8 !important;
+            border-color: #1e40af !important;
           }
         `}</style>
         <FullCalendar
@@ -124,6 +152,13 @@ export default function CalendarPage() {
           }}
           locale="ja"
           events={events}
+          eventClassNames={(arg) => {
+            const eventType = arg.event.extendedProps.type as string | undefined;
+            if (eventType === "deadline") return ["calendar-event-deadline"];
+            if (eventType === "es") return ["calendar-event-es"];
+            if (eventType === "interview") return ["calendar-event-interview"];
+            return [];
+          }}
           height="auto"
           eventClick={(info) => {
             const { type, companySlug } = info.event.extendedProps;

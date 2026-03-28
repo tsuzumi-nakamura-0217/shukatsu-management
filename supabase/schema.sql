@@ -32,8 +32,8 @@ CREATE TABLE tasks (
   title TEXT NOT NULL,
   category TEXT DEFAULT 'その他',
   execution_date DATE,
-  deadline DATE,
-  completed BOOLEAN DEFAULT FALSE,
+  deadline TIMESTAMPTZ,
+  status TEXT DEFAULT '未着手',
   memo TEXT DEFAULT '',
   notion_page_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -63,9 +63,14 @@ CREATE TABLE es_documents (
   company_slug TEXT NOT NULL,
   title TEXT NOT NULL,
   content TEXT DEFAULT '',
+  character_limit INTEGER,
+  character_limit_type TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+COMMENT ON COLUMN es_documents.character_limit IS '目標文字数（字数指定）';
+COMMENT ON COLUMN es_documents.character_limit_type IS '字数指定の種別（程度、以下、未満など）';
 
 -- 5. 自己分析テーブル
 CREATE TABLE self_analysis (

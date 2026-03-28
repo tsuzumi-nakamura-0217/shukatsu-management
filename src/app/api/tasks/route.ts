@@ -8,6 +8,30 @@ import {
 import { getConfig } from "@/lib/data/config";
 import { syncTaskToNotion, deleteTaskFromNotion } from "@/lib/notion";
 import { withAuthenticatedUser } from "@/lib/auth-server";
+import { normalizeDateOnly, normalizeDateTime } from "@/lib/data/utils";
+import type { TaskCreate } from "@/types";
+
+function sanitizeTaskInput(input: Record<string, unknown>): { payload: Record<string, unknown>; error?: string } {
+  const payload = { ...input };
+
+  if (Object.prototype.hasOwnProperty.call(payload, "executionDate")) {
+    const normalizedExecutionDate = normalizeDateOnly(payload.executionDate);
+    if (payload.executionDate !== "" && payload.executionDate != null && !normalizedExecutionDate) {
+      return { payload, error: "executionDate must be YYYY-MM-DD" };
+    }
+    payload.executionDate = normalizedExecutionDate ?? "";
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, "deadline")) {
+    const normalizedDeadline = normalizeDateTime(payload.deadline);
+    if (payload.deadline !== "" && payload.deadline != null && !normalizedDeadline) {
+      return { payload, error: "deadline must be a valid datetime" };
+    }
+    payload.deadline = normalizedDeadline ?? "";
+  }
+
+  return { payload };
+}
 
 export async function GET(request: NextRequest) {
   return withAuthenticatedUser(request, async () => {
@@ -50,7 +74,26 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      const task = await createTask(body);
+
+      const { payload, error } = sanitizeTaskInput(body as Record<string, unknown>);
+      if (error) {
+        return NextResponse.json({ error }, { status: 400 });
+      }
+
+      const taskInput: TaskCreate = {
+        title: String(payload.title ?? ""),
+        companySlug: String(payload.companySlug ?? ""),
+        category: typeof payload.category === "string" ? payload.category : undefined,
+        executionDate: typeof payload.executionDate === "string" ? payload.executionDate : undefined,
+        deadline: typeof payload.deadline === "string" ? payload.deadline : undefined,
+        status:
+          payload.status === "未着手" || payload.status === "進行中" || payload.status === "完了"
+            ? payload.status
+            : undefined,
+        memo: typeof payload.memo === "string" ? payload.memo : undefined,
+      };
+
+      const task = await createTask(taskInput);
 
       const config = await getConfig();
       if (config.notion.enabled) {
@@ -76,7 +119,20 @@ export async function PUT(request: NextRequest) {
   return withAuthenticatedUser(request, async () => {
     try {
       const body = await request.json();
-      const { id, ...updates } = body;
+
+      if (!body.id || typeof body.id !== "string") {
+        return NextResponse.json(
+          { error: "id は必須です" },
+          { status: 400 }
+        );
+      }
+
+      const { id, ...rawUpdates } = body;
+      const { payload: updates, error } = sanitizeTaskInput(rawUpdates as Record<string, unknown>);
+      if (error) {
+        return NextResponse.json({ error }, { status: 400 });
+      }
+
       const task = await updateTask(id, updates);
       if (!task) {
         return NextResponse.json(
