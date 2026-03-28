@@ -62,8 +62,8 @@ function rowToCompany(row: Record<string, unknown>): Company {
     status: (row.status as string) || "未応募",
     priority: (row.priority as number) || 3,
     stages: (row.stages as string[]) || [],
-    createdAt: toISODate(row.created_at as string),
-    updatedAt: toISODate(row.updated_at as string),
+    createdAt: (row.created_at as string) || "",
+    updatedAt: (row.updated_at as string) || "",
     memo: (row.memo as string) || "",
   };
 }
@@ -82,7 +82,7 @@ function rowToTask(row: Record<string, unknown>): Task {
     memo: (row.memo as string) || "",
     notionPageId: (row.notion_page_id as string) || undefined,
     createdAt: toISODate(row.created_at as string),
-    updatedAt: toISODate(row.updated_at as string),
+    updatedAt: (row.updated_at as string) || "",
   };
 }
 
@@ -97,7 +97,7 @@ function rowToInterview(row: Record<string, unknown>): Interview {
     result: (row.result as string) || "結果待ち",
     memo: (row.memo as string) || "",
     createdAt: toISODate(row.created_at as string),
-    updatedAt: toISODate(row.updated_at as string),
+    updatedAt: (row.updated_at as string) || "",
   };
 }
 
@@ -111,7 +111,7 @@ function rowToESDocument(row: Record<string, unknown>): ESDocument {
     companyName: companyData?.name || "",
     title: (row.title as string) || "",
     content: (row.content as string) || "",
-    updatedAt: toISODate(row.updated_at as string),
+    updatedAt: (row.updated_at as string) || "",
   };
 }
 

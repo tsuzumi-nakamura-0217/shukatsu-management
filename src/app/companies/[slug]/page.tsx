@@ -57,6 +57,7 @@ import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
+import { countCharacters } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
 
@@ -582,27 +583,43 @@ export default function CompanyDetailPage({
                 <Card key={doc.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{doc.title}</CardTitle>
+                      <div className="flex flex-col gap-1">
+                        <CardTitle className="text-base">{doc.title}</CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <span>更新: {new Date(doc.updatedAt).toLocaleString("ja-JP")}</span>
+                          <span className="bg-muted px-1.5 py-0.5 rounded-sm text-xs font-medium">
+                            {countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content)}文字
+                          </span>
+                        </CardDescription>
+                      </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setEditEsDoc(doc)}>
-                          <Edit className="mr-1 h-3 w-3" /> 編集
-                        </Button>
+                        {editEsDoc?.id === doc.id ? (
+                          <>
+                            {isSavingEs && <span className="text-xs text-muted-foreground animate-pulse self-center mr-1">保存中...</span>}
+                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>キャンセル</Button>
+                            <Button size="sm" onClick={() => handleSaveEs(editEsDoc)} disabled={isSavingEs}>保存</Button>
+                          </>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => setEditEsDoc(doc)}>
+                            <Edit className="mr-1 h-3 w-3" /> 編集
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    <CardDescription>更新: {doc.updatedAt}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {editEsDoc?.id === doc.id ? (
+                    {doc.content || editEsDoc?.id === doc.id ? (
                       <div className="space-y-2">
-                        <NotionEditor content={editEsDoc.content} onChange={(val) => setEditEsDoc({ ...editEsDoc, content: val })} />
-                        <div className="flex items-center gap-2 justify-end">
-                          {isSavingEs && <span className="text-xs text-muted-foreground animate-pulse">保存中...</span>}
-                          <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>キャンセル</Button>
-                          <Button size="sm" onClick={() => handleSaveEs(editEsDoc)} disabled={isSavingEs}>保存</Button>
-                        </div>
+                        <NotionEditor
+                          readOnly={editEsDoc?.id !== doc.id}
+                          content={editEsDoc?.id === doc.id ? editEsDoc.content : doc.content}
+                          onChange={(val) => editEsDoc?.id === doc.id && setEditEsDoc({ ...editEsDoc, content: val })}
+                        />
                       </div>
                     ) : (
-                      <NotionEditor readOnly content={doc.content} onChange={() => {}} />
+                      <div className="text-center text-muted-foreground italic py-4">
+                        本文がありません
+                      </div>
                     )}
                   </CardContent>
                 </Card>

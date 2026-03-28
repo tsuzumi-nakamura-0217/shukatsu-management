@@ -338,9 +338,9 @@ export default function CompaniesPage() {
                         📍 {company.location}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      更新: {company.updatedAt}
-                    </p>
+                      <p className="text-xs text-muted-foreground">
+                        更新: {new Date(company.updatedAt).toLocaleDateString("ja-JP")}
+                      </p>
                   </div>
                 </CardContent>
               </Card>

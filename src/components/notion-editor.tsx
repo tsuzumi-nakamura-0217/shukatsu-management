@@ -157,6 +157,13 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
     }
   }, [content, editor, parseContent]);
 
+  // readOnly 変更の反映
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!readOnly);
+    }
+  }, [readOnly, editor]);
+
   // 画像ファイル → base64 → エディタに挿入
   const insertImageFromFile = useCallback(
     (file: File) => {
