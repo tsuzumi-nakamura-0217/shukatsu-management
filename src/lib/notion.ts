@@ -1,5 +1,5 @@
 import { Client } from "@notionhq/client";
-import { getConfig } from "./data";
+import { getConfig } from "./data/config";
 import type { Task } from "@/types";
 
 const STATUS_MAP: Record<string, string> = {

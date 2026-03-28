@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getExportData } from "@/lib/data";
+import { getExportData } from "@/lib/data/export";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 import fs from "fs/promises";
 import path from "path";

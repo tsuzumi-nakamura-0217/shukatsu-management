@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStats } from "@/lib/data";
+import { getStats } from "@/lib/data/stats";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 export async function GET(request: NextRequest) {

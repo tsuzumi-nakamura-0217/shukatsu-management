@@ -4,8 +4,8 @@ import {
   createTask,
   updateTask,
   deleteTask,
-  getConfig,
-} from "@/lib/data";
+} from "@/lib/data/tasks";
+import { getConfig } from "@/lib/data/config";
 import { syncTaskToNotion, deleteTaskFromNotion } from "@/lib/notion";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 

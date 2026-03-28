@@ -3,7 +3,7 @@ import {
   getAllSelfAnalysis,
   saveSelfAnalysis,
   deleteSelfAnalysis,
-} from "@/lib/data";
+} from "@/lib/data/self-analysis";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 export async function GET(request: NextRequest) {

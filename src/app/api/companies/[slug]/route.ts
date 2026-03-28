@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCompany, saveCompany, deleteCompany } from "@/lib/data";
+import { getCompany, saveCompany, deleteCompany } from "@/lib/data/companies";
 import type { Company } from "@/types";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 

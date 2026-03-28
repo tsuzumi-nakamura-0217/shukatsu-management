@@ -4,7 +4,7 @@ import {
   createInterview,
   updateInterview,
   deleteInterview,
-} from "@/lib/data";
+} from "@/lib/data/interviews";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 export async function GET(

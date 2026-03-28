@@ -22,6 +22,7 @@ import {
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import type { SelfAnalysis } from "@/types";
 
 export default function SelfAnalysisPage() {
@@ -87,17 +88,13 @@ export default function SelfAnalysisPage() {
     }
   };
 
-  // Auto-save useEffect
-  useEffect(() => {
-    if (!selected) return;
-    if (editContent === selected.content) return;
-
-    const timer = setTimeout(() => {
-      handleSave();
-    }, 1500); // 1.5秒のディレイ
-
-    return () => clearTimeout(timer);
-  }, [editContent, selected]);
+  useAutoSave({
+    enabled: !!selected,
+    hasChanges: !!selected && editContent !== selected.content,
+    onSave: handleSave,
+    delay: 1500,
+    deps: [editContent, selected?.id, selected?.content],
+  });
 
   const handleCreate = async () => {
     if (isCreating) return;

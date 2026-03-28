@@ -59,6 +59,7 @@ import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { countCharacters } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
 
 export default function CompanyDetailPage({
@@ -139,17 +140,13 @@ export default function CompanyDetailPage({
     }
   };
 
-  // Auto-save memo
-  useEffect(() => {
-    if (!company) return;
-    if (memoContent === company.memo) return;
-
-    const timer = setTimeout(() => {
-      handleSaveCompany();
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [memoContent, company]);
+  useAutoSave({
+    enabled: !!company,
+    hasChanges: !!company && memoContent !== company.memo,
+    onSave: handleSaveCompany,
+    delay: 1500,
+    deps: [memoContent, company?.id, company?.memo],
+  });
 
   const handleDeleteCompany = async () => {
     if (!confirm("この企業を削除しますか？関連するタスクも削除されます。")) return;

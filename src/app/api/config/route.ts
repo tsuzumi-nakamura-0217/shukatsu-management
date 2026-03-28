@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getConfig, updateConfig } from "@/lib/data";
+import { getConfig, updateConfig } from "@/lib/data/config";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 export async function GET(request: NextRequest) {

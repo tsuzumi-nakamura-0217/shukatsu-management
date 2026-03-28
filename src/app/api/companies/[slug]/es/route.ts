@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getESDocuments, saveESDocument, deleteESDocument } from "@/lib/data";
+import { getESDocuments, saveESDocument, deleteESDocument } from "@/lib/data/es";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 export async function GET(

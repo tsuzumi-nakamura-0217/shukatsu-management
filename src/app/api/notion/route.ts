@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllTasks, updateTask } from "@/lib/data";
+import { getAllTasks, updateTask } from "@/lib/data/tasks";
 import { syncTaskToNotion, testNotionConnection, searchNotionDatabases, fetchTasksFromNotion } from "@/lib/notion";
-import { getConfig } from "@/lib/data";
+import { getConfig } from "@/lib/data/config";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 import type { Task } from "@/types";
 
@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
         const normalizeId = (id: string) => id.replace(/-/g, "").toLowerCase();
 
         // Pre-fetch companies for matching during import
-        const { getAllCompanies, createCompany, createTask } = await import("@/lib/data");
+        const { getAllCompanies, createCompany } = await import("@/lib/data/companies");
+        const { createTask } = await import("@/lib/data/tasks");
         const allCompanies = await getAllCompanies();
 
         for (const notionTask of notionResult.tasks) {
