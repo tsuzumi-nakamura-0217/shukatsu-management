@@ -1,62 +1,27 @@
 "use client";
 
-import { useEffect, useState, useMemo, useDeferredValue, memo } from "react";
-import { Copy, FileText, Search, Loader2, Edit, Save, X } from "lucide-react";
+import { useEffect, useState, useMemo, useDeferredValue } from "react";
+import {
+  FileText,
+  Search,
+  Loader2,
+  Copy,
+  ChevronRight
+} from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn, countCharacters } from "@/lib/utils";
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
+import { useAutoSave } from "@/hooks/use-auto-save";
 import type { ESDocument } from "@/types";
-import { countCharacters } from "@/lib/utils";
-
-// リストアイテムをメモ化して再レンダリングを抑制
-const DocumentListItem = memo(({ 
-  doc, 
-  isSelected, 
-  onClick 
-}: { 
-  doc: ESDocument; 
-  isSelected: boolean; 
-  onClick: (doc: ESDocument) => void;
-}) => {
-  return (
-    <button
-      onClick={() => onClick(doc)}
-      className={`flex flex-col text-left px-4 py-3 border-b border-border/40 transition-colors hover:bg-muted/50 ${
-        isSelected
-          ? "bg-primary/5 border-l-4 border-l-primary"
-          : "border-l-4 border-l-transparent"
-      }`}
-    >
-      <div className="font-medium text-sm text-foreground mb-1 line-clamp-1">
-        {doc.title || "無題のES"}
-      </div>
-      <div className="text-xs text-muted-foreground flex justify-between items-center w-full">
-        <span className="truncate">
-          {doc.companyName || doc.companySlug}
-        </span>
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-          <span className="bg-muted px-1.5 py-0.5 rounded-sm">
-            {doc.charCount ?? 0}文字
-          </span>
-          <span>
-            {new Date(doc.updatedAt).toLocaleDateString("ja-JP")}
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-});
-DocumentListItem.displayName = "DocumentListItem";
 
 export default function ESListPage() {
   const [esDocs, setEsDocs] = useState<ESDocument[]>([]);
@@ -64,28 +29,41 @@ export default function ESListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState("");
-  const [editedTitle, setEditedTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editTitle, setEditTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchEsDocs = async () => {
+  const fetchEsDocs = async (selectId?: string) => {
     try {
       const r = await fetch("/api/es");
       const data = await r.json();
-      
-      // 文字数を事前に計算して保持（リスト表示の高速化）
+
       const docsWithCharCount = data.map((doc: ESDocument) => ({
         ...doc,
         charCount: countCharacters(doc.content)
       }));
-      
+
       setEsDocs(docsWithCharCount);
-      
-      // 選択中のドキュメントを更新
-      if (selected) {
-        const updatedDoc = docsWithCharCount.find((d: ESDocument) => d.id === selected.id);
-        if (updatedDoc) setSelected(updatedDoc);
+
+      if (docsWithCharCount.length > 0) {
+        if (selectId) {
+          const doc = docsWithCharCount.find((d: ESDocument) => d.id === selectId);
+          if (doc) {
+            setSelected(doc);
+            setEditContent(doc.content);
+            setEditTitle(doc.title);
+          }
+        } else if (!selected) {
+          setSelected(docsWithCharCount[0]);
+          setEditContent(docsWithCharCount[0].content);
+          setEditTitle(docsWithCharCount[0].title);
+        } else {
+          // Update selected if it's already set
+          const doc = docsWithCharCount.find((d: ESDocument) => d.id === selected.id);
+          if (doc) {
+            setSelected(doc);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to fetch ES documents", error);
@@ -112,22 +90,11 @@ export default function ESListPage() {
   const handleCopy = async () => {
     if (!selected) return;
     try {
-      await navigator.clipboard.writeText(selected.content);
+      await navigator.clipboard.writeText(editContent);
       toast.success("クリップボードにコピーしました");
     } catch (err) {
       toast.error("コピーに失敗しました");
     }
-  };
-
-  const startEditing = () => {
-    if (!selected) return;
-    setEditedContent(selected.content);
-    setEditedTitle(selected.title);
-    setIsEditing(true);
-  };
-
-  const cancelEditing = () => {
-    setIsEditing(false);
   };
 
   const handleSave = async () => {
@@ -139,14 +106,18 @@ export default function ESListPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: selected.id,
-          title: editedTitle,
-          content: editedContent,
+          title: editTitle,
+          content: editContent,
         }),
       });
       if (res.ok) {
-        toast.success("保存しました");
-        setIsEditing(false);
-        await fetchEsDocs();
+        // Sync state without full reload if possible, but fetch ensures consistency
+        const r = await fetch("/api/es");
+        const data = await r.json();
+        setEsDocs(data.map((doc: ESDocument) => ({
+          ...doc,
+          charCount: countCharacters(doc.content)
+        })));
       } else {
         toast.error("保存に失敗しました");
       }
@@ -157,148 +128,193 @@ export default function ESListPage() {
     }
   };
 
+  useAutoSave({
+    enabled: !!selected,
+    hasChanges: !!selected && (editContent !== selected.content || editTitle !== selected.title),
+    onSave: handleSave,
+    delay: 1500,
+    deps: [editContent, editTitle, selected?.id],
+  });
+
   const handleSelect = (doc: ESDocument) => {
     setSelected(doc);
-    setIsEditing(false);
+    setEditContent(doc.content);
+    setEditTitle(doc.title);
   };
 
   return (
-    <div className="flex h-full gap-4 relative">
-      {/* 左サイドのリスト */}
-      <Card className="w-1/3 flex flex-col h-[calc(100vh-10rem)] shadow-sm border-muted/60">
-        <CardHeader className="pb-3 border-b border-border/40 shrink-0">
-          <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            ES・志望動機一覧
-          </CardTitle>
-          <CardDescription>
-            各企業向けに作成したESや志望動機を一元管理・閲覧できます
-          </CardDescription>
-          <div className="mt-4 relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="flex flex-col gap-6 pb-6">
+      {/* Compact Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-orange-500/10 blur-[40px]" />
+
+        <div className="relative flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <FileText className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              エントリーシート管理
+            </h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+              {esDocs.length} Documents Registered
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {selected && (
+            <Button
+              onClick={handleCopy}
+              variant="outline"
+              size="sm"
+              className="rounded-xl h-10 px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              コピー
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[700px]">
+        {/* Left Side: List */}
+        <div className="lg:col-span-3 flex flex-col gap-4 overflow-hidden">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="企業名やタイトルで検索..."
-              className="pl-9 bg-background/50 focus-visible:bg-background"
+              placeholder="タイトルや企業名で検索..."
+              className="pl-11 h-12 rounded-2xl glass border-none focus-visible:ring-2 focus-visible:ring-primary/20"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-        </CardHeader>
-        <CardContent className="p-0 flex-grow overflow-hidden">
-          <ScrollArea className="h-full">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredDocs.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                {searchQuery ? "一致するESが見つかりません" : "保存されたESがありません"}
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                {filteredDocs.map((doc) => (
-                  <DocumentListItem
-                    key={doc.id}
-                    doc={doc}
-                    isSelected={selected?.id === doc.id}
-                    onClick={handleSelect}
-                  />
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
 
-      {/* 右サイドのプレビュー */}
-      <Card className="w-2/3 flex flex-col h-[calc(100vh-10rem)] shadow-sm border-muted/60">
-        {selected ? (
-          <>
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/40 shrink-0">
-              <div className="flex-grow mr-4">
-                <CardDescription className="mb-1.5 flex items-center gap-1.5">
-                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-xs font-medium">
-                    {selected.companyName || selected.companySlug}
-                  </span>
-                  <span className="bg-muted px-2 py-0.5 rounded-md text-xs font-medium">
-                    {isEditing 
-                      ? countCharacters(editedContent) 
-                      : (selected.charCount ?? countCharacters(selected.content))}文字
-                  </span>
-                  {!isEditing && (
-                    <span>
-                      最終更新: {new Date(selected.updatedAt).toLocaleString("ja-JP")}
-                    </span>
-                  )}
-                </CardDescription>
-                {isEditing ? (
-                  <Input
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    className="text-2xl font-bold h-auto py-1 px-2 -ml-2 bg-transparent focus-visible:ring-1"
-                  />
+          <Card className="flex-grow border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5">
+            <ScrollArea className="h-full">
+              <div className="p-2 space-y-1">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center p-20 gap-3">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+                    <p className="text-sm font-bold text-muted-foreground">読み込み中...</p>
+                  </div>
+                ) : filteredDocs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center gap-4">
+                    <div className="p-4 rounded-full bg-muted/20">
+                      <Search className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                    <p className="text-sm font-bold text-muted-foreground">
+                      {searchQuery ? "一致するESが見つかりません" : "まだドキュメントがありません"}
+                    </p>
+                  </div>
                 ) : (
-                  <CardTitle className="text-2xl font-bold">{selected.title || "無題のES"}</CardTitle>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {isEditing ? (
-                  <>
-                    <Button onClick={handleSave} size="sm" className="gap-2" disabled={isSaving}>
-                      {isSaving ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
+                  filteredDocs.map((doc) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => handleSelect(doc)}
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 rounded-2xl transition-all group relative text-left",
+                        selected?.id === doc.id
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                          : "hover:bg-white/40 dark:hover:bg-white/5"
                       )}
-                      保存
-                    </Button>
-                    <Button onClick={cancelEditing} variant="ghost" size="sm" className="gap-2" disabled={isSaving}>
-                      <X className="h-4 w-4" />
-                      キャンセル
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button onClick={startEditing} variant="outline" size="sm" className="gap-2">
-                      <Edit className="h-4 w-4" />
-                      編集
-                    </Button>
-                    <Button onClick={handleCopy} variant="outline" size="sm" className="gap-2">
-                      <Copy className="h-4 w-4" />
-                      コピー
-                    </Button>
-                  </>
+                    >
+                      <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                        selected?.id === doc.id ? "bg-white/20" : "bg-primary/10 text-primary"
+                      )}>
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="font-bold truncate text-sm">
+                          {doc.title || "無題のES"}
+                        </div>
+                        <div className={cn(
+                          "text-[10px] uppercase tracking-widest font-bold mt-1 flex justify-between",
+                          selected?.id === doc.id ? "text-primary-foreground/60" : "text-muted-foreground"
+                        )}>
+                          <span>{doc.companyName || doc.companySlug}</span>
+                          <span>{doc.charCount ?? 0}文字</span>
+                        </div>
+                      </div>
+                      <ChevronRight className={cn(
+                        "h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1",
+                        selected?.id === doc.id ? "text-primary-foreground/40" : "text-muted-foreground/20"
+                      )} />
+                    </button>
+                  ))
                 )}
               </div>
-            </CardHeader>
-            <CardContent className="p-0 flex-grow overflow-hidden bg-muted/10">
-              <ScrollArea className="h-full w-full">
-                <div className="p-6 md:p-8 w-full">
-                  {selected.content || isEditing ? (
-                    <NotionEditor
-                      key={selected.id}
-                      readOnly={!isEditing}
-                      content={isEditing ? editedContent : selected.content}
-                      onChange={(val) => isEditing && setEditedContent(val)}
-                    />
-                  ) : (
-                    <div className="text-center text-muted-foreground italic py-10">
-                      本文がありません
+            </ScrollArea>
+          </Card>
+        </div>
+
+        {/* Right Side: EditorArea */}
+        <div className="lg:col-span-9 overflow-hidden">
+          {selected ? (
+            <Card className="h-full border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col py-0!">
+              <div className="border-b border-white/10 px-6 py-2 flex flex-row items-center justify-between shrink-0 min-h-[56px]">
+                <div className="flex-grow mr-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">
+                      {selected.companyName || selected.companySlug}
+                    </div>
+                    <div className="bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">
+                      {countCharacters(editContent)} Characters
+                    </div>
+                  </div>
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="text-2xl font-black bg-transparent border-none focus-visible:ring-0 p-0 h-auto w-full text-foreground"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  {isSaving && (
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
+                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
                     </div>
                   )}
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4">
-            <div className="p-4 rounded-full bg-muted/30">
-              <FileText className="h-10 w-10 opacity-30" />
-            </div>
-            <p>左側のリストからESを選択すると詳細が表示されます</p>
-          </div>
-        )}
-      </Card>
+              </div>
+              <CardContent className="flex-grow p-0 overflow-hidden relative">
+                <ScrollArea className="h-full">
+                  <div className="max-w-5xl mx-auto p-4 lg:p-6 pt-2!">
+                    {selected.content || true ? (
+                      <NotionEditor
+                        key={selected.id}
+                        content={editContent}
+                        onChange={setEditContent}
+                      />
+                    ) : (
+                      <div className="text-center py-20 px-4">
+                        <div className="h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-4">
+                          <FileText className="h-8 w-8 text-muted-foreground/30" />
+                        </div>
+                        <p className="text-muted-foreground italic font-medium">本文がまだありません。入力を開始しましょう。</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="h-full border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col items-center justify-center p-12 text-center group">
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 group-hover:scale-175 transition-transform duration-700" />
+                <div className="relative h-32 w-32 rounded-3xl bg-card border border-white/20 flex items-center justify-center shadow-2xl">
+                  <FileText className="h-16 w-16 text-primary" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold mb-2">ドキュメントを選択</h3>
+              <p className="text-muted-foreground font-medium max-w-xs mx-auto">
+                左側のリストから閲覧・編集したいエントリーシートを選択してください。
+              </p>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

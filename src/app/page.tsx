@@ -9,7 +9,8 @@ import {
   ListChecks,
 } from "lucide-react";
 import { ExportButtons } from "@/components/export-buttons";
-import { StatusBadge } from "@/components/badges";
+import { StatusBadge, TagBadge } from "@/components/badges";
+import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,21 +22,12 @@ import {
 } from "@/components/ui/card";
 import type { Stats } from "@/types";
 
-function formatDate(value: string): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric",
-    day: "numeric",
-    weekday: "short",
-  }).format(date);
-}
 
 export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [greeting, setGreeting] = useState("こんにちは");
 
   async function fetchStats() {
     setLoading(true);
@@ -57,6 +49,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchStats();
+
+    // Set greeting based on time
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) setGreeting("おはようございます");
+    else if (hour >= 12 && hour < 18) setGreeting("こんにちは");
+    else setGreeting("こんばんは");
   }, []);
 
   const completionRate = useMemo(() => {
@@ -70,197 +68,265 @@ export default function Home() {
   }, [stats]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border bg-card p-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">ダッシュボード</h1>
-            <p className="text-slate-600 dark:text-slate-300">
-              企業応募から選考進捗まで、今日の状況をまとめて確認できます。
+    <div className="space-y-6 pb-8">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1.5">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              {greeting}！
+            </h1>
+            <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+              企業応募から選考進捗まで、今日の状況をまとめて確認しましょう。
+              あなたの就職活動を全力でサポートします。
             </p>
           </div>
-          <ExportButtons />
+          <div className="flex items-center gap-3">
+            <ExportButtons />
+          </div>
         </div>
+      </div>
 
       {error && (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardContent className="pt-6 text-sm text-destructive">{error}</CardContent>
+        <Card className="border-destructive/40 bg-destructive/5 animate-in fade-in slide-in-from-top-4 duration-500">
+          <CardContent className="pt-6 text-sm text-destructive font-medium flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+            {error}
+          </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Link href="/companies">
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription>企業数</CardDescription>
-                <CardTitle className="text-2xl">{stats?.totalCompanies ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Briefcase className="h-3.5 w-3.5" />
-                  現在管理している企業
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Link href="/companies" className="group">
+          <Card className="hover-lift h-full border-none glass overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="font-medium">企業数</CardDescription>
+                <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900/30">
+                  <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-              </CardContent>
+              </div>
+              <CardTitle className="text-3xl font-bold">{stats?.totalCompanies ?? 0}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                現在管理している企業
+              </p>
+            </CardContent>
           </Card>
         </Link>
 
-        <Link href="/tasks">
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription>タスク完了率</CardDescription>
-                <CardTitle className="text-2xl">{completionRate}%</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xs text-muted-foreground">
-                  {stats?.completedTasks ?? 0}/{stats?.totalTasks ?? 0} 件完了
+        <Link href="/tasks" className="group">
+          <Card className="hover-lift h-full border-none glass overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="font-medium">タスク完了率</CardDescription>
+                <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/30">
+                  <ListChecks className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-              </CardContent>
+              </div>
+              <CardTitle className="text-3xl font-bold">{completionRate}%</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-full rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-1000"
+                    style={{ width: `${completionRate}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  {stats?.completedTasks ?? 0}/{stats?.totalTasks ?? 0}
+                </span>
+              </div>
+            </CardContent>
           </Card>
         </Link>
 
-        <Link href="/companies">
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription>通過率</CardDescription>
-                <CardTitle className="text-2xl">{stats?.passRate ?? 0}%</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xs text-muted-foreground">選考結果が出た企業ベース</div>
-              </CardContent>
+        <Link href="/companies" className="group">
+          <Card className="hover-lift h-full border-none glass overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="font-medium">通過率</CardDescription>
+                <div className="rounded-full bg-violet-100 p-2 dark:bg-violet-900/30">
+                  <Badge variant="outline" className="h-4 border-none p-0">
+                    <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 mt-0.5 whitespace-nowrap">PASS</span>
+                  </Badge>
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold text-glow">{stats?.passRate ?? 0}%</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">選考結果が出た企業ベース</p>
+            </CardContent>
           </Card>
         </Link>
 
-        <Link href="/calendar">
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription>面接総数</CardDescription>
-                <CardTitle className="text-2xl">{stats?.totalInterviews ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xs text-muted-foreground">
-                  通過 {stats?.interviewResultCounts.通過 ?? 0} / 不合格 {stats?.interviewResultCounts.不合格 ?? 0}
+        <Link href="/calendar" className="group">
+          <Card className="hover-lift h-full border-none glass overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="font-medium">面接総数</CardDescription>
+                <div className="rounded-full bg-sky-100 p-2 dark:bg-sky-900/30">
+                  <CalendarClock className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 </div>
-              </CardContent>
+              </div>
+              <CardTitle className="text-3xl font-bold">{stats?.totalInterviews ?? 0}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider">
+                <span className="text-emerald-600 dark:text-emerald-400">通過 {stats?.interviewResultCounts.通過 ?? 0}</span>
+                <span className="text-rose-600 dark:text-rose-400">不合格 {stats?.interviewResultCounts.不合格 ?? 0}</span>
+              </div>
+            </CardContent>
           </Card>
         </Link>
 
-        <Link href="/companies">
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardDescription>ES件数</CardDescription>
-                <CardTitle className="text-2xl">{stats?.totalESDocuments ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" />
-                  登録済みエントリーシート
+        <Link href="/companies" className="group">
+          <Card className="hover-lift h-full border-none glass overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardDescription className="font-medium">ES件数</CardDescription>
+                <div className="rounded-full bg-amber-100 p-2 dark:bg-amber-900/30">
+                  <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
-              </CardContent>
+              </div>
+              <CardTitle className="text-3xl font-bold">{stats?.totalESDocuments ?? 0}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">登録済みエントリーシート</p>
+            </CardContent>
           </Card>
         </Link>
       </div>
 
-      <div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ListChecks className="h-5 w-5" />
+      <div className="grid gap-8 lg:grid-cols-12">
+        {/* Recent Tasks */}
+        <div className="lg:col-span-12 xl:col-span-7 space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <ListChecks className="h-5 w-5 text-primary" />
               近日締切タスク
-            </CardTitle>
-            <CardDescription>期限が近い未完了タスクを確認</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">読み込み中...</div>
-            ) : (stats?.upcomingDeadlines.length ?? 0) === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                近日締切のタスクはありません。
-              </div>
-            ) : (
-              stats?.upcomingDeadlines.map((task) => (
-                <Link
-                  key={task.id}
-                  href={`/companies/${task.companySlug}?tab=tasks`}
-                  className="flex flex-col gap-2 rounded-xl border bg-background p-3 transition-colors hover:bg-accent sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-sm text-muted-foreground">{task.companyName || "企業未設定"}</p>
+            </h2>
+            <Link href="/tasks" className="text-sm font-medium text-primary hover:underline">すべて見る</Link>
+          </div>
+          <Card className="border-none glass">
+            <CardContent className="pt-6 space-y-3">
+              {loading ? (
+                <div className="py-12 text-center space-y-4">
+                  <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-sm text-muted-foreground">読み込み中...</p>
+                </div>
+              ) : (stats?.upcomingDeadlines.length ?? 0) === 0 ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <ListChecks className="h-6 w-6 text-muted-foreground/50" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{task.category}</Badge>
-                    <Badge variant="secondary">{formatDate(task.deadline)}</Badge>
-                  </div>
-                </Link>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  <p className="text-sm text-muted-foreground font-medium">近日締切のタスクはありません。</p>
+                </div>
+              ) : (
+                stats?.upcomingDeadlines.map((task) => (
+                  <Link
+                    key={task.id}
+                    href={`/companies/${task.companySlug}?tab=tasks`}
+                    className="group flex flex-col gap-3 rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-white dark:hover:bg-card hover:border-border hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</p>
+                        <p className="text-sm text-muted-foreground font-medium">{task.companyName || "企業未設定"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <TagBadge name={task.category} color="blue" />
+                      <div className="px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold ring-1 ring-rose-200 dark:ring-rose-800/50">
+                        {formatDate(task.deadline)}
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CalendarClock className="h-5 w-5" />
+        <div className="lg:col-span-12 xl:col-span-5 space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-secondary" />
               近日面接
-            </CardTitle>
-            <CardDescription>今後予定されている面接</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">読み込み中...</div>
-            ) : (stats?.upcomingInterviews.length ?? 0) === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                近日予定の面接はありません。
-              </div>
-            ) : (
-              stats?.upcomingInterviews.map((interview) => (
-                <Link
-                  key={interview.id}
-                  href={`/companies/${interview.companySlug}?tab=interviews`}
-                  className="flex items-center justify-between rounded-xl border bg-background p-3 transition-colors hover:bg-accent"
-                >
-                  <div>
-                    <p className="font-medium">{interview.companyName}</p>
-                    <p className="text-sm text-muted-foreground">{interview.type}</p>
+            </h2>
+            <Link href="/calendar" className="text-sm font-medium text-secondary hover:underline">カレンダーを表示</Link>
+          </div>
+          <Card className="border-none glass">
+            <CardContent className="pt-6 space-y-3">
+              {loading ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">読み込み中...</div>
+              ) : (stats?.upcomingInterviews.length ?? 0) === 0 ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <CalendarClock className="h-6 w-6 opacity-40" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{interview.result}</Badge>
-                    <Badge variant="secondary">{formatDate(interview.date)}</Badge>
-                  </div>
-                </Link>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                  <p className="text-sm text-muted-foreground font-medium">近日予定の面接はありません。</p>
+                </div>
+              ) : (
+                stats?.upcomingInterviews.map((interview) => (
+                  <Link
+                    key={interview.id}
+                    href={`/companies/${interview.companySlug}?tab=interviews`}
+                    className="group flex items-center justify-between rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-white dark:hover:bg-card hover:border-border hover:shadow-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+                      <div>
+                        <p className="font-bold group-hover:text-sky-600 transition-colors">{interview.companyName}</p>
+                        <p className="text-xs font-medium text-muted-foreground">{interview.type}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-foreground">{formatDate(interview.date)}</p>
+                      <TagBadge name={interview.result || "未完了"} color={interview.result === "通過" ? "green" : "blue"} />
+                    </div>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">ステータス別企業数</CardTitle>
-            <CardDescription>選考段階ごとの分布</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">読み込み中...</div>
-            ) : statusEntries.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                集計対象の企業がありません。
-              </div>
-            ) : (
-              statusEntries.map(([status, count]) => (
-                <Link
-                  key={status}
-                  href={`/companies?status=${encodeURIComponent(status)}`}
-                  className="flex items-center justify-between rounded-xl border bg-background p-3 transition-colors hover:bg-accent"
-                >
-                  <StatusBadge status={status} />
-                  <span className="font-semibold">{count} 社</span>
-                </Link>
-              ))
-            )}
-          </CardContent>
-        </Card>
+        {/* Status Distribution */}
+        <div className="lg:col-span-12 space-y-4">
+          <div className="flex items-center px-2">
+            <h2 className="text-xl font-bold">選考状況の分布</h2>
+          </div>
+          <Card className="border-none glass">
+            <CardContent className="pt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {loading ? (
+                <div className="col-span-full py-12 text-center text-sm text-muted-foreground">読み込み中...</div>
+              ) : statusEntries.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-sm text-muted-foreground">集計対象の企業がありません。</div>
+              ) : (
+                statusEntries.map(([status, count]) => (
+                  <Link
+                    key={status}
+                    href={`/companies?status=${encodeURIComponent(status)}`}
+                    className="flex items-center justify-between rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-white dark:hover:bg-card hover:border-border hover:shadow-lg group shadow-sm"
+                  >
+                    <StatusBadge status={status} />
+                    <span className="text-xl font-black group-hover:text-primary transition-colors">{count} <span className="text-xs font-medium text-muted-foreground">社</span></span>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
 }
+

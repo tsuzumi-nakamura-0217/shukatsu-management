@@ -57,7 +57,10 @@ import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
-import { countCharacters } from "@/lib/utils";
+import { countCharacters, formatDate } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
@@ -93,6 +96,8 @@ export default function CompanyDetailPage({
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [isSavingEs, setIsSavingEs] = useState(false);
+  const [isSavingTask, setIsSavingTask] = useState(false);
+  const [isSavingInterview, setIsSavingInterview] = useState(false);
 
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
@@ -131,9 +136,8 @@ export default function CompanyDetailPage({
         body: JSON.stringify({ ...editingCompany, memo: memoContent }),
       });
       if (res.ok) {
-        // toast.success("保存しました");
-        setEditMode(false);
-        fetchAll();
+        // fetchAll(); // Avoid over-fetching if only memo/info changed
+        setCompany(prev => prev ? { ...prev, ...editingCompany, memo: memoContent } : null);
       }
     } finally {
       setIsSavingMemo(false);
@@ -142,10 +146,10 @@ export default function CompanyDetailPage({
 
   useAutoSave({
     enabled: !!company,
-    hasChanges: !!company && memoContent !== company.memo,
+    hasChanges: !!company && (memoContent !== company.memo || JSON.stringify(editingCompany) !== JSON.stringify(company)),
     onSave: handleSaveCompany,
     delay: 1500,
-    deps: [memoContent, company?.id, company?.memo],
+    deps: [memoContent, editingCompany, company?.id],
   });
 
   const handleDeleteCompany = async () => {
@@ -191,7 +195,7 @@ export default function CompanyDetailPage({
 
   const handleStatusChangeTask = async (task: Task, newStatus: "未着手" | "進行中" | "完了") => {
     const oldStatus = task.status;
-    
+
     // 楽観的アップデート: UIを即座に更新
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
 
@@ -201,11 +205,11 @@ export default function CompanyDetailPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: task.id, status: newStatus }),
       });
-      
+
       if (!res.ok) {
         throw new Error("Failed to update task status");
       }
-      
+
       // 成功時は最新データをバックグラウンドで取得（任意）
       fetchAll();
     } catch (error) {
@@ -216,17 +220,33 @@ export default function CompanyDetailPage({
     }
   };
 
-  const handleSaveTask = async () => {
-    if (!editingTask) return;
-    await fetch("/api/tasks", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editingTask),
-    });
-    toast.success("タスクを更新しました");
-    setEditingTask(null);
-    fetchAll();
+  const handleSaveTask = async (taskToSave?: Task) => {
+    const target = taskToSave || editingTask;
+    if (!target || isSavingTask) return;
+    setIsSavingTask(true);
+    try {
+      await fetch("/api/tasks", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(target),
+      });
+      if (!taskToSave) {
+        // toast.success("タスクを更新しました");
+        // setEditingTask(null);
+      }
+      fetchAll();
+    } finally {
+      setIsSavingTask(false);
+    }
   };
+
+  useAutoSave({
+    enabled: !!editingTask,
+    hasChanges: !!editingTask && JSON.stringify(editingTask) !== JSON.stringify(tasks.find(t => t.id === editingTask.id)),
+    onSave: () => handleSaveTask(),
+    delay: 1500,
+    deps: [editingTask],
+  });
 
   const handleDeleteTask = async (id: string) => {
     if (!confirm("このタスクを削除しますか？")) return;
@@ -259,17 +279,33 @@ export default function CompanyDetailPage({
     }
   };
 
-  const handleSaveInterview = async () => {
-    if (!editingInterview) return;
-    await fetch(`/api/companies/${slug}/interviews`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editingInterview),
-    });
-    toast.success("面接記録を更新しました");
-    setEditingInterview(null);
-    fetchAll();
+  const handleSaveInterview = async (interviewToSave?: Interview) => {
+    const target = interviewToSave || editingInterview;
+    if (!target || isSavingInterview) return;
+    setIsSavingInterview(true);
+    try {
+      await fetch(`/api/companies/${slug}/interviews`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(target),
+      });
+      if (!interviewToSave) {
+        // toast.success("面接記録を更新しました");
+        // setEditingInterview(null);
+      }
+      fetchAll();
+    } finally {
+      setIsSavingInterview(false);
+    }
   };
+
+  useAutoSave({
+    enabled: !!editingInterview,
+    hasChanges: !!editingInterview && JSON.stringify(editingInterview) !== JSON.stringify(interviews.find(i => i.id === editingInterview.id)),
+    onSave: () => handleSaveInterview(),
+    delay: 1500,
+    deps: [editingInterview],
+  });
 
   const handleDeleteInterview = async (id: string) => {
     if (!confirm("この面接記録を削除しますか？")) return;
@@ -302,8 +338,9 @@ export default function CompanyDetailPage({
     }
   };
 
-  const handleSaveEs = async (doc: ESDocument) => {
-    if (isSavingEs) return;
+  const handleSaveEs = async (docToSave?: ESDocument) => {
+    const doc = docToSave || editEsDoc;
+    if (!doc || isSavingEs) return;
     setIsSavingEs(true);
     try {
       await fetch(`/api/companies/${slug}/es`, {
@@ -311,25 +348,20 @@ export default function CompanyDetailPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: doc.id, title: doc.title, content: doc.content }),
       });
-      // toast.success("文書を保存しました");
       fetchAll();
     } finally {
       setIsSavingEs(false);
     }
   };
 
-  // Auto-save ES doc
-  useEffect(() => {
-    if (!editEsDoc) return;
-    const originalDoc = esDocs.find(d => d.id === editEsDoc.id);
-    if (!originalDoc || editEsDoc.content === originalDoc.content) return;
+  useAutoSave({
+    enabled: !!editEsDoc,
+    hasChanges: !!editEsDoc && (editEsDoc.content !== esDocs.find(d => d.id === editEsDoc.id)?.content || editEsDoc.title !== esDocs.find(d => d.id === editEsDoc.id)?.title),
+    onSave: () => handleSaveEs(),
+    delay: 1500,
+    deps: [editEsDoc],
+  });
 
-    const timer = setTimeout(() => {
-      handleSaveEs(editEsDoc);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [editEsDoc, esDocs]);
 
   if (!company) {
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">読み込み中...</p></div>;
@@ -358,6 +390,20 @@ export default function CompanyDetailPage({
                 <MapPin className="h-3 w-3" /> {company.location}
               </span>
             )}
+            <div className="flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border text-[10px] font-bold">
+              <span className="text-muted-foreground mr-1 uppercase tracking-tighter">Priority</span>
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-1 w-2.5 rounded-full",
+                    i < company.priority
+                      ? (company.priority >= 4 ? "bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]" : "bg-primary")
+                      : "bg-slate-300 dark:bg-slate-700"
+                  )}
+                />
+              ))}
+            </div>
             {company.url && (
               <a href={company.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1 text-blue-600 hover:underline">
@@ -377,12 +423,18 @@ export default function CompanyDetailPage({
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+          {isSavingMemo && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
+            </div>
+          )}
           <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
             <Edit className="mr-2 h-4 w-4" /> {editMode ? "キャンセル" : "編集"}
           </Button>
           {editMode && (
-            <Button size="sm" onClick={handleSaveCompany}>
-              <Save className="mr-2 h-4 w-4" /> 保存
+            <Button size="sm" onClick={() => { handleSaveCompany(); setEditMode(false); }}>
+              <Save className="mr-2 h-4 w-4" /> 完了
             </Button>
           )}
           <Button variant="destructive" size="sm" onClick={handleDeleteCompany}>
@@ -405,13 +457,12 @@ export default function CompanyDetailPage({
                 <button
                   key={stage}
                   onClick={() => handleUpdateStatus(stage)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                    isCurrent
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isCurrent
                       ? "bg-primary text-primary-foreground"
                       : isPast
-                      ? "bg-green-100 text-green-800"
-                      : "bg-muted text-muted-foreground hover:bg-accent"
-                  }`}
+                        ? "bg-green-100 text-green-800"
+                        : "bg-muted text-muted-foreground hover:bg-accent"
+                    }`}
                 >
                   {stage}
                 </button>
@@ -513,6 +564,26 @@ export default function CompanyDetailPage({
                 <Label>所在地</Label>
                 <Input value={editingCompany.location || ""} onChange={(e) => setEditingCompany({ ...editingCompany, location: e.target.value })} />
               </div>
+              <div>
+                <Label>優先度 (1-5)</Label>
+                <Select
+                  value={(editingCompany.priority || 3).toString()}
+                  onValueChange={(value) =>
+                    setEditingCompany({ ...editingCompany, priority: parseInt(value) })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="優先度を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 4, 3, 2, 1].map((p) => (
+                      <SelectItem key={p} value={p.toString()}>
+                        {p} {p === 5 ? "(最高)" : p === 1 ? "(最低)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -591,11 +662,16 @@ export default function CompanyDetailPage({
                       </div>
                       <div className="flex gap-2">
                         {editEsDoc?.id === doc.id ? (
-                          <>
-                            {isSavingEs && <span className="text-xs text-muted-foreground animate-pulse self-center mr-1">保存中...</span>}
-                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>キャンセル</Button>
-                            <Button size="sm" onClick={() => handleSaveEs(editEsDoc)} disabled={isSavingEs}>保存</Button>
-                          </>
+                          <div className="flex gap-2 items-center">
+                            {isSavingEs && (
+                              <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10 mr-1">
+                                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                              </div>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>完了</Button>
+                            <Button size="sm" onClick={() => handleSaveEs()} disabled={isSavingEs}>保存</Button>
+                          </div>
                         ) : (
                           <Button variant="outline" size="sm" onClick={() => setEditEsDoc(doc)}>
                             <Edit className="mr-1 h-3 w-3" /> 編集
@@ -644,7 +720,10 @@ export default function CompanyDetailPage({
                   </div>
                   <div>
                     <Label>日付 *</Label>
-                    <Input type="date" value={newInterview.date} onChange={(e) => setNewInterview({ ...newInterview, date: e.target.value })} />
+                    <DatePicker
+                      date={newInterview.date ? new Date(newInterview.date) : undefined}
+                      onChange={(d) => setNewInterview({ ...newInterview, date: d ? format(d, "yyyy-MM-dd") : "" })}
+                    />
                   </div>
                   <div>
                     <Label>場所</Label>
@@ -716,15 +795,9 @@ export default function CompanyDetailPage({
                         </div>
                         <div>
                           <Label>日付</Label>
-                          <Input
-                            type="date"
-                            value={editingInterview.date}
-                            onChange={(e) =>
-                              setEditingInterview({
-                                ...editingInterview,
-                                date: e.target.value,
-                              })
-                            }
+                          <DatePicker
+                            date={editingInterview.date ? new Date(editingInterview.date) : undefined}
+                            onChange={(d) => setEditingInterview({ ...editingInterview, date: d ? format(d, "yyyy-MM-dd") : "" })}
                           />
                         </div>
                         <div>
@@ -762,23 +835,29 @@ export default function CompanyDetailPage({
                           </Select>
                         </div>
                       </div>
-                      <div>
+                      <div className="min-h-[150px]">
                         <Label>メモ</Label>
-                        <Textarea
-                          value={editingInterview.memo}
-                          onChange={(e) =>
+                        <NotionEditor
+                          content={editingInterview.memo}
+                          onChange={(val) =>
                             setEditingInterview({
                               ...editingInterview,
-                              memo: e.target.value,
+                              memo: val,
                             })
                           }
                         />
                       </div>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-3">
+                        {isSavingInterview && (
+                          <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                            <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                          </div>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => setEditingInterview(null)}>
-                          キャンセル
+                          完了
                         </Button>
-                        <Button size="sm" onClick={handleSaveInterview}>保存</Button>
+                        <Button size="sm" onClick={() => handleSaveInterview()}>保存</Button>
                       </div>
                     </CardContent>
                   ) : (
@@ -803,7 +882,7 @@ export default function CompanyDetailPage({
                       </CardHeader>
                       {interview.memo && (
                         <CardContent>
-                        <NotionEditor readOnly content={interview.memo} onChange={() => {}} />
+                          <NotionEditor readOnly content={interview.memo} onChange={() => { }} />
                         </CardContent>
                       )}
                     </>
@@ -844,15 +923,17 @@ export default function CompanyDetailPage({
                   </div>
                   <div>
                     <Label>実施日</Label>
-                    <Input
-                      type="date"
-                      value={newTask.executionDate}
-                      onChange={(e) => setNewTask({ ...newTask, executionDate: e.target.value })}
+                    <DatePicker
+                      date={newTask.executionDate ? new Date(newTask.executionDate) : undefined}
+                      onChange={(d) => setNewTask({ ...newTask, executionDate: d ? format(d, "yyyy-MM-dd") : "" })}
                     />
                   </div>
                   <div>
                     <Label>締切</Label>
-                    <Input type="date" value={newTask.deadline} onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })} />
+                    <DateTimePicker
+                      date={newTask.deadline ? new Date(newTask.deadline) : undefined}
+                      onChange={(d) => setNewTask({ ...newTask, deadline: d ? format(d, "yyyy-MM-dd'T'HH:mm") : "" })}
+                    />
                   </div>
                   <div>
                     <Label>メモ</Label>
@@ -924,34 +1005,33 @@ export default function CompanyDetailPage({
                             ))}
                           </SelectContent>
                         </Select>
-                        <Input
-                          type="date"
-                          value={editingTask.executionDate}
-                          onChange={(e) =>
+                        <DatePicker
+                          date={editingTask.executionDate ? new Date(editingTask.executionDate) : undefined}
+                          onChange={(d) =>
                             setEditingTask({
                               ...editingTask,
-                              executionDate: e.target.value,
+                              executionDate: d ? format(d, "yyyy-MM-dd") : "",
                             })
                           }
                         />
-                        <Input
-                          type="date"
-                          value={editingTask.deadline}
-                          onChange={(e) =>
+                        <DateTimePicker
+                          date={editingTask.deadline ? new Date(editingTask.deadline) : undefined}
+                          onChange={(d) =>
                             setEditingTask({
                               ...editingTask,
-                              deadline: e.target.value,
+                              deadline: d ? format(d, "yyyy-MM-dd'T'HH:mm") : "",
                             })
                           }
                         />
                       </div>
-                      <Textarea
-                        value={editingTask.memo}
-                        onChange={(e) =>
-                          setEditingTask({ ...editingTask, memo: e.target.value })
-                        }
-                        placeholder="メモ"
-                      />
+                      <div className="min-h-[150px]">
+                        <NotionEditor
+                          content={editingTask.memo || ""}
+                          onChange={(val) =>
+                            setEditingTask({ ...editingTask, memo: val })
+                          }
+                        />
+                      </div>
                       <div className="flex items-center justify-between">
                         <div className="w-32">
                           <Select
@@ -971,42 +1051,53 @@ export default function CompanyDetailPage({
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
-                            キャンセル
-                          </Button>
-                          <Button size="sm" onClick={handleSaveTask}>保存</Button>
-                        </div>
+                         <div className="flex gap-2 items-center">
+                           {isSavingTask && (
+                             <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                               <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                               <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                             </div>
+                           )}
+                           <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
+                             完了
+                           </Button>
+                           <Button size="sm" onClick={() => handleSaveTask()}>保存</Button>
+                         </div>
                       </div>
                     </div>
                   ) : (
                     <>
-                    <div className="w-24" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={task.status}
-                        onValueChange={(v: any) => handleStatusChangeTask(task, v)}
-                      >
-                        <SelectTrigger className={cn("h-8 text-xs", statusColors[task.status])}><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="未着手">未着手</SelectItem>
-                          <SelectItem value="進行中">進行中</SelectItem>
-                          <SelectItem value="完了">完了</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex-1">
-                      <p className={`text-sm font-medium ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
-                      {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
-                    </div>
+                      <div className="w-24" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={task.status}
+                          onValueChange={(v: any) => handleStatusChangeTask(task, v)}
+                        >
+                          <SelectTrigger className={cn("h-8 text-xs", statusColors[task.status])}><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="未着手">未着手</SelectItem>
+                            <SelectItem value="進行中">進行中</SelectItem>
+                            <SelectItem value="完了">完了</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
+                        {task.memo && <p className="text-xs text-muted-foreground">{task.memo}</p>}
+                      </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">{task.category}</Badge>
                         {task.executionDate && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
                             <span className="font-medium text-[10px] uppercase text-slate-400">実施</span>
-                            <span>{task.executionDate}</span>
+                            <span>{formatDate(task.executionDate)}</span>
                           </div>
                         )}
-                        {task.deadline && <span className="text-xs text-muted-foreground">{task.deadline}</span>}
+                        {task.deadline && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
+                            <span className="font-medium text-[10px] uppercase text-rose-400">締切</span>
+                            <span>{formatDate(task.deadline)}</span>
+                          </div>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1040,12 +1131,17 @@ export default function CompanyDetailPage({
         <TabsContent value="memo" className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">企業研究メモ</h3>
-            <div className="flex items-center gap-3">
-              {isSavingMemo && <span className="text-xs text-muted-foreground animate-pulse">保存中...</span>}
-              <Button size="sm" onClick={handleSaveCompany} disabled={isSavingMemo}>
-                <Save className="mr-2 h-4 w-4" /> 保存
-              </Button>
-            </div>
+             <div className="flex items-center gap-3">
+               {isSavingMemo && (
+                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
+                   <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                 </div>
+               )}
+               <Button size="sm" onClick={() => handleSaveCompany()} disabled={isSavingMemo}>
+                 <Save className="mr-2 h-4 w-4" /> 保存
+               </Button>
+             </div>
           </div>
           <div className="min-h-[400px]">
             <NotionEditor content={memoContent} onChange={setMemoContent} />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search, LayoutGrid, List, Loader2 } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, Loader2, Building2, MapPin, Tag, Filter, CheckCircle2, XCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,10 +29,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { StatusBadge, statusColors } from "@/components/badges";
+import { StatusBadge, TagBadge, statusColors } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { Company, AppConfig } from "@/types";
+import type { Company, AppConfig, Task } from "@/types";
 
 export default function CompaniesPage() {
   const searchParams = useSearchParams();
@@ -43,6 +43,10 @@ export default function CompaniesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [industryFilter, setIndustryFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("priority");
+  const [excludeRejected, setExcludeRejected] = useState(false);
+  const [minPriority, setMinPriority] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newCompany, setNewCompany] = useState({
@@ -53,7 +57,9 @@ export default function CompaniesPage() {
     loginId: "",
     password: "",
     location: "",
+    priority: 3,
   });
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   function fetchCompanies() {
     fetch("/api/companies")
@@ -61,8 +67,15 @@ export default function CompaniesPage() {
       .then(setCompanies);
   }
 
+  function fetchTasks() {
+    fetch("/api/tasks")
+      .then((r) => r.json())
+      .then(setTasks);
+  }
+
   useEffect(() => {
     fetchCompanies();
+    fetchTasks();
     fetch("/api/config")
       .then((r) => r.json())
       .then((data: AppConfig) => {
@@ -98,6 +111,7 @@ export default function CompaniesPage() {
           loginId: "",
           password: "",
           location: "",
+          priority: 3,
         });
         fetchCompanies();
       } else {
@@ -123,224 +137,365 @@ export default function CompaniesPage() {
       if (statusFilter !== "all") return c.status === statusFilter;
       return true;
     })
-    .sort((a, b) => b.priority - a.priority || a.name.localeCompare(b.name));
+    .filter((c) => {
+      if (industryFilter !== "all") return c.industry === industryFilter;
+      return true;
+    })
+    .filter((c) => {
+      if (excludeRejected) return c.status !== "不合格";
+      return true;
+    })
+    .filter((c) => {
+      if (minPriority > 0) return c.priority >= minPriority;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "priority") return b.priority - a.priority || a.name.localeCompare(b.name);
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "deadline") {
+        const aTasks = tasks.filter(t => t.companySlug === a.slug && t.status !== "完了" && t.deadline);
+        const bTasks = tasks.filter(t => t.companySlug === b.slug && t.status !== "完了" && t.deadline);
+        const aDeadline = aTasks.sort((t1, t2) => t1.deadline.localeCompare(t2.deadline))[0]?.deadline || "9999-12-31";
+        const bDeadline = bTasks.sort((t1, t2) => t1.deadline.localeCompare(t2.deadline))[0]?.deadline || "9999-12-31";
+        return aDeadline.localeCompare(bDeadline) || b.priority - a.priority;
+      }
+      return 0;
+    });
 
   const allStatuses = config?.defaultStages || [];
   const allIndustries = config?.industries || [];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">企業一覧</h1>
-          <p className="text-muted-foreground">
-            {companies.length} 社が登録されています
-          </p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              企業を追加
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>新しい企業を追加</DialogTitle>
-              <DialogDescription>
-                企業の基本情報を入力してください
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">企業名 *</Label>
-                <Input
-                  id="name"
-                  value={newCompany.name}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, name: e.target.value })
-                  }
-                  placeholder="株式会社サンプル"
-                />
+    <div className="space-y-8 pb-10">
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-8 shadow-xl shadow-primary/5">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-primary/10 blur-[60px]" />
+        <div className="absolute bottom-0 left-0 -ml-12 -mb-12 h-48 w-48 rounded-full bg-secondary/10 blur-[60px]" />
+
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">企業一覧</h1>
+            <p className="text-muted-foreground mt-1 font-medium">
+              現在 <span className="text-primary font-bold">{companies.length}</span> 社の選考データを管理しています
+            </p>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30">
+                <Plus className="mr-2 h-5 w-5" />
+                新規企業を追加
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] rounded-3xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">新しい企業を追加</DialogTitle>
+                <DialogDescription>
+                  志望する企業の基本情報を入力してください
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-5 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name" className="font-bold ml-1">企業名 <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="name"
+                    value={newCompany.name}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, name: e.target.value })
+                    }
+                    placeholder="株式会社サンプル"
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="industry" className="font-bold ml-1">業界</Label>
+                    <Select
+                      value={newCompany.industry}
+                      onValueChange={(value) =>
+                        setNewCompany({ ...newCompany, industry: value })
+                      }
+                    >
+                      <SelectTrigger id="industry" className="rounded-xl">
+                        <SelectValue placeholder="選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allIndustries.map((industry) => (
+                          <SelectItem key={industry} value={industry}>
+                            {industry}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="location" className="font-bold ml-1">所在地</Label>
+                    <Input
+                      id="location"
+                      value={newCompany.location}
+                      onChange={(e) =>
+                        setNewCompany({ ...newCompany, location: e.target.value })
+                      }
+                      placeholder="例: 東京都"
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="url" className="font-bold ml-1">企業URL</Label>
+                    <Input
+                      id="url"
+                      value={newCompany.url}
+                      onChange={(e) =>
+                        setNewCompany({ ...newCompany, url: e.target.value })
+                      }
+                      placeholder="https://example.com"
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="priority" className="font-bold ml-1">優先度 (1-5)</Label>
+                    <Select
+                      value={newCompany.priority.toString()}
+                      onValueChange={(value) =>
+                        setNewCompany({ ...newCompany, priority: parseInt(value) })
+                      }
+                    >
+                      <SelectTrigger id="priority" className="rounded-xl">
+                        <SelectValue placeholder="選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[5, 4, 3, 2, 1].map((p) => (
+                          <SelectItem key={p} value={p.toString()}>
+                            {p} {p === 5 ? "(最高)" : p === 1 ? "(最低)" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="industry">業界</Label>
-                <Select
-                  value={newCompany.industry}
-                  onValueChange={(value) =>
-                    setNewCompany({ ...newCompany, industry: value })
-                  }
+              <DialogFooter>
+                <Button variant="ghost" disabled={isCreating} onClick={() => setDialogOpen(false)}>
+                  キャンセル
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={isCreating}
+                  className="rounded-xl px-8"
                 >
-                  <SelectTrigger id="industry">
-                    <SelectValue placeholder="業界を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allIndustries.map((industry) => (
-                      <SelectItem key={industry} value={industry}>
-                        {industry}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="url">企業URL</Label>
-                <Input
-                  id="url"
-                  value={newCompany.url}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, url: e.target.value })
-                  }
-                  placeholder="https://example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="mypage-url">マイページURL</Label>
-                <Input
-                  id="mypage-url"
-                  value={newCompany.mypageUrl}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, mypageUrl: e.target.value })
-                  }
-                  placeholder="https://mypage.example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="login-id">ログインID</Label>
-                <Input
-                  id="login-id"
-                  value={newCompany.loginId}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, loginId: e.target.value })
-                  }
-                  placeholder="your-login-id"
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">パスワード</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newCompany.password}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, password: e.target.value })
-                  }
-                  placeholder="password"
-                />
-              </div>
-              <div>
-                <Label htmlFor="location">所在地</Label>
-                <Input
-                  id="location"
-                  value={newCompany.location}
-                  onChange={(e) =>
-                    setNewCompany({ ...newCompany, location: e.target.value })
-                  }
-                  placeholder="東京都渋谷区"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" disabled={isCreating} onClick={() => setDialogOpen(false)}>
-                キャンセル
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={isCreating}
-                className="transition-transform active:scale-95"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    追加中...
-                  </>
-                ) : (
-                  "追加"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      追加中...
+                    </>
+                  ) : (
+                    "企業の登録"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="relative w-full md:max-w-sm">
+      {/* Filters bar */}
+      <div className="flex flex-col gap-4 glass p-4 rounded-2xl md:flex-row md:items-center">
+        <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="企業名・業界で検索..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-10 border-none bg-background/50 focus-visible:bg-background rounded-xl h-11"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className={cn("w-full md:w-40", statusFilter !== "all" ? statusColors[statusFilter] : "")}>
-            <SelectValue placeholder="ステータス" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">すべて</SelectItem>
-            {allStatuses.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-1 self-start rounded-md border p-1 md:self-auto">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50", statusFilter !== "all" && "ring-2 ring-primary/20")}>
+              <SelectValue placeholder="状況" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全ステータス</SelectItem>
+              {allStatuses.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={industryFilter} onValueChange={setIndustryFilter}>
+            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50", industryFilter !== "all" && "ring-2 ring-primary/20")}>
+              <SelectValue placeholder="業界" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全業界</SelectItem>
+              {allIndustries.map((ind) => (
+                <SelectItem key={ind} value={ind}>
+                  {ind}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={minPriority.toString()} onValueChange={(v) => setMinPriority(parseInt(v))}>
+            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50", minPriority > 0 && "ring-2 ring-primary/20")}>
+              <SelectValue placeholder="優先度" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">全優先度</SelectItem>
+              {[5, 4, 3, 2, 1].map((p) => (
+                <SelectItem key={p} value={p.toString()}>★ {p}以上</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
-            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            variant={excludeRejected ? "secondary" : "ghost"}
             size="sm"
-            onClick={() => setViewMode("grid")}
+            className={cn("rounded-xl h-9 px-3 text-xs gap-1.5", excludeRejected && "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 hover:text-rose-700")}
+            onClick={() => setExcludeRejected(!excludeRejected)}
           >
-            <LayoutGrid className="h-4 w-4" />
+            {excludeRejected ? <XCircle className="h-3.5 w-3.5" /> : <Filter className="h-3.5 w-3.5" />}
+            不合格を除外
           </Button>
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-4 w-4" />
-          </Button>
+
+          <div className="h-6 w-px bg-border/50 mx-1 hidden md:block" />
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50">
+              <SelectValue placeholder="並べ替え" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="priority">優先度順</SelectItem>
+              <SelectItem value="deadline">締め切り順</SelectItem>
+              <SelectItem value="name">五十音順</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl h-9 border ml-auto">
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-lg h-7 px-2"
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-lg h-7 px-2"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Company List */}
+      {/* Content Area */}
       {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <p className="text-center text-muted-foreground">
-              {companies.length === 0
-                ? "まだ企業が登録されていません。「企業を追加」ボタンから始めましょう。"
-                : "条件に一致する企業がありません"}
-            </p>
+        <Card className="border-none glass">
+          <CardContent className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-muted/30 flex items-center justify-center">
+              <Search className="h-8 w-8 text-muted-foreground/30" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-foreground">
+                {companies.length === 0 ? "まだ企業が登録されていません" : "一致する企業がありません"}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                {companies.length === 0 ? "「企業を追加」ボタンから就職活動の管理を始めましょう！" : "検索キーワードやフィルター設定を確認してください"}
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : viewMode === "grid" ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((company) => (
-            <Link key={company.slug} href={`/companies/${company.slug}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{company.name}</CardTitle>
-                    <StatusBadge status={company.status} />
+            <Link key={company.slug} href={`/companies/${company.slug}`} className="group">
+              <Card className="hover-lift h-full border-none glass overflow-hidden relative flex flex-col group-hover:ring-2 group-hover:ring-primary/20 transition-all duration-500">
+                {/* Subtle Background Gradient based on Priority */}
+                <div className={cn(
+                  "absolute inset-0 opacity-[0.03] dark:opacity-[0.07] transition-opacity duration-500 group-hover:opacity-[0.08] dark:group-hover:opacity-[0.12]",
+                  company.priority >= 4 ? "bg-gradient-to-br from-amber-500 to-orange-600" :
+                    company.priority >= 2 ? "bg-gradient-to-br from-blue-500 to-indigo-600" :
+                      "bg-gradient-to-br from-slate-400 to-slate-600"
+                )} />
+
+                <CardHeader className="pb-1.5 px-4 pt-4 relative z-10 flex-grow">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className={cn(
+                      "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm transition-transform duration-500 group-hover:scale-110",
+                      company.priority >= 4 ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" :
+                        company.priority >= 2 ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
+                          "bg-slate-100 text-slate-600 dark:bg-slate-900/30 dark:text-slate-400"
+                    )}>
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <div className="shrink-0 scale-[0.8] origin-right">
+                      <StatusBadge status={company.status} />
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {company.industry}
-                  </p>
+
+                  <div className="space-y-0">
+                    <CardTitle className="text-base font-black tracking-tight group-hover:text-primary transition-colors line-clamp-1">
+                      {company.name}
+                    </CardTitle>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
+                      <div className="flex items-center gap-1 text-[8px] font-bold text-muted-foreground uppercase tracking-wider transition-colors group-hover:text-primary">
+                        <Tag className="h-2 w-2" />
+                        {company.industry}
+                      </div>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {company.location && (
-                      <p className="text-sm text-muted-foreground">
-                        📍 {company.location}
-                      </p>
-                    )}
-                      <p className="text-xs text-muted-foreground">
-                        更新: {new Date(company.updatedAt).toLocaleDateString("ja-JP")}
-                      </p>
+
+                <CardContent className="px-4 pb-4 pt-1 mt-auto relative z-10">
+                  {/* Next Deadline Section */}
+                  <div className="mb-2.5 space-y-1">
+                    {(() => {
+                      const nextTask = tasks
+                        .filter(t => t.companySlug === company.slug && t.status !== "完了" && t.deadline)
+                        .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
+
+                      if (!nextTask) return <div className="h-[38px]" />;
+
+                      return (
+                        <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-primary/5 border border-primary/10 transition-colors group-hover:bg-primary/10">
+                          <div className="flex items-center justify-between text-[8px] font-bold uppercase tracking-wider text-primary/70">
+                            <span>Next Deadline</span>
+                            <span className="text-primary">
+                              {nextTask.deadline.split('T')[0]}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-bold text-foreground line-clamp-1">
+                            {nextTask.title}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="pt-2.5 border-t border-white/10 dark:border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <div
+                            key={i}
+                            className={cn(
+                              "h-1 w-2 rounded-full transition-all duration-500",
+                              i < company.priority
+                                ? (company.priority >= 4 ? "bg-amber-500" : "bg-primary")
+                                : "bg-slate-200 dark:bg-slate-800"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">Priority</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -348,25 +503,53 @@ export default function CompaniesPage() {
           ))}
         </div>
       ) : (
-        <Card>
-          <div className="divide-y">
+        <Card className="border-none glass overflow-hidden">
+          <div className="divide-y divide-white/10 dark:divide-white/5">
             {filtered.map((company) => (
               <Link
                 key={company.slug}
                 href={`/companies/${company.slug}`}
-                className="flex flex-col gap-3 p-4 transition-colors hover:bg-accent md:flex-row md:items-center md:justify-between"
+                className="group flex flex-col gap-4 p-5 transition-all hover:bg-white/40 dark:hover:bg-card md:flex-row md:items-center md:justify-between"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-5">
+                  <div className={`h-10 w-10 flex items-center justify-center rounded-xl font-bold text-white shadow-lg ${company.priority >= 4 ? "bg-amber-500" : company.priority >= 2 ? "bg-blue-500" : "bg-slate-400"}`}>
+                    {company.name.charAt(0)}
+                  </div>
                   <div>
-                    <p className="font-medium">{company.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-lg font-bold group-hover:text-primary transition-colors">{company.name}</p>
+                    <p className="text-sm font-medium text-muted-foreground">
                       {company.industry}
-                      {company.location && ` ・ ${company.location}`}
+                      {company.location && <span className="mx-2 opacity-30">|</span>}
+                      {company.location && company.location}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 self-start md:self-auto">
-                  <StatusBadge status={company.status} />
+                <div className="flex items-center gap-6">
+                  {(() => {
+                    const nextTask = tasks
+                      .filter(t => t.companySlug === company.slug && t.status !== "完了" && t.deadline)
+                      .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
+
+                    if (!nextTask) return <div className="hidden md:block w-32" />;
+
+                    return (
+                      <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 w-48 overflow-hidden">
+                        <div className="flex-grow min-w-0">
+                          <p className="text-[10px] font-bold text-primary/70 uppercase tracking-tight">Next: {nextTask.deadline}</p>
+                          <p className="text-xs font-bold text-foreground truncate">{nextTask.title}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex items-center gap-4 self-end md:self-auto">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Status</p>
+                      <p className="text-xs font-medium mt-1">{company.status}</p>
+                    </div>
+                    <div className="scale-110">
+                      <StatusBadge status={company.status} />
+                    </div>
+                  </div>
                 </div>
               </Link>
             ))}

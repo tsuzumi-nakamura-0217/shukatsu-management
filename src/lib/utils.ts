@@ -36,3 +36,22 @@ function countTiptapCharacters(node: any): number {
   }
   return count;
 }
+
+/**
+ * 日付と時刻を指定された形式でフォーマットするユーティリティ
+ */
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  
+  // ISO形式 (YYYY-MM-DDTHH:mm) かどうか、またはスペースとコロンを含むかチェック
+  const hasTime = value.includes("T") || (value.includes(" ") && value.includes(":"));
+  
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    ...(hasTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+  }).format(date);
+}
