@@ -33,11 +33,13 @@ export async function POST(request: NextRequest) {
       await fs.writeFile(path.join(syncDir, "self-analysis.json"), JSON.stringify(data.selfAnalysis, null, 2));
       await fs.writeFile(path.join(syncDir, "interviews.json"), JSON.stringify(data.interviews, null, 2));
       await fs.writeFile(path.join(syncDir, "es-documents.json"), JSON.stringify(data.esDocuments, null, 2));
+      await fs.writeFile(path.join(syncDir, "tips.json"), JSON.stringify(data.tips, null, 2));
 
       return NextResponse.json({ 
         message: "Local synchronization successful",
         path: syncDir
       });
+
     } catch (error) {
       console.error("Local sync error:", error);
       return NextResponse.json(

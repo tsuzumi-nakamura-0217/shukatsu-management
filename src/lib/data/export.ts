@@ -4,6 +4,7 @@ import { getAllSelfAnalysis } from "./self-analysis";
 import { getConfig } from "./config";
 import { getAllInterviews } from "./interviews";
 import { getAllESDocuments } from "./es";
+import { getAllTips } from "./tips";
 import type { Interview, ESDocument } from "@/types";
 
 export async function getExportData() {
@@ -12,11 +13,13 @@ export async function getExportData() {
     tasks,
     selfAnalysis,
     config,
+    tips,
   ] = await Promise.all([
     getAllCompanies(),
     getAllTasks(),
     getAllSelfAnalysis(),
     getConfig(),
+    getAllTips(),
   ]);
 
   // Gather all interviews and ES documents for all companies
@@ -54,7 +57,9 @@ export async function getExportData() {
     tasks,
     selfAnalysis,
     config,
+    tips,
     interviews: allInterviews,
     esDocuments: allESDocuments,
   };
 }
+
