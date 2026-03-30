@@ -17,6 +17,9 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Copy,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   Card,
@@ -114,6 +117,7 @@ export default function CompanyDetailPage({
   const [isCreatingInterview, setIsCreatingInterview] = useState(false);
   const [isCreatingEs, setIsCreatingEs] = useState(false);
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
+  const [expandedEsIds, setExpandedEsIds] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
@@ -398,6 +402,30 @@ export default function CompanyDetailPage({
     }
   };
 
+  const handleDuplicateEs = async (doc: ESDocument) => {
+    const duplicatedTitle = `[コピー] ${doc.title}`;
+    try {
+      const res = await fetch(`/api/companies/${slug}/es`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: duplicatedTitle,
+          content: doc.content,
+          characterLimit: doc.characterLimit,
+          characterLimitType: doc.characterLimitType
+        }),
+      });
+      if (res.ok) {
+        toast.success("文書を複製しました");
+        fetchAll();
+      } else {
+        toast.error("文書の複製に失敗しました");
+      }
+    } catch (error) {
+      toast.error("文書の複製に失敗しました");
+    }
+  };
+
   useAutoSave({
     enabled: !!editEsDoc,
     hasChanges: !!editEsDoc && (
@@ -411,6 +439,21 @@ export default function CompanyDetailPage({
     deps: [editEsDoc],
   });
 
+  const toggleEsExpand = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setExpandedEsIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
 
   if (!company) {
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">読み込み中...</p></div>;
@@ -423,7 +466,7 @@ export default function CompanyDetailPage({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/companies")}>
+        <Button variant="ghost" size="sm" onClick={() => router.push("/companies")} className="transition-all">
           <ArrowLeft className="mr-2 h-4 w-4" /> 企業一覧
         </Button>
       </div>
@@ -478,15 +521,15 @@ export default function CompanyDetailPage({
               <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
             </div>
           )}
-          <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
+          <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)} className="transition-all">
             <Edit className="mr-2 h-4 w-4" /> {editMode ? "キャンセル" : "編集"}
           </Button>
           {editMode && (
-            <Button size="sm" onClick={() => { handleSaveCompany(); setEditMode(false); }}>
+            <Button size="sm" onClick={() => { handleSaveCompany(); setEditMode(false); }} className="transition-all">
               <Save className="mr-2 h-4 w-4" /> 完了
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={handleDeleteCompany}>
+          <Button variant="destructive" size="sm" onClick={handleDeleteCompany} className="transition-all">
             <Trash2 className="mr-2 h-4 w-4" /> 削除
           </Button>
         </div>
@@ -506,11 +549,11 @@ export default function CompanyDetailPage({
                 <button
                   key={stage}
                   onClick={() => handleUpdateStatus(stage)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${isCurrent
-                    ? "bg-primary text-primary-foreground"
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer hover:bg-accent/10 ${isCurrent
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : isPast
-                      ? "bg-green-100 text-green-800"
-                      : "bg-muted text-muted-foreground hover:bg-accent"
+                      ? "bg-green-100 text-green-800 hover:bg-green-200"
+                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                     }`}
                 >
                   {stage}
@@ -541,7 +584,7 @@ export default function CompanyDetailPage({
                     setEditingCompany({ ...editingCompany, industry: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="transition-all duration-200 hover:shadow-md cursor-pointer">
                     <SelectValue placeholder="業界を選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -621,7 +664,7 @@ export default function CompanyDetailPage({
                     setEditingCompany({ ...editingCompany, priority: parseInt(value) })
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full transition-all duration-200 hover:shadow-md cursor-pointer">
                     <SelectValue placeholder="優先度を選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -641,16 +684,16 @@ export default function CompanyDetailPage({
       {/* Tabs */}
       <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="es" className="gap-2">
+          <TabsTrigger value="es" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
             <FileText className="h-4 w-4" /> ES・志望動機
           </TabsTrigger>
-          <TabsTrigger value="interviews" className="gap-2">
+          <TabsTrigger value="interviews" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
             <MessageSquare className="h-4 w-4" /> 面接記録
           </TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-2">
+          <TabsTrigger value="tasks" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
             <CheckSquare className="h-4 w-4" /> タスク
           </TabsTrigger>
-          <TabsTrigger value="memo" className="gap-2">
+          <TabsTrigger value="memo" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
             <BookOpen className="h-4 w-4" /> 企業研究メモ
           </TabsTrigger>
         </TabsList>
@@ -661,7 +704,7 @@ export default function CompanyDetailPage({
             <h3 className="text-lg font-semibold">ES・志望動機</h3>
             <Dialog open={newEsOpen} onOpenChange={setNewEsOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-2 h-4 w-4" /> 新規作成</Button>
+                <Button size="sm" className="transition-all"><Plus className="mr-2 h-4 w-4" /> 新規作成</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -686,7 +729,7 @@ export default function CompanyDetailPage({
                         value={newEs.characterLimitType}
                         onValueChange={(val: any) => setNewEs({ ...newEs, characterLimitType: val })}
                       >
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className="w-[100px] transition-all duration-200 hover:shadow-md cursor-pointer">
                           <SelectValue placeholder="種別" />
                         </SelectTrigger>
                         <SelectContent>
@@ -723,7 +766,22 @@ export default function CompanyDetailPage({
           ) : (
             <div className="space-y-4">
               {esDocs.map((doc) => (
-                <Card key={doc.id}>
+                <Card
+                  key={doc.id}
+                  className={cn(
+                    "overflow-hidden transition-all duration-200 border",
+                    editEsDoc?.id === doc.id
+                      ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
+                      : "hover:shadow-md hover:border-primary/20",
+                    editEsDoc?.id !== doc.id && "cursor-pointer"
+                  )}
+                  onClick={(e) => {
+                    // Ignore clicks if we are already editing this document to prevent weird event bubbling issues
+                    if (editEsDoc?.id !== doc.id) {
+                      toggleEsExpand(doc.id, e);
+                    }
+                  }}
+                >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col gap-1 flex-1">
@@ -731,10 +789,13 @@ export default function CompanyDetailPage({
                           <Input
                             className="text-base font-semibold h-8"
                             value={editEsDoc.title}
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) => setEditEsDoc({ ...editEsDoc, title: e.target.value })}
                           />
                         ) : (
-                          <CardTitle className="text-base">{doc.title}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">{doc.title}</CardTitle>
+                          </div>
                         )}
                         <CardDescription className="flex items-center gap-2">
                           <span>更新: {new Date(doc.updatedAt).toLocaleString("ja-JP")}</span>
@@ -749,7 +810,7 @@ export default function CompanyDetailPage({
                           </span>
                         </CardDescription>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                         {editEsDoc?.id === doc.id ? (
                           <div className="flex gap-2 items-center">
                             {isSavingEs && (
@@ -758,80 +819,88 @@ export default function CompanyDetailPage({
                                 <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
                               </div>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)}>完了</Button>
+                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)} className="transition-all">完了</Button>
                           </div>
                         ) : (
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(doc)}>
+                          <div className="flex gap-2 items-center">
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicateEs(doc); }} className="transition-all">
+                              <Copy className="mr-1 h-3 w-3" /> 複製
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setEditEsDoc(doc); setExpandedEsIds(prev => new Set(prev).add(doc.id)); }} className="transition-all">
                               <Edit className="mr-1 h-3 w-3" /> 編集
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteEs(doc.id)}>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteEs(doc.id); }}>
                               <Trash2 className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="ml-2 w-8 h-8 p-0" onClick={(e) => toggleEsExpand(doc.id, e)}>
+                              {expandedEsIds.has(doc.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    {doc.content || editEsDoc?.id === doc.id ? (
-                      <div className="space-y-4">
-                        {editEsDoc?.id === doc.id && (
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap">字数指定:</Label>
-                            <Input
-                              type="number"
-                              className="h-8 text-xs w-20"
-                              value={editEsDoc.characterLimit || ""}
-                              onChange={(e) => setEditEsDoc({ ...editEsDoc, characterLimit: e.target.value ? parseInt(e.target.value) : undefined })}
-                              placeholder="制限なし"
-                            />
-                            <Select
-                              value={editEsDoc.characterLimitType || ""}
-                              onValueChange={(val: any) => setEditEsDoc({ ...editEsDoc, characterLimitType: val === " " ? "" : val })}
-                            >
-                              <SelectTrigger className="h-8 text-xs w-24">
-                                <SelectValue placeholder="種別" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value=" ">指定なし</SelectItem>
-                                <SelectItem value="程度">程度</SelectItem>
-                                <SelectItem value="以下">以下</SelectItem>
-                                <SelectItem value="未満">未満</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        <NotionEditor
-                          readOnly={editEsDoc?.id !== doc.id}
-                          content={editEsDoc?.id === doc.id ? editEsDoc.content : doc.content}
-                          onChange={(val) => editEsDoc?.id === doc.id && setEditEsDoc({ ...editEsDoc, content: val })}
-                        />
+                  {(expandedEsIds.has(doc.id) || editEsDoc?.id === doc.id) && (
+                    <CardContent className="pt-2 border-t">
+                      {doc.content || editEsDoc?.id === doc.id ? (
+                        <div className="space-y-4">
+                          {editEsDoc?.id === doc.id && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs whitespace-nowrap">字数指定:</Label>
+                              <Input
+                                type="number"
+                                className="h-8 text-xs w-20"
+                                value={editEsDoc.characterLimit || ""}
+                                onChange={(e) => setEditEsDoc({ ...editEsDoc, characterLimit: e.target.value ? parseInt(e.target.value) : undefined })}
+                                placeholder="制限なし"
+                              />
+                              <Select
+                                value={editEsDoc.characterLimitType || ""}
+                                onValueChange={(val: any) => setEditEsDoc({ ...editEsDoc, characterLimitType: val === " " ? "" : val })}
+                              >
+                                <SelectTrigger className="h-8 text-xs w-24 transition-all duration-200 hover:shadow-md cursor-pointer">
+                                  <SelectValue placeholder="種別" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value=" ">指定なし</SelectItem>
+                                  <SelectItem value="程度">程度</SelectItem>
+                                  <SelectItem value="以下">以下</SelectItem>
+                                  <SelectItem value="未満">未満</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          <NotionEditor
+                            readOnly={editEsDoc?.id !== doc.id}
+                            content={editEsDoc?.id === doc.id ? editEsDoc.content : doc.content}
+                            onChange={(val) => editEsDoc?.id === doc.id && setEditEsDoc({ ...editEsDoc, content: val })}
+                          />
 
-                        {/* Section Character Counts */}
-                        <div className="mt-4 pt-4 border-t border-dashed">
-                          <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).map((section, idx) => (
-                              <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
-                                <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
-                                <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
-                              </div>
-                            ))}
-                            {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).length === 0 && (
-                              <p className="text-[10px] text-muted-foreground italic col-span-2">
-                                * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
-                              </p>
-                            )}
+                          {/* Section Character Counts */}
+                          <div className="mt-4 pt-4 border-t border-dashed">
+                            <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).map((section, idx) => (
+                                <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
+                                  <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
+                                  <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
+                                </div>
+                              ))}
+                              {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).length === 0 && (
+                                <p className="text-[10px] text-muted-foreground italic col-span-2">
+                                  * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-center text-muted-foreground italic py-4">
-                        本文がありません
-                      </div>
-                    )}
-                  </CardContent>
+                      ) : (
+                        <div className="text-center text-muted-foreground italic py-4">
+                          本文がありません
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
                 </Card>
               ))}
             </div>
@@ -844,7 +913,7 @@ export default function CompanyDetailPage({
             <h3 className="text-lg font-semibold">面接記録</h3>
             <Dialog open={newInterviewOpen} onOpenChange={setNewInterviewOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-2 h-4 w-4" /> 面接を追加</Button>
+                <Button size="sm" className="transition-all"><Plus className="mr-2 h-4 w-4" /> 面接を追加</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -856,10 +925,10 @@ export default function CompanyDetailPage({
                     <Input value={newInterview.type} onChange={(e) => setNewInterview({ ...newInterview, type: e.target.value })} placeholder="1次面接" />
                   </div>
                   <div>
-                    <Label>日付 *</Label>
-                    <DatePicker
+                    <Label>日時 *</Label>
+                    <DateTimePicker
                       date={newInterview.date ? new Date(newInterview.date) : undefined}
-                      onChange={(d) => setNewInterview({ ...newInterview, date: d ? format(d, "yyyy-MM-dd") : "" })}
+                      onChange={(d) => setNewInterview({ ...newInterview, date: d ? d.toISOString() : "" })}
                     />
                   </div>
                   <div>
@@ -874,7 +943,7 @@ export default function CompanyDetailPage({
                         setNewInterview({ ...newInterview, result: value })
                       }
                     >
-                      <SelectTrigger className={cn(statusColors[newInterview.result])}>
+                      <SelectTrigger className={cn(statusColors[newInterview.result], "transition-all duration-200 hover:shadow-md cursor-pointer")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -914,7 +983,21 @@ export default function CompanyDetailPage({
           ) : (
             <div className="space-y-4">
               {interviews.sort((a, b) => b.date.localeCompare(a.date)).map((interview) => (
-                <Card key={interview.id}>
+                <Card
+                  key={interview.id}
+                  className={cn(
+                    "overflow-hidden transition-all duration-200 border",
+                    editingInterview?.id === interview.id
+                      ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
+                      : "hover:shadow-md hover:border-primary/20",
+                    editingInterview?.id !== interview.id && "cursor-pointer"
+                  )}
+                  onClick={(e) => {
+                    if (editingInterview?.id !== interview.id) {
+                      setEditingInterview(interview);
+                    }
+                  }}
+                >
                   {editingInterview?.id === interview.id ? (
                     <CardContent className="pt-6 space-y-4">
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -931,10 +1014,10 @@ export default function CompanyDetailPage({
                           />
                         </div>
                         <div>
-                          <Label>日付</Label>
-                          <DatePicker
+                          <Label>日時</Label>
+                          <DateTimePicker
                             date={editingInterview.date ? new Date(editingInterview.date) : undefined}
-                            onChange={(d) => setEditingInterview({ ...editingInterview, date: d ? format(d, "yyyy-MM-dd") : "" })}
+                            onChange={(d) => setEditingInterview({ ...editingInterview, date: d ? d.toISOString() : "" })}
                           />
                         </div>
                         <div>
@@ -960,7 +1043,7 @@ export default function CompanyDetailPage({
                               })
                             }
                           >
-                            <SelectTrigger className={cn(statusColors[editingInterview.result])}>
+                            <SelectTrigger className={cn(statusColors[editingInterview.result], "transition-all duration-200 hover:shadow-md cursor-pointer")}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -991,10 +1074,10 @@ export default function CompanyDetailPage({
                             <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
                           </div>
                         )}
-                        <Button variant="outline" size="sm" onClick={() => setEditingInterview(null)}>
+                        <Button variant="outline" size="sm" onClick={() => setEditingInterview(null)} className="transition-all">
                           完了
                         </Button>
-                        <Button size="sm" onClick={() => handleSaveInterview()}>保存</Button>
+                        <Button size="sm" onClick={() => handleSaveInterview()} className="transition-all">保存</Button>
                       </div>
                     </CardContent>
                   ) : (
@@ -1004,11 +1087,11 @@ export default function CompanyDetailPage({
                           <CardTitle className="text-base">{interview.type}</CardTitle>
                           <div className="flex flex-wrap items-center gap-2">
                             <StatusBadge status={interview.result} />
-                            <span className="text-sm text-muted-foreground">{interview.date}</span>
-                            <Button variant="outline" size="sm" onClick={() => setEditingInterview(interview)}>
+                            <span className="text-sm text-muted-foreground">{formatDate(interview.date)}</span>
+                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setEditingInterview(interview); }} className="transition-all">
                               <Edit className="mr-1 h-3 w-3" /> 編集
                             </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteInterview(interview.id)}>
+                            <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteInterview(interview.id); }} className="transition-all">
                               <Trash2 className="mr-1 h-3 w-3" /> 削除
                             </Button>
                           </div>
@@ -1036,7 +1119,7 @@ export default function CompanyDetailPage({
             <h3 className="text-lg font-semibold">タスク</h3>
             <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-2 h-4 w-4" /> タスク追加</Button>
+                <Button size="sm" className="transition-all"><Plus className="mr-2 h-4 w-4" /> タスク追加</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -1050,7 +1133,7 @@ export default function CompanyDetailPage({
                   <div>
                     <Label>カテゴリ</Label>
                     <Select value={newTask.category} onValueChange={(v) => setNewTask({ ...newTask, category: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="transition-all duration-200 hover:shadow-md cursor-pointer"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {(config?.taskCategories || []).map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -1079,7 +1162,7 @@ export default function CompanyDetailPage({
                   <div className="space-y-2 pt-2">
                     <Label>ステータス</Label>
                     <Select value={newTask.status} onValueChange={(v: any) => setNewTask({ ...newTask, status: v })}>
-                      <SelectTrigger className={cn(statusColors[newTask.status])}><SelectValue /></SelectTrigger>
+                      <SelectTrigger className={cn(statusColors[newTask.status], "transition-all duration-200 hover:shadow-md cursor-pointer")}><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="未着手">未着手</SelectItem>
                         <SelectItem value="進行中">進行中</SelectItem>
@@ -1114,8 +1197,17 @@ export default function CompanyDetailPage({
               {tasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => setEditingTask(task)}
+                  className={cn(
+                    "flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center transition-all duration-200",
+                    editingTask?.id === task.id
+                      ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
+                      : "hover:shadow-md hover:border-primary/20 cursor-pointer"
+                  )}
+                  onClick={() => {
+                    if (editingTask?.id !== task.id) {
+                      setEditingTask(task);
+                    }
+                  }}
                 >
                   {editingTask?.id === task.id ? (
                     <div className="flex-1 space-y-3" onClick={(e) => e.stopPropagation()}>
@@ -1133,7 +1225,7 @@ export default function CompanyDetailPage({
                             setEditingTask({ ...editingTask, category: value })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="transition-all duration-200 hover:shadow-md cursor-pointer">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1148,9 +1240,9 @@ export default function CompanyDetailPage({
                             setEditingTask((prev) =>
                               prev
                                 ? {
-                                    ...prev,
-                                    executionDate: d ? format(d, "yyyy-MM-dd") : "",
-                                  }
+                                  ...prev,
+                                  executionDate: d ? format(d, "yyyy-MM-dd") : "",
+                                }
                                 : prev
                             )
                           }
@@ -1161,9 +1253,9 @@ export default function CompanyDetailPage({
                             setEditingTask((prev) =>
                               prev
                                 ? {
-                                    ...prev,
-                                    deadline: d ? d.toISOString() : "",
-                                  }
+                                  ...prev,
+                                  deadline: d ? d.toISOString() : "",
+                                }
                                 : prev
                             )
                           }
@@ -1188,7 +1280,7 @@ export default function CompanyDetailPage({
                               })
                             }
                           >
-                            <SelectTrigger className={cn("h-9", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
+                            <SelectTrigger className={cn("h-9 transition-all duration-200 hover:shadow-md cursor-pointer", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="未着手">未着手</SelectItem>
                               <SelectItem value="進行中">進行中</SelectItem>
@@ -1203,10 +1295,10 @@ export default function CompanyDetailPage({
                               <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
                             </div>
                           )}
-                          <Button variant="outline" size="sm" onClick={() => setEditingTask(null)}>
+                          <Button variant="outline" size="sm" onClick={() => setEditingTask(null)} className="transition-all">
                             完了
                           </Button>
-                          <Button size="sm" onClick={() => handleSaveTask()}>保存</Button>
+                          <Button size="sm" onClick={() => handleSaveTask()} className="transition-all">保存</Button>
                         </div>
                       </div>
                     </div>
@@ -1217,7 +1309,7 @@ export default function CompanyDetailPage({
                           value={task.status}
                           onValueChange={(v: any) => handleStatusChangeTask(task, v)}
                         >
-                          <SelectTrigger className={cn("h-8 text-xs", statusColors[task.status])}><SelectValue /></SelectTrigger>
+                          <SelectTrigger className={cn("h-8 text-xs transition-all duration-200 hover:shadow-md cursor-pointer", statusColors[task.status])}><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="未着手">未着手</SelectItem>
                             <SelectItem value="進行中">進行中</SelectItem>
@@ -1246,6 +1338,7 @@ export default function CompanyDetailPage({
                         <Button
                           variant="outline"
                           size="sm"
+                          className="transition-all"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingTask(task);
@@ -1256,6 +1349,7 @@ export default function CompanyDetailPage({
                         <Button
                           variant="destructive"
                           size="sm"
+                          className="transition-all"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteTask(task.id);
@@ -1283,7 +1377,7 @@ export default function CompanyDetailPage({
                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
                 </div>
               )}
-              <Button size="sm" onClick={() => handleSaveCompany()} disabled={isSavingMemo}>
+              <Button size="sm" onClick={() => handleSaveCompany()} disabled={isSavingMemo} className="transition-all">
                 <Save className="mr-2 h-4 w-4" /> 保存
               </Button>
             </div>

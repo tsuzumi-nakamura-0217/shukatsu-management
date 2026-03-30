@@ -176,7 +176,7 @@ export default function TipsPage() {
           onClick={handleCreate}
           disabled={isCreating}
           size="sm"
-          className="rounded-xl h-10 px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all"
+          className="rounded-xl h-10 px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-105 active:scale-95"
         >
           {isCreating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
           新規作成
@@ -190,7 +190,7 @@ export default function TipsPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="検索内容を入力..."
-              className="pl-11 h-12 rounded-2xl glass border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              className="pl-11 h-12 rounded-2xl glass border-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all duration-300 hover:shadow-md focus:shadow-lg hover:scale-[1.01]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -217,10 +217,10 @@ export default function TipsPage() {
                       key={item.id}
                       onClick={() => handleSelect(item)}
                       className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-2xl transition-all group relative text-left",
+                        "w-full flex items-center gap-4 p-4 rounded-2xl transition-all group relative text-left hover:scale-[1.02] active:scale-[0.98]",
                         selected?.id === item.id
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                          : "hover:bg-white/40 dark:hover:bg-white/5"
+                          : "hover:bg-white/40 dark:hover:bg-white/5 hover:shadow-md"
                       )}
                     >
                       <div className={cn(
@@ -283,7 +283,7 @@ export default function TipsPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+                    className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 transition-all hover:scale-110 active:scale-90"
                     onClick={() => handleDelete(selected.id)}
                   >
                     <Trash2 className="h-5 w-5" />
@@ -316,7 +316,7 @@ export default function TipsPage() {
               </p>
               <Button
                 variant="outline"
-                className="mt-8 rounded-2xl h-12 px-8 font-bold border-2 hover:border-primary hover:text-primary transition-all"
+                className="mt-8 rounded-2xl h-12 px-8 font-bold border-2 hover:border-primary hover:text-primary transition-all hover:scale-105 active:scale-95 hover:shadow-lg"
                 onClick={handleCreate}
               >
                 新しいTipsを作成

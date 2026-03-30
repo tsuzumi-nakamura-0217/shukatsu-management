@@ -47,7 +47,7 @@ CREATE TABLE interviews (
   company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
   company_slug TEXT NOT NULL,
   type TEXT NOT NULL,
-  date DATE NOT NULL,
+  date TIMESTAMPTZ NOT NULL,
   location TEXT DEFAULT '',
   result TEXT DEFAULT '結果待ち',
   memo TEXT DEFAULT '',

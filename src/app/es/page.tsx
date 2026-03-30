@@ -6,6 +6,7 @@ import {
   Search,
   Loader2,
   Copy,
+  CopyPlus,
   ChevronRight
 } from "lucide-react";
 import {
@@ -97,6 +98,31 @@ export default function ESListPage() {
     }
   };
 
+  const handleDuplicate = async () => {
+    if (!selected) return;
+    const duplicatedTitle = `[コピー] ${selected.title}`;
+    try {
+      const res = await fetch(`/api/companies/${selected.companySlug}/es`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: duplicatedTitle,
+          content: selected.content,
+          characterLimit: selected.characterLimit,
+          characterLimitType: selected.characterLimitType
+        }),
+      });
+      if (res.ok) {
+        toast.success("文書を複製しました");
+        fetchEsDocs();
+      } else {
+        toast.error("文書の複製に失敗しました");
+      }
+    } catch (error) {
+      toast.error("文書の複製に失敗しました");
+    }
+  };
+
   const handleSave = async () => {
     if (!selected || isSaving) return;
     setIsSaving(true);
@@ -164,15 +190,26 @@ export default function ESListPage() {
 
         <div className="flex items-center gap-3">
           {selected && (
-            <Button
-              onClick={handleCopy}
-              variant="outline"
-              size="sm"
-              className="rounded-xl h-10 px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-2"
-            >
-              <Copy className="h-4 w-4" />
-              コピー
-            </Button>
+            <>
+              <Button
+                onClick={handleDuplicate}
+                variant="outline"
+                size="sm"
+                className="rounded-xl h-10 px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-2"
+              >
+                <CopyPlus className="h-4 w-4" />
+                複製
+              </Button>
+              <Button
+                onClick={handleCopy}
+                variant="outline"
+                size="sm"
+                className="rounded-xl h-10 px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                テキストをコピー
+              </Button>
+            </>
           )}
         </div>
       </div>

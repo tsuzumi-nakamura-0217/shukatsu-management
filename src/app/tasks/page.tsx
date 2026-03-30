@@ -256,7 +256,7 @@ export default function TasksPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30">
+                <Button size="lg" className="rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
                   <Plus className="mr-2 h-5 w-5" />
                   タスクを追加
                 </Button>
@@ -342,8 +342,8 @@ export default function TasksPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="ghost" onClick={() => setNewTaskOpen(false)}>キャンセル</Button>
-                  <Button onClick={handleCreateTask} disabled={isCreatingTask} className="rounded-xl px-8">
+                  <Button variant="ghost" onClick={() => setNewTaskOpen(false)} className="transition-all">キャンセル</Button>
+                  <Button onClick={handleCreateTask} disabled={isCreatingTask} className="rounded-xl px-8 transition-all">
                     {isCreatingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "作成"}
                   </Button>
                 </DialogFooter>
@@ -360,12 +360,12 @@ export default function TasksPage() {
             placeholder="タスク名・企業名で検索..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 border-none bg-background/50 focus-visible:bg-background rounded-xl h-11"
+            className="pl-10 border-none bg-background/50 focus-visible:bg-background rounded-xl h-11 transition-all duration-300 hover:bg-background/80"
           />
         </div>
         <div className="flex items-center gap-3">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full md:w-40 rounded-xl h-11 border-none bg-background/50">
+            <SelectTrigger className="w-full md:w-40 rounded-xl h-11 border-none bg-background/50 transition-all duration-200 cursor-pointer">
               <SelectValue placeholder="全カテゴリ" />
             </SelectTrigger>
             <SelectContent>
@@ -376,7 +376,7 @@ export default function TasksPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className={cn("w-full md:w-44 rounded-xl h-11 border-none bg-background/50", statusFilter !== "all" && statusFilter !== "incomplete" && "ring-2 ring-primary/20")}>
+            <SelectTrigger className={cn("w-full md:w-44 rounded-xl h-11 border-none bg-background/50 transition-all duration-200 cursor-pointer", statusFilter !== "all" && statusFilter !== "incomplete" && "ring-2 ring-primary/20")}>
               <SelectValue placeholder="ステータス" />
             </SelectTrigger>
             <SelectContent>
@@ -455,8 +455,8 @@ export default function TasksPage() {
                       )}
                     </div>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setEditingTask(null)}>キャンセル</Button>
-                          <Button size="sm" onClick={() => handleSaveTask()} className="rounded-xl px-6">保存</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingTask(null)} className="transition-all">キャンセル</Button>
+                          <Button size="sm" onClick={() => handleSaveTask()} className="rounded-xl px-6 transition-all">保存</Button>
                         </div>
                   </div>
                 </div>
@@ -510,8 +510,8 @@ export default function TasksPage() {
                       )}
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); setEditingTask(task) }}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(task.id) }}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 transition-all duration-200" onClick={(e) => { e.stopPropagation(); setEditingTask(task) }}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-destructive transition-all duration-200" onClick={(e) => { e.stopPropagation(); handleDelete(task.id) }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 </div>

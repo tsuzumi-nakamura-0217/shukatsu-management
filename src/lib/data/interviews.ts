@@ -9,7 +9,7 @@ export function rowToInterview(row: Record<string, unknown>): Interview {
     companyId: (row.company_id as string) || "",
     companySlug: (row.company_slug as string) || "",
     type: (row.type as string) || "",
-    date: toISODate(row.date as string),
+    date: (row.date as string) || "",
     location: (row.location as string) || "",
     result: (row.result as string) || "結果待ち",
     memo: (row.memo as string) || "",

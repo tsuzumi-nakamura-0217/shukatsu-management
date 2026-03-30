@@ -181,7 +181,7 @@ export default function CompaniesPage() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="lg" className="rounded-xl shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30">
+              <Button size="lg" className="rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
                 <Plus className="mr-2 h-5 w-5" />
                 新規企業を追加
               </Button>
@@ -276,13 +276,13 @@ export default function CompaniesPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="ghost" disabled={isCreating} onClick={() => setDialogOpen(false)}>
+                <Button variant="ghost" disabled={isCreating} onClick={() => setDialogOpen(false)} className="transition-all">
                   キャンセル
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={isCreating}
-                  className="rounded-xl px-8"
+                  className="rounded-xl px-8 transition-all"
                 >
                   {isCreating ? (
                     <>
@@ -307,12 +307,12 @@ export default function CompaniesPage() {
             placeholder="企業名・業界で検索..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 border-none bg-background/50 focus-visible:bg-background rounded-xl h-11"
+            className="pl-10 border-none bg-background/50 focus-visible:bg-background rounded-xl h-11 transition-all duration-300 hover:bg-background/80"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50", statusFilter !== "all" && "ring-2 ring-primary/20")}>
+            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50 transition-all duration-200 cursor-pointer", statusFilter !== "all" && "ring-2 ring-primary/20")}>
               <SelectValue placeholder="状況" />
             </SelectTrigger>
             <SelectContent>
@@ -326,7 +326,7 @@ export default function CompaniesPage() {
           </Select>
 
           <Select value={industryFilter} onValueChange={setIndustryFilter}>
-            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50", industryFilter !== "all" && "ring-2 ring-primary/20")}>
+            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50 transition-all duration-200 cursor-pointer", industryFilter !== "all" && "ring-2 ring-primary/20")}>
               <SelectValue placeholder="業界" />
             </SelectTrigger>
             <SelectContent>
@@ -340,7 +340,7 @@ export default function CompaniesPage() {
           </Select>
 
           <Select value={minPriority.toString()} onValueChange={(v) => setMinPriority(parseInt(v))}>
-            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50", minPriority > 0 && "ring-2 ring-primary/20")}>
+            <SelectTrigger className={cn("w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50 transition-all duration-200 cursor-pointer", minPriority > 0 && "ring-2 ring-primary/20")}>
               <SelectValue placeholder="優先度" />
             </SelectTrigger>
             <SelectContent>
@@ -354,7 +354,7 @@ export default function CompaniesPage() {
           <Button
             variant={excludeRejected ? "secondary" : "ghost"}
             size="sm"
-            className={cn("rounded-xl h-9 px-3 text-xs gap-1.5", excludeRejected && "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 hover:text-rose-700")}
+            className={cn("rounded-xl h-9 px-3 text-xs gap-1.5 transition-all", excludeRejected && "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 hover:text-rose-700")}
             onClick={() => setExcludeRejected(!excludeRejected)}
           >
             {excludeRejected ? <XCircle className="h-3.5 w-3.5" /> : <Filter className="h-3.5 w-3.5" />}
@@ -364,7 +364,7 @@ export default function CompaniesPage() {
           <div className="h-6 w-px bg-border/50 mx-1 hidden md:block" />
 
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50">
+            <SelectTrigger className="w-full md:w-32 rounded-xl h-9 text-xs border-none bg-background/50 transition-all duration-200 cursor-pointer">
               <SelectValue placeholder="並べ替え" />
             </SelectTrigger>
             <SelectContent>
@@ -378,7 +378,7 @@ export default function CompaniesPage() {
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="sm"
-              className="rounded-lg h-7 px-2"
+              className="rounded-lg h-7 px-2 transition-all hover:bg-background/80"
               onClick={() => setViewMode("grid")}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -386,7 +386,7 @@ export default function CompaniesPage() {
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="sm"
-              className="rounded-lg h-7 px-2"
+              className="rounded-lg h-7 px-2 transition-all hover:bg-background/80"
               onClick={() => setViewMode("list")}
             >
               <List className="h-3.5 w-3.5" />

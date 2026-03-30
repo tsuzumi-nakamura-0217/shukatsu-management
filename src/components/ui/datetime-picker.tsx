@@ -13,7 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DateTimePickerProps {
   date?: Date;
@@ -38,8 +37,8 @@ export function DateTimePicker({ date, onChange, placeholder = "日時を選択"
       return;
     }
 
-    const newDate = selectedDate ? 
-      setMinutes(setHours(d, selectedDate.getHours()), selectedDate.getMinutes()) : 
+    const newDate = selectedDate ?
+      setMinutes(setHours(d, selectedDate.getHours()), selectedDate.getMinutes()) :
       setHours(setMinutes(d, 0), 9); // Default to 9:00 AM if no time set
 
     setSelectedDate(newDate);
@@ -95,22 +94,29 @@ export function DateTimePicker({ date, onChange, placeholder = "日時を選択"
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Time</span>
             </div>
             <div className="flex h-[280px] gap-1">
-              <ScrollArea className="w-12 h-full rounded-md bg-background/50">
+              <div 
+                className="w-12 h-full overflow-y-auto rounded-md bg-background/50 scrollbar-thin scrollbar-thumb-border"
+                onWheel={(e) => e.stopPropagation()}
+              >
                 <div className="flex flex-col p-1 gap-1">
                   {Array.from({ length: 24 }).map((_, i) => (
                     <Button
                       key={i}
                       variant={selectedDate?.getHours() === i ? "default" : "ghost"}
                       size="sm"
-                      className="h-8 w-full p-0 text-xs font-bold"
+                      className="h-8 w-full p-0 text-xs font-bold shrink-0"
                       onClick={() => handleTimeChange("hour", i)}
+                      onWheel={(e) => e.stopPropagation()}
                     >
                       {i.toString().padStart(2, "0")}
                     </Button>
                   ))}
                 </div>
-              </ScrollArea>
-              <ScrollArea className="w-12 h-full rounded-md bg-background/50">
+              </div>
+              <div 
+                className="w-12 h-full overflow-y-auto rounded-md bg-background/50 scrollbar-thin scrollbar-thumb-border"
+                onWheel={(e) => e.stopPropagation()}
+              >
                 <div className="flex flex-col p-1 gap-1">
                   {Array.from({ length: 12 }).map((_, i) => {
                     const minute = i * 5;
@@ -119,15 +125,16 @@ export function DateTimePicker({ date, onChange, placeholder = "日時を選択"
                         key={minute}
                         variant={selectedDate?.getMinutes() === minute ? "default" : "ghost"}
                         size="sm"
-                        className="h-8 w-full p-0 text-xs font-bold"
+                        className="h-8 w-full p-0 text-xs font-bold shrink-0"
                         onClick={() => handleTimeChange("minute", minute)}
+                        onWheel={(e) => e.stopPropagation()}
                       >
                         {minute.toString().padStart(2, "0")}
                       </Button>
                     );
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </div>
         </div>

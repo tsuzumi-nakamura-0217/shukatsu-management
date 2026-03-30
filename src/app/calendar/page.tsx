@@ -105,6 +105,13 @@ export default function CalendarPage() {
             font-size: 0.75rem !important;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
             border: none !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+          }
+          .fc .fc-event:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            filter: brightness(1.1);
           }
           .fc .fc-event.calendar-event-deadline {
             background: #ef4444 !important;
