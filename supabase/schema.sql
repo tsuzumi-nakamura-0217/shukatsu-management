@@ -100,6 +100,17 @@ CREATE TABLE config (
   value JSONB NOT NULL
 );
 
+-- 8. Tipsテーブル
+CREATE TABLE tips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+  title TEXT NOT NULL,
+  category TEXT DEFAULT 'その他',
+  content TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE UNIQUE INDEX companies_user_slug_key ON companies(user_id, slug);
 CREATE UNIQUE INDEX config_user_key_key ON config(user_id, key);
 CREATE UNIQUE INDEX config_global_key_key ON config(key) WHERE user_id IS NULL;
@@ -123,6 +134,7 @@ ALTER TABLE es_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE self_analysis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tips ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY companies_owner_policy ON companies
   FOR ALL USING (auth.uid() = user_id)
@@ -145,6 +157,10 @@ CREATE POLICY self_analysis_owner_policy ON self_analysis
   WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
 
 CREATE POLICY templates_owner_policy ON templates
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
+
+CREATE POLICY tips_owner_policy ON tips
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
 

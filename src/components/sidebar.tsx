@@ -13,6 +13,7 @@ import {
   Settings,
   GraduationCap,
   Menu,
+  Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,11 @@ const navItems = [
     href: "/es",
     label: "ES一覧",
     icon: FileText,
+  },
+  {
+    href: "/tips",
+    label: "就活Tips",
+    icon: Lightbulb,
   },
   {
     href: "/settings",

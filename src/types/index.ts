@@ -101,6 +101,14 @@ export interface SelfAnalysis {
   content: string;
 }
 
+// Tipsの型定義
+export interface Tip {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+}
+
 // 設定の型定義
 export interface AppConfig {
   defaultStages: string[];
