@@ -447,8 +447,17 @@ export default function CompanyDetailPage({
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
+        // Collapsing: exit edit mode if this doc was being edited
+        if (editEsDoc?.id === id) {
+          setEditEsDoc(null);
+        }
       } else {
         next.add(id);
+        // Expanding: automatically enter edit mode
+        const doc = esDocs.find(d => d.id === id);
+        if (doc) {
+          setEditEsDoc(doc);
+        }
       }
       return next;
     });
@@ -776,10 +785,7 @@ export default function CompanyDetailPage({
                     editEsDoc?.id !== doc.id && "cursor-pointer"
                   )}
                   onClick={(e) => {
-                    // Ignore clicks if we are already editing this document to prevent weird event bubbling issues
-                    if (editEsDoc?.id !== doc.id) {
-                      toggleEsExpand(doc.id, e);
-                    }
+                    toggleEsExpand(doc.id, e);
                   }}
                 >
                   <CardHeader className="pb-2">
@@ -811,69 +817,64 @@ export default function CompanyDetailPage({
                         </CardDescription>
                       </div>
                       <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                        {editEsDoc?.id === doc.id ? (
-                          <div className="flex gap-2 items-center">
-                            {isSavingEs && (
-                              <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10 mr-1">
-                                <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                                <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                              </div>
-                            )}
-                            <Button variant="outline" size="sm" onClick={() => setEditEsDoc(null)} className="transition-all">完了</Button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2 items-center">
-                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicateEs(doc); }} className="transition-all">
-                              <Copy className="mr-1 h-3 w-3" /> 複製
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setEditEsDoc(doc); setExpandedEsIds(prev => new Set(prev).add(doc.id)); }} className="transition-all">
-                              <Edit className="mr-1 h-3 w-3" /> 編集
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteEs(doc.id); }}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="ml-2 w-8 h-8 p-0" onClick={(e) => toggleEsExpand(doc.id, e)}>
-                              {expandedEsIds.has(doc.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            </Button>
+                        {isSavingEs && editEsDoc?.id === doc.id && (
+                          <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10 mr-1">
+                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                            <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
                           </div>
                         )}
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicateEs(doc); }} className="transition-all">
+                          <Copy className="mr-1 h-3 w-3" /> 複製
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteEs(doc.id); }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="ml-2 w-8 h-8 p-0" onClick={(e) => toggleEsExpand(doc.id, e)}>
+                          {expandedEsIds.has(doc.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
                   </CardHeader>
-                  {(expandedEsIds.has(doc.id) || editEsDoc?.id === doc.id) && (
-                    <CardContent className="pt-2 border-t">
+                  {expandedEsIds.has(doc.id) && (
+                    <CardContent className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                       {doc.content || editEsDoc?.id === doc.id ? (
                         <div className="space-y-4">
-                          {editEsDoc?.id === doc.id && (
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs whitespace-nowrap">字数指定:</Label>
-                              <Input
-                                type="number"
-                                className="h-8 text-xs w-20"
-                                value={editEsDoc.characterLimit || ""}
-                                onChange={(e) => setEditEsDoc({ ...editEsDoc, characterLimit: e.target.value ? parseInt(e.target.value) : undefined })}
-                                placeholder="制限なし"
-                              />
-                              <Select
-                                value={editEsDoc.characterLimitType || ""}
-                                onValueChange={(val: any) => setEditEsDoc({ ...editEsDoc, characterLimitType: val === " " ? "" : val })}
-                              >
-                                <SelectTrigger className="h-8 text-xs w-24 transition-all duration-200 hover:shadow-md cursor-pointer">
-                                  <SelectValue placeholder="種別" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value=" ">指定なし</SelectItem>
-                                  <SelectItem value="程度">程度</SelectItem>
-                                  <SelectItem value="以下">以下</SelectItem>
-                                  <SelectItem value="未満">未満</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs whitespace-nowrap">字数指定:</Label>
+                            <Input
+                              type="number"
+                              className="h-8 text-xs w-20"
+                              value={(editEsDoc?.id === doc.id ? editEsDoc.characterLimit : doc.characterLimit) || ""}
+                              onChange={(e) => {
+                                const esDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
+                                setEditEsDoc({ ...esDoc, characterLimit: e.target.value ? parseInt(e.target.value) : undefined });
+                              }}
+                              placeholder="制限なし"
+                            />
+                            <Select
+                              value={(editEsDoc?.id === doc.id ? editEsDoc.characterLimitType : doc.characterLimitType) || ""}
+                              onValueChange={(val: any) => {
+                                const esDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
+                                setEditEsDoc({ ...esDoc, characterLimitType: val === " " ? "" : val });
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs w-24 transition-all duration-200 hover:shadow-md cursor-pointer">
+                                <SelectValue placeholder="種別" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value=" ">指定なし</SelectItem>
+                                <SelectItem value="程度">程度</SelectItem>
+                                <SelectItem value="以下">以下</SelectItem>
+                                <SelectItem value="未満">未満</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <NotionEditor
-                            readOnly={editEsDoc?.id !== doc.id}
                             content={editEsDoc?.id === doc.id ? editEsDoc.content : doc.content}
-                            onChange={(val) => editEsDoc?.id === doc.id && setEditEsDoc({ ...editEsDoc, content: val })}
+                            onChange={(val) => {
+                              const esDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
+                              setEditEsDoc({ ...esDoc, content: val });
+                            }}
                           />
 
                           {/* Section Character Counts */}

@@ -2,28 +2,24 @@ import { getAllCompanies } from "./companies";
 import { getAllTasks } from "./tasks";
 import { getAllInterviews } from "./interviews";
 
-export async function getCalendarEvents(): Promise<
-  {
-    id: string;
-    title: string;
-    date: string;
-    type: string;
-    companySlug: string;
-    companyName: string;
-    color: string;
-  }[]
-> {
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string;
+  type: string;
+  companySlug: string;
+  companyName: string;
+  color: string;
+  status?: string;
+};
+
+export async function getCalendarEvents(options?: {
+  includeCompleted?: boolean;
+}): Promise<CalendarEvent[]> {
+  const includeCompleted = options?.includeCompleted ?? false;
   const companies = await getAllCompanies();
   const tasks = await getAllTasks();
-  const events: {
-    id: string;
-    title: string;
-    date: string;
-    type: string;
-    companySlug: string;
-    companyName: string;
-    color: string;
-  }[] = [];
+  const events: CalendarEvent[] = [];
 
   // Interviews
   const allInterviews = await getAllInterviews();
@@ -46,17 +42,19 @@ export async function getCalendarEvents(): Promise<
 
   // Task deadlines
   for (const task of tasks) {
-    if (task.deadline && task.status !== "完了") {
-      events.push({
-        id: task.id,
-        title: `${task.companyName || ""} - ${task.title}`,
-        date: task.deadline,
-        type: task.category === "ES" ? "es" : "deadline",
-        companySlug: task.companySlug,
-        companyName: task.companyName || "",
-        color: task.category === "ES" ? "#eab308" : "#ef4444", // yellow / red
-      });
-    }
+    if (!task.deadline) continue;
+    if (!includeCompleted && task.status === "完了") continue;
+
+    events.push({
+      id: task.id,
+      title: `${task.companyName || ""} - ${task.title}`,
+      date: task.deadline,
+      type: task.category === "ES" ? "es" : "deadline",
+      companySlug: task.companySlug,
+      companyName: task.companyName || "",
+      color: task.category === "ES" ? "#eab308" : "#ef4444", // yellow / red
+      status: task.status,
+    });
   }
 
   return events;

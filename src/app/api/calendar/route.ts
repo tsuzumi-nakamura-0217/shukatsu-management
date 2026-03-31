@@ -5,7 +5,8 @@ import { withAuthenticatedUser } from "@/lib/auth-server";
 export async function GET(request: NextRequest) {
   return withAuthenticatedUser(request, async () => {
     try {
-      const events = await getCalendarEvents();
+      const includeCompleted = request.nextUrl.searchParams.get("includeCompleted") === "true";
+      const events = await getCalendarEvents({ includeCompleted });
       return NextResponse.json(events);
     } catch {
       return NextResponse.json(

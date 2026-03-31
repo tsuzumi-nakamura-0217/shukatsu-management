@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -9,30 +9,68 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import {
   Card,
-  CardContent,
 } from "@/components/ui/card";
-import { statusColors } from "@/components/badges";
-import type { Task } from "@/types";
+import { cn } from "@/lib/utils";
+import type { CalendarEvent } from "@/lib/data/calendar";
+
+type FilterKey = "deadline" | "es" | "interview" | "completed";
+
+const FILTER_CONFIG: { key: FilterKey; label: string; dotColor: string; description: string }[] = [
+  { key: "deadline", label: "締切", dotColor: "bg-red-500", description: "タスクの締切日" },
+  { key: "es", label: "ES", dotColor: "bg-amber-500", description: "ES関連タスク" },
+  { key: "interview", label: "面接", dotColor: "bg-blue-500", description: "面接スケジュール" },
+  { key: "completed", label: "完了済み", dotColor: "bg-emerald-500", description: "完了タスクも表示" },
+];
 
 export default function CalendarPage() {
   const router = useRouter();
-  const [events, setEvents] = useState<EventInput[]>([]);
+  const [rawEvents, setRawEvents] = useState<CalendarEvent[]>([]);
+  const [filters, setFilters] = useState<Record<FilterKey, boolean>>({
+    deadline: true,
+    es: true,
+    interview: true,
+    completed: false,
+  });
+
+  const fetchEvents = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (filters.completed) params.set("includeCompleted", "true");
+    const r = await fetch(`/api/calendar?${params.toString()}`);
+    const data: CalendarEvent[] = await r.json();
+    setRawEvents(data);
+  }, [filters.completed]);
 
   useEffect(() => {
-    fetch("/api/calendar")
-      .then((r) => r.json())
-      .then((data: any[]) => {
-        const evs: EventInput[] = data.map((e) => ({
-          id: e.id,
-          title: e.title,
-          start: e.date,
-          backgroundColor: e.color || "var(--primary)",
-          borderColor: "transparent",
-          extendedProps: { ...e },
-        }));
-        setEvents(evs);
-      });
-  }, []);
+    fetchEvents();
+  }, [fetchEvents]);
+
+  const events: EventInput[] = useMemo(() => {
+    return rawEvents
+      .filter((e) => {
+        if (e.type === "deadline" && !filters.deadline) return false;
+        if (e.type === "es" && !filters.es) return false;
+        if (e.type === "interview" && !filters.interview) return false;
+        return true;
+      })
+      .map((e) => ({
+        id: e.id,
+        title: e.title,
+        start: e.date,
+        backgroundColor: e.status === "完了" ? "#6b7280" : e.color || "var(--primary)",
+        borderColor: "transparent",
+        extendedProps: { ...e },
+        classNames: [
+          ...(e.status === "完了" ? ["calendar-event-completed"] : []),
+          ...(e.type === "deadline" && e.status !== "完了" ? ["calendar-event-deadline"] : []),
+          ...(e.type === "es" && e.status !== "完了" ? ["calendar-event-es"] : []),
+          ...(e.type === "interview" ? ["calendar-event-interview"] : []),
+        ],
+      }));
+  }, [rawEvents, filters]);
+
+  const toggleFilter = (key: FilterKey) => {
+    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   return (
     <div className="space-y-8 pb-10">
@@ -47,6 +85,33 @@ export default function CalendarPage() {
             <p className="text-muted-foreground mt-1 font-medium">
               選考スケジュールとタスクの締切を一目で確認しましょう
             </p>
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTER_CONFIG.map(({ key, label, dotColor }) => {
+              const active = filters[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleFilter(key)}
+                  className={cn(
+                    "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 border cursor-pointer select-none",
+                    active
+                      ? "bg-white/80 dark:bg-white/10 border-white/40 dark:border-white/20 shadow-sm text-foreground"
+                      : "bg-transparent border-white/10 dark:border-white/5 text-muted-foreground/50 hover:text-muted-foreground/80 hover:border-white/20"
+                  )}
+                  title={FILTER_CONFIG.find(f => f.key === key)?.description}
+                >
+                  <span className={cn(
+                    "h-2.5 w-2.5 rounded-full transition-all",
+                    active ? dotColor : "bg-muted-foreground/20",
+                    active && "shadow-[0_0_6px_rgba(0,0,0,0.15)]"
+                  )} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -128,6 +193,13 @@ export default function CalendarPage() {
             color: #ffffff !important;
             border: 1px solid #1d4ed8 !important;
           }
+          .fc .fc-event.calendar-event-completed {
+            background: #6b7280 !important;
+            color: #e5e7eb !important;
+            border: 1px solid #4b5563 !important;
+            opacity: 0.6;
+            text-decoration: line-through;
+          }
           .dark .fc {
             --fc-border-color: rgba(255, 255, 255, 0.05);
             --fc-today-bg-color: var(--muted);
@@ -148,6 +220,11 @@ export default function CalendarPage() {
             background: #1d4ed8 !important;
             border-color: #1e40af !important;
           }
+          .dark .fc .fc-event.calendar-event-completed {
+            background: #4b5563 !important;
+            color: #9ca3af !important;
+            border-color: #374151 !important;
+          }
         `}</style>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -159,13 +236,6 @@ export default function CalendarPage() {
           }}
           locale="ja"
           events={events}
-          eventClassNames={(arg) => {
-            const eventType = arg.event.extendedProps.type as string | undefined;
-            if (eventType === "deadline") return ["calendar-event-deadline"];
-            if (eventType === "es") return ["calendar-event-es"];
-            if (eventType === "interview") return ["calendar-event-interview"];
-            return [];
-          }}
           height="auto"
           eventClick={(info) => {
             const { type, companySlug } = info.event.extendedProps;
