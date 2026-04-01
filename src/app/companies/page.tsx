@@ -264,7 +264,7 @@ export default function CompaniesPage() {
                   <FlexibleDateInput
                     value={newCompany.expectedResultPeriod}
                     onChange={(val) => setNewCompany({ ...newCompany, expectedResultPeriod: val })}
-                    placeholder="例: 1週間以内、4月中旬..."
+                    placeholder="例: 2/17"
                   />
                 </div>
               </div>
@@ -547,7 +547,7 @@ export default function CompaniesPage() {
                       </div>
                     );
                   })()}
-                  
+
                   {company.expectedResultPeriod && (
                     <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 shadow-sm w-44">
                       <Clock className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400 shrink-0" />

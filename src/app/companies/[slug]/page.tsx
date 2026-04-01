@@ -601,7 +601,7 @@ export default function CompanyDetailPage({
             <FlexibleDateInput
               value={editingCompany.expectedResultPeriod || ""}
               onChange={(val) => setEditingCompany({ ...editingCompany, expectedResultPeriod: val })}
-              placeholder="例: 1週間以内、4月中旬、4/15ごろ..."
+              placeholder="例: 2/17"
               className="w-full sm:w-64"
             />
           </div>
