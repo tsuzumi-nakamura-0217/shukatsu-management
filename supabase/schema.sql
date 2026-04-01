@@ -18,6 +18,7 @@ CREATE TABLE companies (
   priority INTEGER DEFAULT 3,
   stages TEXT[] DEFAULT '{"未応募","ES提出","適性検査","1次面接","2次面接","最終面接","内定","不合格","辞退"}',
   memo TEXT DEFAULT '',
+  expected_result_period TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

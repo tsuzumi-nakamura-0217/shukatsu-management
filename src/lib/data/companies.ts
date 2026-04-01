@@ -30,6 +30,7 @@ export function rowToCompany(row: Record<string, unknown>): Company {
     createdAt: (row.created_at as string) || "",
     updatedAt: (row.updated_at as string) || "",
     memo: (row.memo as string) || "",
+    expectedResultPeriod: (row.expected_result_period as string) || "",
   };
 }
 
@@ -82,6 +83,7 @@ export async function createCompany(input: CompanyCreate): Promise<Company> {
     priority: input.priority || 3,
     stages: input.stages || config.defaultStages,
     memo: "",
+    expected_result_period: input.expectedResultPeriod || "",
   };
 
   const { data, error } = await supabase
@@ -112,6 +114,7 @@ export async function saveCompany(company: Company): Promise<void> {
       priority: company.priority,
       stages: company.stages,
       memo: company.memo,
+      expected_result_period: company.expectedResultPeriod || "",
       updated_at: new Date().toISOString(),
     })
     .eq("slug", company.slug);

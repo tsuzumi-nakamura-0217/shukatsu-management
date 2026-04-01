@@ -15,6 +15,7 @@ export interface Company {
   createdAt: string;
   updatedAt: string;
   memo: string;
+  expectedResultPeriod?: string;
 }
 
 // 企業作成用
@@ -29,6 +30,7 @@ export interface CompanyCreate {
   status?: string;
   priority?: number;
   stages?: string[];
+  expectedResultPeriod?: string;
 }
 
 // タスクの型定義

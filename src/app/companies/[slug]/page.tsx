@@ -20,7 +20,9 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  Clock,
 } from "lucide-react";
+import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import {
   Card,
   CardContent,
@@ -569,6 +571,19 @@ export default function CompanyDetailPage({
                 </button>
               );
             })}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-border/50 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0">
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              <span>結果通知予定</span>
+            </div>
+            <FlexibleDateInput 
+              value={editingCompany.expectedResultPeriod || ""} 
+              onChange={(val) => setEditingCompany({ ...editingCompany, expectedResultPeriod: val })}
+              placeholder="例: 1週間以内、4月中旬、4/15ごろ..."
+              className="flex-1"
+            />
           </div>
         </CardContent>
       </Card>

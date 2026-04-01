@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search, LayoutGrid, List, Loader2, Building2, MapPin, Tag, Filter, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, Loader2, Building2, MapPin, Tag, Filter, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import {
   Card,
   CardContent,
@@ -60,6 +61,7 @@ export default function CompaniesPage() {
     password: "",
     location: "",
     priority: 3,
+    expectedResultPeriod: "",
   });
 
   // Update industry default when config loads
@@ -94,6 +96,7 @@ export default function CompaniesPage() {
           password: "",
           location: "",
           priority: 3,
+          expectedResultPeriod: "",
         });
         mutateCompanies();
       } else {
@@ -255,6 +258,14 @@ export default function CompaniesPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="expectedResultPeriod" className="font-bold ml-1">結果通知予定</Label>
+                  <FlexibleDateInput
+                    value={newCompany.expectedResultPeriod}
+                    onChange={(val) => setNewCompany({ ...newCompany, expectedResultPeriod: val })}
+                    placeholder="例: 1週間以内、4月中旬..."
+                  />
                 </div>
               </div>
               <DialogFooter>
@@ -461,6 +472,19 @@ export default function CompaniesPage() {
                     })()}
                   </div>
 
+                  {/* Expected Result Period Section */}
+                  {company.expectedResultPeriod && (
+                    <div className="mb-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      <Clock className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-bold text-orange-600/70 dark:text-orange-400/70 uppercase tracking-tighter leading-none">Result Expected</span>
+                        <span className="text-[10px] font-black text-orange-700 dark:text-orange-300 truncate leading-tight">
+                          {company.expectedResultPeriod}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-2.5 border-t border-white/10 dark:border-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <div className="flex items-center gap-0.5">
@@ -523,6 +547,19 @@ export default function CompaniesPage() {
                       </div>
                     );
                   })()}
+                  
+                  {company.expectedResultPeriod && (
+                    <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 shadow-sm w-44">
+                      <Clock className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400 shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[7px] font-bold text-orange-600/70 dark:text-orange-400/70 uppercase tracking-tighter leading-none">Result Expected</span>
+                        <p className="text-[10px] font-black text-orange-700 dark:text-orange-300 truncate leading-tight">
+                          {company.expectedResultPeriod}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4 self-end md:self-auto">
                     <div className="text-right hidden sm:block">
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Status</p>
