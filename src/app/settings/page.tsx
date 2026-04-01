@@ -17,8 +17,25 @@ import {
   Loader2,
   Search,
   ChevronRight,
-  ListChecks
+  ListChecks,
+  GripVertical
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Card,
   CardContent,
@@ -67,6 +84,51 @@ function normalizeConfig(data: unknown): AppConfig {
   };
 }
 
+function SortableBadge({ id, children, onRemove }: { id: string; children: React.ReactNode; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("inline-flex items-center touch-manipulation", isDragging && "relative z-50")}
+    >
+      <Badge
+        variant="secondary"
+        className={cn(
+          "pl-2 pr-1.5 py-1.5 rounded-xl font-bold bg-white/60 border border-white/40 group",
+          isDragging && "shadow-lg scale-105 border-primary/40 ring-2 ring-primary/20"
+        )}
+      >
+        <div 
+          {...attributes} 
+          {...listeners} 
+          className="cursor-grab active:cursor-grabbing hover:bg-black/5 rounded mr-1.5 p-0.5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        {children}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="ml-2 h-5 w-5 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </Badge>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
@@ -95,6 +157,11 @@ export default function SettingsPage() {
   const safeIndustries = Array.isArray(industries) ? industries : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeInterviewStatuses = Array.isArray(interviewStatuses) ? interviewStatuses : [];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   useEffect(() => {
     fetch("/api/config")
@@ -348,6 +415,7 @@ export default function SettingsPage() {
         {/* Master Data Managers */}
         {[
           { 
+            id: "stages",
             title: "選考ステージ", 
             desc: "企業に設定される選考フェーズ", 
             data: safeStages, 
@@ -358,6 +426,7 @@ export default function SettingsPage() {
             color: "bg-blue-500"
           },
           { 
+            id: "industries",
             title: "業界リスト", 
             desc: "分類に使用する業界一覧", 
             data: safeIndustries, 
@@ -368,6 +437,7 @@ export default function SettingsPage() {
             color: "bg-violet-500"
           },
           { 
+            id: "categories",
             title: "タスクカテゴリ", 
             desc: "タスクの目的別分類設定", 
             data: safeCategories, 
@@ -378,7 +448,9 @@ export default function SettingsPage() {
             color: "bg-fuchsia-500"
           },
           { 
+            id: "interviewStatuses",
             title: "面接ステータス", 
+
             desc: "面接記録のステータスとして使用する選択肢", 
             data: safeInterviewStatuses, 
             setData: setInterviewStatuses, 
@@ -401,19 +473,38 @@ export default function SettingsPage() {
               </div>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              <div className="flex flex-wrap gap-2">
-                {section.data.map((item, i) => (
-                  <Badge key={i} variant="secondary" className="pl-3 pr-1.5 py-1.5 rounded-xl font-bold bg-white/60 border border-white/40 group">
-                    {item}
-                    <button
-                      onClick={() => section.setData(section.data.filter((_, idx) => idx !== i))}
-                      className="ml-2 h-5 w-5 rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => {
+                  const { active, over } = event;
+                  if (over && active.id !== over.id) {
+                    const sortableItems = section.data.map((val) => ({ id: `${section.id}-${val}`, value: val }));
+                    const oldIndex = sortableItems.findIndex((x) => x.id === active.id);
+                    const newIndex = sortableItems.findIndex((x) => x.id === over.id);
+                    if (oldIndex !== -1 && newIndex !== -1) {
+                      section.setData(arrayMove(section.data, oldIndex, newIndex));
+                    }
+                  }
+                }}
+              >
+                <SortableContext
+                  items={section.data.map((val) => `${section.id}-${val}`)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="flex flex-wrap gap-2">
+                    {section.data.map((item, i) => (
+                      <SortableBadge 
+                        key={`${section.id}-${item}-${i}`} 
+                        id={`${section.id}-${item}`} 
+                        onRemove={() => section.setData(section.data.filter((_, idx) => idx !== i))}
+                      >
+                        {item}
+                      </SortableBadge>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
               <div className="flex gap-2">
                 <Input
                   value={section.newVal}
@@ -422,8 +513,12 @@ export default function SettingsPage() {
                   className="h-10 rounded-xl border-none glass bg-white/60 focus-visible:ring-2 focus-visible:ring-primary/20 flex-grow text-sm font-bold"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && section.newVal) {
-                      section.setData([...section.data, section.newVal]);
-                      section.setNewVal("");
+                      if (!section.data.includes(section.newVal)) {
+                        section.setData([...section.data, section.newVal]);
+                        section.setNewVal("");
+                      } else {
+                        toast.error("既に存在する項目です");
+                      }
                     }
                   }}
                 />
@@ -433,8 +528,12 @@ export default function SettingsPage() {
                   className="h-10 w-10 p-0 rounded-xl border-2 hover:bg-primary hover:text-white transition-all shadow-sm"
                   onClick={() => {
                     if (section.newVal) {
-                      section.setData([...section.data, section.newVal]);
-                      section.setNewVal("");
+                      if (!section.data.includes(section.newVal)) {
+                        section.setData([...section.data, section.newVal]);
+                        section.setNewVal("");
+                      } else {
+                        toast.error("既に存在する項目です");
+                      }
                     }
                   }}
                 >
