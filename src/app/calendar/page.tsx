@@ -7,6 +7,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
+import { Calendar } from "lucide-react";
 import {
   Card,
 } from "@/components/ui/card";
@@ -73,46 +74,47 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-8 shadow-xl shadow-primary/5">
-        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-emerald-500/10 blur-[60px]" />
-        <div className="absolute bottom-0 left-0 -ml-12 -mb-12 h-48 w-48 rounded-full bg-blue-500/10 blur-[60px]" />
+    <div className="flex flex-col gap-6 pb-6">
+      {/* Compact Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-emerald-500/10 blur-[40px]" />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Calendar className="h-6 w-6 text-primary" />
+          </div>
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">カレンダー</h1>
-            <p className="text-muted-foreground mt-1 font-medium">
-              選考スケジュールとタスクの締切を一目で確認しましょう
-            </p>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              カレンダー
+            </h1>
           </div>
+        </div>
 
-          {/* Filter Chips */}
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTER_CONFIG.map(({ key, label, dotColor }) => {
-              const active = filters[key];
-              return (
-                <button
-                  key={key}
-                  onClick={() => toggleFilter(key)}
-                  className={cn(
-                    "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 border cursor-pointer select-none",
-                    active
-                      ? "bg-white/80 dark:bg-white/10 border-white/40 dark:border-white/20 shadow-sm text-foreground"
-                      : "bg-transparent border-white/10 dark:border-white/5 text-muted-foreground/50 hover:text-muted-foreground/80 hover:border-white/20"
-                  )}
-                  title={FILTER_CONFIG.find(f => f.key === key)?.description}
-                >
-                  <span className={cn(
-                    "h-2.5 w-2.5 rounded-full transition-all",
-                    active ? dotColor : "bg-muted-foreground/20",
-                    active && "shadow-[0_0_6px_rgba(0,0,0,0.15)]"
-                  )} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+        {/* Filter Chips */}
+        <div className="relative flex flex-wrap items-center gap-2">
+          {FILTER_CONFIG.map(({ key, label, dotColor }) => {
+            const active = filters[key];
+            return (
+              <button
+                key={key}
+                onClick={() => toggleFilter(key)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-bold tracking-wide transition-all duration-200 border cursor-pointer select-none",
+                  active
+                    ? "bg-white/80 dark:bg-white/10 border-white/40 dark:border-white/20 shadow-sm text-foreground"
+                    : "bg-transparent border-white/10 dark:border-white/5 text-muted-foreground/30 hover:text-muted-foreground/80 hover:border-white/20"
+                )}
+                title={FILTER_CONFIG.find(f => f.key === key)?.description}
+              >
+                <span className={cn(
+                  "h-2 w-2 rounded-full transition-all",
+                  active ? dotColor : "bg-muted-foreground/20",
+                  active && "shadow-[0_0_6px_rgba(0,0,0,0.15)]"
+                )} />
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

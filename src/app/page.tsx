@@ -7,6 +7,7 @@ import {
   CalendarClock,
   FileText,
   ListChecks,
+  LayoutDashboard,
 } from "lucide-react";
 import { ExportButtons } from "@/components/export-buttons";
 import { StatusBadge, TagBadge } from "@/components/badges";
@@ -47,23 +48,27 @@ export default function Home() {
   const error = fetchError ? "ダッシュボードデータの取得に失敗しました。時間をおいて再試行してください。" : null;
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+    <div className="flex flex-col gap-6 pb-8">
+      {/* Compact Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-primary/10 blur-[40px]" />
 
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1.5">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <div className="relative flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <LayoutDashboard className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               {greeting}！
             </h1>
-            <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
-              企業応募から選考進捗まで、今日の状況をまとめて確認しましょう。
-              あなたの就職活動を全力でサポートします。
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+              Welcome back to your job hunt management
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <ExportButtons />
-          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <ExportButtons />
         </div>
       </div>
 

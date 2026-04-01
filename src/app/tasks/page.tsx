@@ -240,116 +240,120 @@ export default function TasksPage() {
   const incompleteCount = localTasks.filter((t) => t.status !== "完了").length;
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-8 shadow-xl shadow-primary/5">
-        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-rose-500/10 blur-[60px]" />
-        <div className="absolute bottom-0 left-0 -ml-12 -mb-12 h-48 w-48 rounded-full bg-indigo-500/10 blur-[60px]" />
+    <div className="flex flex-col gap-6 pb-10">
+      {/* Compact Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-rose-500/10 blur-[40px]" />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <ListChecks className="h-6 w-6 text-primary" />
+          </div>
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">タスク管理</h1>
-            <p className="text-muted-foreground mt-1 font-medium">
-              現在 <span className="text-rose-500 font-bold">{incompleteCount}</span> 件の未完了プロジェクトが進行中です
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              タスク管理
+            </h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+              Currently <span className="text-rose-500">{incompleteCount}</span> incomplete tasks
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
-              <DialogTrigger asChild>
-                <Button size="lg" className="rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
-                  <Plus className="mr-2 h-5 w-5" />
-                  タスクを追加
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] rounded-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold">タスクを作成</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-5 py-4">
-                  <div className="grid gap-2">
-                    <Label className="font-bold ml-1">タイトル <span className="text-destructive">*</span></Label>
-                    <Input
-                      value={newTask.title}
-                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                      placeholder="例: ES提出"
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label className="font-bold ml-1 flex items-center gap-2 text-zinc-500">
-                        <CalendarClock className="h-3 w-3" />
-                        実施日時
-                      </Label>
-                      <DatePicker
-                        date={newTask.executionDate ? new Date(newTask.executionDate) : undefined}
-                        onChange={(d) => setNewTask((prev) => ({ ...prev, executionDate: d ? format(d, "yyyy-MM-dd") : "" }))}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="font-bold ml-1 flex items-center gap-2 text-zinc-500">
-                        <ListChecks className="h-3 w-3" />
-                        締切日時
-                      </Label>
-                      <DateTimePicker
-                        date={newTask.deadline ? new Date(newTask.deadline) : undefined}
-                        onChange={(d) => setNewTask((prev) => ({ ...prev, deadline: d ? d.toISOString() : "" }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label className="font-bold ml-1">メモ</Label>
-                    <Textarea
-                      placeholder="タスクの詳細や備考を入力..."
-                      value={newTask.memo}
-                      onChange={(e) => setNewTask({ ...newTask, memo: e.target.value })}
-                      className="rounded-xl bg-background/50 border-none focus-visible:ring-2 focus-visible:ring-primary/20 min-h-[100px]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label className="font-bold ml-1">カテゴリ</Label>
-                      <Select
-                        value={newTask.category}
-                        onValueChange={(value) => setNewTask({ ...newTask, category: value })}
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(config?.taskCategories || []).map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="font-bold ml-1">ステータス</Label>
-                      <Select
-                        value={newTask.status}
-                        onValueChange={(value: any) => setNewTask({ ...newTask, status: value })}
-                      >
-                        <SelectTrigger className={cn("rounded-xl h-11 border-none bg-background/50 font-bold", statusColors[newTask.status])}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="未着手">未着手</SelectItem>
-                          <SelectItem value="進行中">進行中</SelectItem>
-                          <SelectItem value="完了">完了</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setNewTaskOpen(false)} className="transition-all">キャンセル</Button>
-                  <Button onClick={handleCreateTask} disabled={isCreatingTask} className="rounded-xl px-8 transition-all">
-                    {isCreatingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "作成"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
         </div>
+
+        <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="rounded-xl h-10 px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all">
+              <Plus className="mr-2 h-4 w-4" />
+              新規タスク
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px] rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">タスクを作成</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-5 py-4">
+              <div className="grid gap-2">
+                <Label className="font-bold ml-1">タイトル <span className="text-destructive">*</span></Label>
+                <Input
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                  placeholder="例: ES提出"
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label className="font-bold ml-1 flex items-center gap-2 text-zinc-500">
+                    <CalendarClock className="h-3 w-3" />
+                    実施日時
+                  </Label>
+                  <DatePicker
+                    date={newTask.executionDate ? new Date(newTask.executionDate) : undefined}
+                    onChange={(d) => setNewTask((prev) => ({ ...prev, executionDate: d ? format(d, "yyyy-MM-dd") : "" }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="font-bold ml-1 flex items-center gap-2 text-zinc-500">
+                    <ListChecks className="h-3 w-3" />
+                    締切日時
+                  </Label>
+                  <DateTimePicker
+                    date={newTask.deadline ? new Date(newTask.deadline) : undefined}
+                    onChange={(d) => setNewTask((prev) => ({ ...prev, deadline: d ? d.toISOString() : "" }))}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label className="font-bold ml-1">メモ</Label>
+                <Textarea
+                  placeholder="タスクの詳細や備考を入力..."
+                  value={newTask.memo}
+                  onChange={(e) => setNewTask({ ...newTask, memo: e.target.value })}
+                  className="rounded-xl bg-background/50 border-none focus-visible:ring-2 focus-visible:ring-primary/20 min-h-[100px]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label className="font-bold ml-1">カテゴリ</Label>
+                  <Select
+                    value={newTask.category}
+                    onValueChange={(value) => setNewTask({ ...newTask, category: value })}
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(config?.taskCategories || []).map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="font-bold ml-1">ステータス</Label>
+                  <Select
+                    value={newTask.status}
+                    onValueChange={(value: any) => setNewTask({ ...newTask, status: value })}
+                  >
+                    <SelectTrigger className={cn("rounded-xl h-11 border-none bg-background/50 font-bold", statusColors[newTask.status])}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="未着手">未着手</SelectItem>
+                      <SelectItem value="進行中">進行中</SelectItem>
+                      <SelectItem value="完了">完了</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setNewTaskOpen(false)} className="transition-all">キャンセル</Button>
+              <Button onClick={handleCreateTask} disabled={isCreatingTask} className="rounded-xl px-8 transition-all">
+                {isCreatingTask ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "作成"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex flex-col gap-4 glass p-4 rounded-2xl md:flex-row md:items-center">

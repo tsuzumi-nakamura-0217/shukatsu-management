@@ -151,145 +151,150 @@ export default function CompaniesPage() {
   const allIndustries = config?.industries || [];
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-8 shadow-xl shadow-primary/5">
-        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-primary/10 blur-[60px]" />
-        <div className="absolute bottom-0 left-0 -ml-12 -mb-12 h-48 w-48 rounded-full bg-secondary/10 blur-[60px]" />
+    <div className="flex flex-col gap-6 pb-10">
+      {/* Compact Header */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-primary/10 blur-[40px]" />
 
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="relative flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Building2 className="h-6 w-6 text-primary" />
+          </div>
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">企業一覧</h1>
-            <p className="text-muted-foreground mt-1 font-medium">
-              現在 <span className="text-primary font-bold">{companies.length}</span> 社の選考データを管理しています
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              企業一覧
+            </h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+              Currently managing <span className="text-primary">{companies.length}</span> companies
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
-                <Plus className="mr-2 h-5 w-5" />
-                新規企業を追加
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold">新しい企業を追加</DialogTitle>
-                <DialogDescription>
-                  志望する企業の基本情報を入力してください
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-5 py-4">
+        </div>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="rounded-xl h-10 px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all">
+              <Plus className="mr-2 h-4 w-4" />
+              新規企業
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px] rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">新しい企業を追加</DialogTitle>
+              <DialogDescription>
+                志望する企業の基本情報を入力してください
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-5 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="font-bold ml-1">企業名 <span className="text-destructive">*</span></Label>
+                <Input
+                  id="name"
+                  value={newCompany.name}
+                  onChange={(e) =>
+                    setNewCompany({ ...newCompany, name: e.target.value })
+                  }
+                  placeholder="株式会社サンプル"
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name" className="font-bold ml-1">企業名 <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="name"
-                    value={newCompany.name}
-                    onChange={(e) =>
-                      setNewCompany({ ...newCompany, name: e.target.value })
+                  <Label htmlFor="industry" className="font-bold ml-1">業界</Label>
+                  <Select
+                    value={newCompany.industry}
+                    onValueChange={(value) =>
+                      setNewCompany({ ...newCompany, industry: value })
                     }
-                    placeholder="株式会社サンプル"
+                  >
+                    <SelectTrigger id="industry" className="rounded-xl">
+                      <SelectValue placeholder="選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allIndustries.map((industry) => (
+                        <SelectItem key={industry} value={industry}>
+                          {industry}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="location" className="font-bold ml-1">所在地</Label>
+                  <Input
+                    id="location"
+                    value={newCompany.location}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, location: e.target.value })
+                    }
+                    placeholder="例: 東京都"
                     className="rounded-xl"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="industry" className="font-bold ml-1">業界</Label>
-                    <Select
-                      value={newCompany.industry}
-                      onValueChange={(value) =>
-                        setNewCompany({ ...newCompany, industry: value })
-                      }
-                    >
-                      <SelectTrigger id="industry" className="rounded-xl">
-                        <SelectValue placeholder="選択" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allIndustries.map((industry) => (
-                          <SelectItem key={industry} value={industry}>
-                            {industry}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="location" className="font-bold ml-1">所在地</Label>
-                    <Input
-                      id="location"
-                      value={newCompany.location}
-                      onChange={(e) =>
-                        setNewCompany({ ...newCompany, location: e.target.value })
-                      }
-                      placeholder="例: 東京都"
-                      className="rounded-xl"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="url" className="font-bold ml-1">企業URL</Label>
-                    <Input
-                      id="url"
-                      value={newCompany.url}
-                      onChange={(e) =>
-                        setNewCompany({ ...newCompany, url: e.target.value })
-                      }
-                      placeholder="https://example.com"
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="priority" className="font-bold ml-1">優先度 (1-5)</Label>
-                    <Select
-                      value={newCompany.priority.toString()}
-                      onValueChange={(value) =>
-                        setNewCompany({ ...newCompany, priority: parseInt(value) })
-                      }
-                    >
-                      <SelectTrigger id="priority" className="rounded-xl">
-                        <SelectValue placeholder="選択" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[5, 4, 3, 2, 1].map((p) => (
-                          <SelectItem key={p} value={p.toString()}>
-                            {p} {p === 5 ? "(最高)" : p === 1 ? "(最低)" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="expectedResultPeriod" className="font-bold ml-1">結果通知予定</Label>
-                  <FlexibleDateInput
-                    value={newCompany.expectedResultPeriod}
-                    onChange={(val) => setNewCompany({ ...newCompany, expectedResultPeriod: val })}
-                    placeholder="例: 2/17"
+                  <Label htmlFor="url" className="font-bold ml-1">企業URL</Label>
+                  <Input
+                    id="url"
+                    value={newCompany.url}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, url: e.target.value })
+                    }
+                    placeholder="https://example.com"
+                    className="rounded-xl"
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="priority" className="font-bold ml-1">優先度 (1-5)</Label>
+                  <Select
+                    value={newCompany.priority.toString()}
+                    onValueChange={(value) =>
+                      setNewCompany({ ...newCompany, priority: parseInt(value) })
+                    }
+                  >
+                    <SelectTrigger id="priority" className="rounded-xl">
+                      <SelectValue placeholder="選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 4, 3, 2, 1].map((p) => (
+                        <SelectItem key={p} value={p.toString()}>
+                          {p} {p === 5 ? "(最高)" : p === 1 ? "(最低)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <DialogFooter>
-                <Button variant="ghost" disabled={isCreating} onClick={() => setDialogOpen(false)} className="transition-all">
-                  キャンセル
-                </Button>
-                <Button
-                  onClick={handleCreate}
-                  disabled={isCreating}
-                  className="rounded-xl px-8 transition-all"
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      追加中...
-                    </>
-                  ) : (
-                    "企業の登録"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div className="grid gap-2">
+                <Label htmlFor="expectedResultPeriod" className="font-bold ml-1">結果通知予定</Label>
+                <FlexibleDateInput
+                  value={newCompany.expectedResultPeriod}
+                  onChange={(val) => setNewCompany({ ...newCompany, expectedResultPeriod: val })}
+                  placeholder="例: 2/17"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" disabled={isCreating} onClick={() => setDialogOpen(false)} className="transition-all">
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={isCreating}
+                className="rounded-xl px-8 transition-all"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    追加中...
+                  </>
+                ) : (
+                  "企業の登録"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters bar */}
