@@ -25,10 +25,22 @@ export function useLocalSync() {
     }
 
     const supabase = getSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    let session = null;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.warn(`[Sync] Failed to get session (${reason}):`, error.message);
+        return;
+      }
+      session = data.session;
+    } catch (e) {
+      console.warn(`[Sync] Unexpected error during session retrieval (${reason})`);
+      return;
+    }
 
     if (!session) {
-      console.log(`[Sync] Skipping sync (${reason}): no session`);
+      // Just log quietly if no session, no need to alert the user
+      // console.log(`[Sync] Skipping sync (${reason}): no session`);
       return;
     }
 
@@ -44,6 +56,10 @@ export function useLocalSync() {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          console.warn(`[Sync] Session expired or invalid (401). Skipping background sync.`);
+          return;
+        }
         throw new Error(`Sync failed with status: ${response.status}`);
       }
 
@@ -54,7 +70,8 @@ export function useLocalSync() {
                      "定期的なデータ同期を完了しました",
       });
     } catch (error) {
-      console.error("[Sync] Local sync failed:", error);
+      // Still log but maybe use warn for less noise in dev console
+      console.warn("[Sync] Local sync operation failed:", error);
     } finally {
       isSyncing.current = false;
     }
