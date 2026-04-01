@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getAllTasks, updateTask } from "@/lib/data/tasks";
 import { syncTaskToNotion, testNotionConnection, searchNotionDatabases } from "@/lib/notion";
 import { getConfig } from "@/lib/data/config";

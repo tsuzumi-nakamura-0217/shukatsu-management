@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getStats } from "@/lib/data/stats";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 

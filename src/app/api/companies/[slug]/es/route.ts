@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getESDocuments, saveESDocument, deleteESDocument } from "@/lib/data/es";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 

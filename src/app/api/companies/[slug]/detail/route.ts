@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getCompany } from "@/lib/data/companies";
 import { getAllTasks } from "@/lib/data/tasks";
 import { getInterviews } from "@/lib/data/interviews";

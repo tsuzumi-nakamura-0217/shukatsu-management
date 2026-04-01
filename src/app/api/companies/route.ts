@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getAllCompanies, createCompany } from "@/lib/data/companies";
 import type { CompanyCreate } from "@/types";
 import { withAuthenticatedUser } from "@/lib/auth-server";

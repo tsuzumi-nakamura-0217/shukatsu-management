@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getExportData } from "@/lib/data/export";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 import fs from "fs/promises";
