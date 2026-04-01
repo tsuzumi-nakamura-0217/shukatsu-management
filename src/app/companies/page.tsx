@@ -491,7 +491,7 @@ export default function CompaniesPage() {
               <Link
                 key={company.slug}
                 href={`/companies/${company.slug}`}
-                className="group flex flex-col gap-4 p-5 transition-all hover:bg-white/40 dark:hover:bg-card md:flex-row md:items-center md:justify-between"
+                className="group flex flex-col gap-4 p-5 transition-all hover:bg-muted/50 dark:hover:bg-card md:flex-row md:items-center md:justify-between"
               >
                 <div className="flex items-center gap-5">
                   <div className={`h-10 w-10 flex items-center justify-center rounded-xl font-bold text-white shadow-lg ${company.priority >= 4 ? "bg-amber-500" : company.priority >= 2 ? "bg-blue-500" : "bg-slate-400"}`}>

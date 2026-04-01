@@ -132,9 +132,9 @@ export default function CalendarPage() {
             letter-spacing: -0.025em;
           }
           .fc .fc-button {
-            background: rgba(255, 255, 255, 0.5) !important;
+            background: var(--muted) !important;
             border: none !important;
-            color: var(--foreground) !important;
+            color: var(--muted-foreground) !important;
             font-weight: 700 !important;
             text-transform: capitalize !important;
             padding: 0.5rem 1rem !important;
@@ -143,12 +143,13 @@ export default function CalendarPage() {
             transition: all 0.2s !important;
           }
           .fc .fc-button:hover {
-            background: rgba(255, 255, 255, 0.8) !important;
+            background: var(--accent) !important;
+            color: var(--accent-foreground) !important;
             transform: translateY(-1px);
           }
           .fc .fc-button-active {
             background: var(--primary) !important;
-            color: white !important;
+            color: var(--primary-foreground) !important;
           }
           .fc .fc-col-header-cell {
             padding: 12px 0;
@@ -204,9 +205,7 @@ export default function CalendarPage() {
             --fc-border-color: rgba(255, 255, 255, 0.05);
             --fc-today-bg-color: var(--muted);
           }
-          .dark .fc .fc-button {
-            background: rgba(255, 255, 255, 0.05) !important;
-          }
+
           .dark .fc .fc-event.calendar-event-deadline {
             background: #b91c1c !important;
             border-color: #991b1b !important;

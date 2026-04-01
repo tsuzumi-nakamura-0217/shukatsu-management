@@ -220,7 +220,7 @@ export default function TipsPage() {
                         "w-full flex items-center gap-4 p-4 rounded-2xl transition-all group relative text-left hover:scale-[1.02] active:scale-[0.98]",
                         selected?.id === item.id
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                          : "hover:bg-white/40 dark:hover:bg-white/5 hover:shadow-md"
+                          : "hover:bg-muted/50 dark:hover:bg-muted/20 hover:shadow-md"
                       )}
                     >
                       <div className={cn(

@@ -268,7 +268,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8 pb-10 max-w-6xl mx-auto">
+    <div className="space-y-8 pb-10">
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-8 shadow-xl shadow-primary/5">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-slate-500/10 blur-[60px]" />
@@ -362,7 +362,7 @@ export default function SettingsPage() {
                       {databases.map(db => (
                         <button 
                           key={db.id} 
-                          className="w-full p-4 hover:bg-white/40 dark:hover:bg-white/5 transition-colors text-left flex justify-between items-center group"
+                          className="w-full p-4 hover:bg-muted/50 dark:hover:bg-muted/20 transition-colors text-left flex justify-between items-center group"
                           onClick={() => {
                             setNotionDbId(db.id);
                             setNotionDbType(db.type as any);

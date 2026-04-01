@@ -557,11 +557,12 @@ export default function CompanyDetailPage({
                 <button
                   key={stage}
                   onClick={() => handleUpdateStatus(stage)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer hover:bg-accent/10 ${isCurrent
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : isPast
-                      ? "bg-green-100 text-green-800 hover:bg-green-200"
-                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                    isCurrent
+                      ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                      : isPast
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                     }`}
                 >
                   {stage}

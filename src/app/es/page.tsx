@@ -243,7 +243,7 @@ export default function ESListPage() {
                         "w-full flex items-center gap-4 p-4 rounded-2xl transition-all group relative text-left",
                         selected?.id === doc.id
                           ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                          : "hover:bg-white/40 dark:hover:bg-white/5"
+                          : "hover:bg-muted/50 dark:hover:bg-muted/20"
                       )}
                     >
                       <div className={cn(

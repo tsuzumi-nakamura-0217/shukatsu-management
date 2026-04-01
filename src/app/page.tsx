@@ -267,7 +267,7 @@ export default function Home() {
                   <Link
                     key={task.id}
                     href={`/companies/${task.companySlug}?tab=tasks`}
-                    className="group flex flex-col gap-3 rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-white dark:hover:bg-card hover:border-border hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
+                    className="group flex flex-col gap-3 rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-muted/50 dark:hover:bg-card hover:border-border hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -328,7 +328,7 @@ export default function Home() {
                   <Link
                     key={interview.id}
                     href={`/companies/${interview.companySlug}?tab=interviews`}
-                    className="group flex items-center justify-between rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-white dark:hover:bg-card hover:border-border hover:shadow-lg"
+                    className="group flex items-center justify-between rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-muted/50 dark:hover:bg-card hover:border-border hover:shadow-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
@@ -371,7 +371,7 @@ export default function Home() {
                   <Link
                     key={status}
                     href={`/companies?status=${encodeURIComponent(status)}`}
-                    className="flex items-center justify-between rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-white dark:hover:bg-card hover:border-border hover:shadow-lg group shadow-sm"
+                    className="flex items-center justify-between rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-muted/50 dark:hover:bg-card hover:border-border hover:shadow-lg group shadow-sm"
                   >
                     <StatusBadge status={status} />
                     <span className="text-xl font-black group-hover:text-primary transition-colors">{count} <span className="text-xs font-medium text-muted-foreground">社</span></span>
