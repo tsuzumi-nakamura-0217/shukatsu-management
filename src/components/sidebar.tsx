@@ -113,7 +113,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden sticky top-0 h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
+    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b px-6">
         <GraduationCap className="h-6 w-6 text-primary" />
@@ -141,7 +141,7 @@ export function MobileSidebar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
+    <div className="sticky top-0 z-50 flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" aria-label="メニューを開く">

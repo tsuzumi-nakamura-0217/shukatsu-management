@@ -193,8 +193,8 @@ export default function Home() {
                           isPass
                             ? "text-emerald-600 dark:text-emerald-400"
                             : isFail
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-sky-600 dark:text-sky-400"
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-sky-600 dark:text-sky-400"
                         }
                       >
                         {status} {count}

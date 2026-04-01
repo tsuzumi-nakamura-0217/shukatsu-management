@@ -20,13 +20,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "就活マネージャー",
+  title: "就活管理",
   description: "就職活動を一元管理するアプリ",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "就活マネージャー",
+    title: "就活管理",
   },
   formatDetection: {
     telephone: false,

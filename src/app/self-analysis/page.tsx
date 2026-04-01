@@ -176,7 +176,7 @@ export default function SelfAnalysisPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[700px]">
         {/* Left Sidebar - List */}
-        <div className="lg:col-span-2 flex flex-col gap-4 min-w-0">
+        <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-4 min-w-0">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -244,7 +244,7 @@ export default function SelfAnalysisPage() {
         </div>
 
         {/* Right - Editor Area */}
-        <div className="lg:col-span-10 overflow-hidden">
+        <div className="lg:col-span-8 xl:col-span-9 overflow-hidden">
           {selected ? (
             <Card className="h-full border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col py-0!">
               <div className="border-b border-white/10 px-6 py-2 flex flex-row items-center justify-between shrink-0 min-h-[56px]">
