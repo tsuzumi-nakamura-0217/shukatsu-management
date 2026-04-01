@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, use, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -140,11 +140,14 @@ export default function CompanyDetailPage({
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
   const [newEs, setNewEs] = useState({ title: "", content: "", characterLimit: undefined as number | undefined, characterLimitType: "" as "程度" | "以下" | "未満" | "", status: "未提出" as "未提出" | "提出済" | "結果待ち" | "通過" | "落選" | "" });
 
-  // Keep memoContent/editingCompany in sync with SWR data
+  const initializedCompanyId = useRef<string | null>(null);
+
+  // Keep memoContent/editingCompany in sync with SWR data initially
   useEffect(() => {
-    if (company) {
+    if (company && initializedCompanyId.current !== company.id) {
       setMemoContent(company.memo || "");
       setEditingCompany(company);
+      initializedCompanyId.current = company.id;
     }
   }, [company]);
 
