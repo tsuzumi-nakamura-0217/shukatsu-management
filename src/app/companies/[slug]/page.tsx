@@ -129,6 +129,7 @@ export default function CompanyDetailPage({
   const [expandedEsIds, setExpandedEsIds] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
+  const [expandedInterviewIds, setExpandedInterviewIds] = useState<Set<string>>(new Set());
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [isSavingEs, setIsSavingEs] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
@@ -458,6 +459,30 @@ export default function CompanyDetailPage({
         const doc = localEsDocs.find(d => d.id === id);
         if (doc) {
           setEditEsDoc(doc);
+        }
+      }
+      return next;
+    });
+  };
+
+  const toggleInterviewExpand = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setExpandedInterviewIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        // Collapsing: exit edit mode if this interview was being edited
+        if (editingInterview?.id === id) {
+          setEditingInterview(null);
+        }
+      } else {
+        next.add(id);
+        // Expanding: automatically enter edit mode
+        const interview = localInterviews.find(i => i.id === id);
+        if (interview) {
+          setEditingInterview(interview);
         }
       }
       return next;
@@ -1045,60 +1070,79 @@ export default function CompanyDetailPage({
                     editingInterview?.id === interview.id
                       ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
                       : "hover:shadow-md hover:border-primary/20",
-                    editingInterview?.id !== interview.id && "cursor-pointer"
+                    "cursor-pointer"
                   )}
                   onClick={(e) => {
-                    if (editingInterview?.id !== interview.id) {
-                      setEditingInterview(interview);
-                    }
+                    toggleInterviewExpand(interview.id, e);
                   }}
                 >
-                  {editingInterview?.id === interview.id ? (
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <CardHeader className="pb-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base">{interview.type}</CardTitle>
+                        <StatusBadge status={interview.result} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-sm text-muted-foreground mr-2">{formatDate(interview.date)}</span>
+                        <Button variant="outline" size="sm" onClick={(e) => { toggleInterviewExpand(interview.id, e); }} className="transition-all">
+                          <Edit className="mr-1 h-3 w-3" /> {expandedInterviewIds.has(interview.id) ? "完了" : "編集"}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all font-bold" onClick={(e) => { e.stopPropagation(); handleDeleteInterview(interview.id); }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="ml-2 w-8 h-8 p-0" onClick={(e) => toggleInterviewExpand(interview.id, e)}>
+                          {expandedInterviewIds.has(interview.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    {interview.location && !expandedInterviewIds.has(interview.id) && (
+                      <CardDescription>📍 {interview.location}</CardDescription>
+                    )}
+                  </CardHeader>
+                  
+                  {expandedInterviewIds.has(interview.id) && (
+                    <CardContent className="pt-2 border-t space-y-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-2">
                         <div>
-                          <Label>面接タイプ</Label>
+                          <Label className="text-xs">面接タイプ</Label>
                           <Input
-                            value={editingInterview.type}
-                            onChange={(e) =>
-                              setEditingInterview({
-                                ...editingInterview,
-                                type: e.target.value,
-                              })
-                            }
+                            value={editingInterview?.id === interview.id ? editingInterview.type : interview.type}
+                            onChange={(e) => {
+                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
+                              setEditingInterview({ ...target, type: e.target.value });
+                            }}
                           />
                         </div>
                         <div>
-                          <Label>日時</Label>
+                          <Label className="text-xs">日時</Label>
                           <DateTimePicker
-                            date={editingInterview.date ? new Date(editingInterview.date) : undefined}
-                            onChange={(d) => setEditingInterview({ ...editingInterview, date: d ? d.toISOString() : "" })}
+                            date={new Date((editingInterview?.id === interview.id ? editingInterview.date : interview.date) || "")}
+                            onChange={(d) => {
+                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
+                              setEditingInterview({ ...target, date: d ? d.toISOString() : "" });
+                            }}
                           />
                         </div>
                         <div>
-                          <Label>場所</Label>
+                          <Label className="text-xs">場所</Label>
                           <Input
-                            value={editingInterview.location}
-                            onChange={(e) =>
-                              setEditingInterview({
-                                ...editingInterview,
-                                location: e.target.value,
-                              })
-                            }
+                            value={editingInterview?.id === interview.id ? editingInterview.location : interview.location}
+                            onChange={(e) => {
+                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
+                              setEditingInterview({ ...target, location: e.target.value });
+                            }}
                           />
                         </div>
                         <div>
-                          <Label>ステータス</Label>
+                          <Label className="text-xs">ステータス</Label>
                           <Select
-                            value={editingInterview.result}
-                            onValueChange={(value) =>
-                              setEditingInterview({
-                                ...editingInterview,
-                                result: value,
-                              })
-                            }
+                            value={editingInterview?.id === interview.id ? editingInterview.result : interview.result}
+                            onValueChange={(value) => {
+                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
+                              setEditingInterview({ ...target, result: value });
+                            }}
                           >
-                            <SelectTrigger className={cn(statusColors[editingInterview.result] || "bg-gray-100 text-gray-800", "transition-all duration-200 hover:shadow-md cursor-pointer")}>
+                            <SelectTrigger className={cn(statusColors[editingInterview?.id === interview.id ? editingInterview.result : interview.result] || "bg-gray-100 text-gray-800", "transition-all duration-200 hover:shadow-md cursor-pointer")}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1110,56 +1154,27 @@ export default function CompanyDetailPage({
                         </div>
                       </div>
                       <div className="min-h-[150px]">
-                        <Label>メモ</Label>
+                        <Label className="text-xs">メモ</Label>
                         <NotionEditor
-                          content={editingInterview.memo}
-                          onChange={(val) =>
-                            setEditingInterview({
-                              ...editingInterview,
-                              memo: val,
-                            })
-                          }
+                          content={editingInterview?.id === interview.id ? editingInterview.memo : interview.memo}
+                          onChange={(val) => {
+                            const target = editingInterview?.id === interview.id ? editingInterview : interview;
+                            setEditingInterview({ ...target, memo: val });
+                          }}
                         />
                       </div>
                       <div className="flex justify-end items-center gap-3">
-                        {isSavingInterview && (
+                        {isSavingInterview && editingInterview?.id === interview.id && (
                           <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
                             <Loader2 className="h-3 w-3 animate-spin text-primary" />
                             <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
                           </div>
                         )}
-                        <Button variant="outline" size="sm" onClick={() => setEditingInterview(null)} className="transition-all">
-                          完了
+                        <Button variant="ghost" size="sm" onClick={() => toggleInterviewExpand(interview.id)} className="transition-all">
+                          閉じる
                         </Button>
-                        <Button size="sm" onClick={() => handleSaveInterview()} className="transition-all">保存</Button>
                       </div>
                     </CardContent>
-                  ) : (
-                    <>
-                      <CardHeader className="pb-2">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <CardTitle className="text-base">{interview.type}</CardTitle>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <StatusBadge status={interview.result} />
-                            <span className="text-sm text-muted-foreground">{formatDate(interview.date)}</span>
-                            <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setEditingInterview(interview); }} className="transition-all">
-                              <Edit className="mr-1 h-3 w-3" /> 編集
-                            </Button>
-                            <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleDeleteInterview(interview.id); }} className="transition-all">
-                              <Trash2 className="mr-1 h-3 w-3" /> 削除
-                            </Button>
-                          </div>
-                        </div>
-                        {interview.location && (
-                          <CardDescription>📍 {interview.location}</CardDescription>
-                        )}
-                      </CardHeader>
-                      {interview.memo && (
-                        <CardContent>
-                          <NotionEditor readOnly content={interview.memo} onChange={() => { }} />
-                        </CardContent>
-                      )}
-                    </>
                   )}
                 </Card>
               ))}
