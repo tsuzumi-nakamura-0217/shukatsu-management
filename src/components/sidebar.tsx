@@ -128,9 +128,6 @@ export function Sidebar() {
       {/* Footer */}
       <div className="border-t p-4">
         <LogoutButton />
-        <p className="text-xs text-muted-foreground text-center">
-          就活管理アプリ v1.0
-        </p>
       </div>
     </aside>
   );
