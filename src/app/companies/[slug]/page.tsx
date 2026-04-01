@@ -531,52 +531,48 @@ export default function CompanyDetailPage({
                 />
               ))}
             </div>
-            {company.url && (
-              <a href={company.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1 text-blue-600 hover:underline">
-                <ExternalLink className="h-3 w-3" /> Webサイト
-              </a>
-            )}
-            {company.mypageUrl && (
-              <a
-                href={company.mypageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-blue-600 hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" /> マイページ
-              </a>
-            )}
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+          {company.url && (
+            <Button variant="outline" size="sm" asChild className="h-8 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300">
+              <a href={company.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Webサイト
+              </a>
+            </Button>
+          )}
+          {company.mypageUrl && (
+            <Button variant="outline" size="sm" asChild className="h-8 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300">
+              <a href={company.mypageUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> マイページ
+              </a>
+            </Button>
+          )}
           {isSavingMemo && (
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
               <Loader2 className="h-3 w-3 animate-spin text-primary" />
               <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
             </div>
           )}
-          <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)} className="transition-all">
+          <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
+          <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)} className="transition-all h-8">
             <Edit className="mr-2 h-4 w-4" /> {editMode ? "キャンセル" : "編集"}
           </Button>
           {editMode && (
-            <Button size="sm" onClick={() => { handleSaveCompany(); setEditMode(false); }} className="transition-all">
+            <Button size="sm" onClick={() => { handleSaveCompany(); setEditMode(false); }} className="transition-all h-8">
               <Save className="mr-2 h-4 w-4" /> 完了
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={handleDeleteCompany} className="transition-all">
+          <Button variant="destructive" size="sm" onClick={handleDeleteCompany} className="transition-all h-8">
             <Trash2 className="mr-2 h-4 w-4" /> 削除
           </Button>
         </div>
       </div>
 
-      {/* Pipeline Stepper */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">選考パイプライン</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+      <Card className="px-4 py-3">
+        <div className="space-y-3">
+          <CardTitle className="text-sm font-semibold">選考パイプライン</CardTitle>
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {stages.map((stage, i) => {
               const isCurrent = stage === company.status;
               const isPast = i < currentStageIndex;
@@ -584,12 +580,11 @@ export default function CompanyDetailPage({
                 <button
                   key={stage}
                   onClick={() => handleUpdateStatus(stage)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                    isCurrent
-                      ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-                      : isPast
-                        ? "bg-green-100 text-green-800 hover:bg-green-200"
-                        : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 cursor-pointer ${isCurrent
+                    ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                    : isPast
+                      ? "bg-green-100 text-green-800 hover:bg-green-200"
+                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                     }`}
                 >
                   {stage}
@@ -597,20 +592,20 @@ export default function CompanyDetailPage({
               );
             })}
           </div>
-          
-          <div className="mt-4 pt-4 border-t border-border/50 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0">
+
+          <div className="mt-1 pt-2 border-t border-border/50 flex flex-col gap-1.5 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0 mr-1">
               <Clock className="h-3.5 w-3.5 text-primary" />
               <span>結果通知予定</span>
             </div>
-            <FlexibleDateInput 
-              value={editingCompany.expectedResultPeriod || ""} 
+            <FlexibleDateInput
+              value={editingCompany.expectedResultPeriod || ""}
               onChange={(val) => setEditingCompany({ ...editingCompany, expectedResultPeriod: val })}
               placeholder="例: 1週間以内、4月中旬、4/15ごろ..."
-              className="flex-1"
+              className="w-full sm:w-64"
             />
           </div>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Edit Mode - Company Info */}
@@ -1099,7 +1094,7 @@ export default function CompanyDetailPage({
                       <CardDescription>📍 {interview.location}</CardDescription>
                     )}
                   </CardHeader>
-                  
+
                   {expandedInterviewIds.has(interview.id) && (
                     <CardContent className="pt-2 border-t space-y-4" onClick={(e) => e.stopPropagation()}>
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-2">
