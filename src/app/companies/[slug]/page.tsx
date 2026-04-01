@@ -799,17 +799,29 @@ export default function CompanyDetailPage({
                             <CardTitle className="text-base">{doc.title}</CardTitle>
                           </div>
                         )}
-                        <CardDescription className="flex items-center gap-2">
-                          <span>更新: {new Date(doc.updatedAt).toLocaleString("ja-JP")}</span>
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded-sm text-xs font-medium",
-                            doc.characterLimit
-                              ? (countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content) > doc.characterLimit ? "bg-red-100 text-red-800" : "bg-muted text-muted-foreground")
-                              : "bg-muted text-muted-foreground"
-                          )}>
-                            {countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content)}
-                            {doc.characterLimit ? ` / ${doc.characterLimit}文字${doc.characterLimitType || ""}` : "文字"}
-                          </span>
+                        <CardDescription className="flex flex-col gap-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>更新: {new Date(doc.updatedAt).toLocaleString("ja-JP")}</span>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-sm text-xs font-medium",
+                              doc.characterLimit
+                                ? (countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content) > doc.characterLimit ? "bg-red-100 text-red-800" : "bg-muted text-muted-foreground")
+                                : "bg-muted text-muted-foreground"
+                            )}>
+                              {countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content)}
+                              {doc.characterLimit ? ` / ${doc.characterLimit}文字${doc.characterLimitType || ""}` : "文字"}
+                            </span>
+                          </div>
+                          {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                              {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).map((section, idx) => (
+                                <div key={idx} className="flex items-center gap-1 text-[10px] bg-muted/50 px-1.5 py-0.5 rounded-sm border border-transparent">
+                                  <span className="font-medium truncate max-w-[120px] text-muted-foreground" title={section.title}>{section.title}</span>
+                                  <span className="tabular-nums text-muted-foreground font-semibold">{section.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </CardDescription>
                       </div>
                       <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>

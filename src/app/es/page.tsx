@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, countCharacters } from "@/lib/utils";
+import { cn, countCharacters, getSectionCharacterCounts } from "@/lib/utils";
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
@@ -294,11 +294,29 @@ export default function ESListPage() {
                 <ScrollArea className="h-full">
                   <div className="w-full p-4 lg:p-6 pt-2!">
                     {selected.content || true ? (
-                      <NotionEditor
-                        key={selected.id}
-                        content={editContent}
-                        onChange={setEditContent}
-                      />
+                      <div className="space-y-4">
+                        <NotionEditor
+                          key={selected.id}
+                          content={editContent}
+                          onChange={setEditContent}
+                        />
+                        <div className="mt-4 pt-4 border-t border-white/10 lg:pl-10">
+                          <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {getSectionCharacterCounts(editContent).map((section, idx) => (
+                              <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/10 text-xs border border-transparent transition-all">
+                                <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
+                                <span className="font-bold tabular-nums whitespace-nowrap opacity-70">{section.count} 文字</span>
+                              </div>
+                            ))}
+                            {getSectionCharacterCounts(editContent).length === 0 && (
+                              <p className="text-[10px] text-muted-foreground italic col-span-full">
+                                * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-center py-20 px-4">
                         <div className="h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-4">
