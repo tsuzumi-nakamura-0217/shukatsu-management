@@ -62,7 +62,7 @@ import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
-import { countCharacters, formatDate, getSectionCharacterCounts, getPlainText } from "@/lib/utils";
+import { countCharacters, formatDate, getSectionCharacterCounts, getPlainText, isFuzzyDatePassed } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { format } from "date-fns";
@@ -594,8 +594,11 @@ export default function CompanyDetailPage({
           </div>
 
           <div className="mt-1 pt-2 border-t border-border/50 flex flex-col gap-1.5 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0 mr-1">
-              <Clock className="h-3.5 w-3.5 text-primary" />
+            <div className={cn(
+              "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider shrink-0 mr-1 transition-all",
+              isFuzzyDatePassed(editingCompany.expectedResultPeriod) ? "text-muted-foreground/50" : "text-muted-foreground"
+            )}>
+              <Clock className={cn("h-3.5 w-3.5", isFuzzyDatePassed(editingCompany.expectedResultPeriod) ? "text-muted-foreground/30" : "text-primary")} />
               <span>結果通知予定</span>
             </div>
             <FlexibleDateInput
@@ -1065,7 +1068,7 @@ export default function CompanyDetailPage({
                     editingInterview?.id === interview.id
                       ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
                       : "hover:shadow-md hover:border-primary/20",
-                    "cursor-pointer"
+                    editingInterview?.id !== interview.id && "cursor-pointer"
                   )}
                   onClick={(e) => {
                     toggleInterviewExpand(interview.id, e);
@@ -1073,8 +1076,17 @@ export default function CompanyDetailPage({
                 >
                   <CardHeader className="pb-2">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">{interview.type}</CardTitle>
+                      <div className="flex items-center gap-2 flex-1">
+                        {editingInterview?.id === interview.id ? (
+                          <Input
+                            className="text-base font-semibold h-8 flex-1"
+                            value={editingInterview.type}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => setEditingInterview({ ...editingInterview, type: e.target.value })}
+                          />
+                        ) : (
+                          <CardTitle className="text-base">{interview.type}</CardTitle>
+                        )}
                         <StatusBadge status={interview.result} />
                       </div>
                       <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -1098,16 +1110,7 @@ export default function CompanyDetailPage({
                   {expandedInterviewIds.has(interview.id) && (
                     <CardContent className="pt-2 border-t space-y-4" onClick={(e) => e.stopPropagation()}>
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-2">
-                        <div>
-                          <Label className="text-xs">面接タイプ</Label>
-                          <Input
-                            value={editingInterview?.id === interview.id ? editingInterview.type : interview.type}
-                            onChange={(e) => {
-                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
-                              setEditingInterview({ ...target, type: e.target.value });
-                            }}
-                          />
-                        </div>
+
                         <div>
                           <Label className="text-xs">日時</Label>
                           <DateTimePicker

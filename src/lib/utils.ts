@@ -125,3 +125,36 @@ function getTiptapPlainText(node: any): string {
   }
   return text.trim();
 }
+
+/**
+ * 曖昧な日付（"2/17", "2月17日"など）が既に過ぎているかどうかを判定するユーティリティ
+ */
+export function isFuzzyDatePassed(value: string | null | undefined): boolean {
+  if (!value) return false;
+  
+  // 標準的な日付形式の試行
+  const dateStr = value.toString();
+  const dateParsed = new Date(dateStr);
+  if (!Number.isNaN(dateParsed.getTime()) && dateStr.includes("-")) {
+    return dateParsed < new Date();
+  }
+
+  // "2/17", "2月17日" などの数値（月/日）を抽出
+  const now = new Date();
+  const year = now.getFullYear();
+  
+  const match = dateStr.match(/(\d{1,2})[/\-月]\s*(\d{1,2})/);
+  if (match) {
+    const month = parseInt(match[1], 10) - 1;
+    const day = parseInt(match[2], 10);
+    
+    // 現在の年の日付を生成
+    // 時刻は現在の時刻を基準に比較するか、一日の終わり（23:59:59）にするかだが、
+    // 就活の文脈では本日中ならセーフかもしれない。
+    const target = new Date(year, month, day, 23, 59, 59);
+    
+    return target < now;
+  }
+  
+  return false;
+}

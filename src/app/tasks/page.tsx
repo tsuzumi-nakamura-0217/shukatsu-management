@@ -396,7 +396,7 @@ export default function TasksPage() {
       <Card className="border-none glass overflow-hidden">
         <div className="divide-y divide-white/10 dark:divide-white/5">
           {filtered.map((task) => (
-            <div key={task.id} className="group p-5 transition-all hover:bg-muted/50 dark:hover:bg-card/40 cursor-pointer" onClick={() => setEditingTask(task)}>
+            <div key={task.id} className={cn("group p-5 transition-all hover:bg-muted/50 dark:hover:bg-card/40", editingTask?.id !== task.id && "cursor-pointer")} onClick={() => setEditingTask(task)}>
               {editingTask?.id === task.id ? (
                 <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                   <Input
