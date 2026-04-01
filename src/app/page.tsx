@@ -179,9 +179,28 @@ export default function Home() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider">
-                <span className="text-emerald-600 dark:text-emerald-400">通過 {stats?.interviewResultCounts.通過 ?? 0}</span>
-                <span className="text-rose-600 dark:text-rose-400">不合格 {stats?.interviewResultCounts.不合格 ?? 0}</span>
+              <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
+                {Object.entries(stats?.interviewResultCounts || {})
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 3)
+                  .map(([status, count]) => {
+                    const isPass = ["通過", "内定", "合格"].includes(status);
+                    const isFail = ["不合格", "辞退", "お見送り"].includes(status);
+                    return (
+                      <span
+                        key={status}
+                        className={
+                          isPass
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : isFail
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-sky-600 dark:text-sky-400"
+                        }
+                      >
+                        {status} {count}
+                      </span>
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>

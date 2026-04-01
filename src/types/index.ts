@@ -115,6 +115,7 @@ export interface AppConfig {
   defaultStages: string[];
   industries: string[];
   taskCategories: string[];
+  interviewStatuses: string[];
   notion: NotionConfig;
 }
 
@@ -136,11 +137,7 @@ export interface Stats {
   passRate: number;
   totalInterviews: number;
   totalESDocuments: number;
-  interviewResultCounts: {
-    通過: number;
-    不合格: number;
-    結果待ち: number;
-  };
+  interviewResultCounts: Record<string, number>;
 }
 
 // カレンダーイベントの型定義

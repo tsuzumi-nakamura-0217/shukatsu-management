@@ -467,7 +467,7 @@ export default function CompanyDetailPage({
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">読み込み中...</p></div>;
   }
 
-  const stages = company.stages || config?.defaultStages || [];
+  const stages = config?.defaultStages || company.stages || [];
   const currentStageIndex = stages.indexOf(company.status);
 
   return (
@@ -976,21 +976,20 @@ export default function CompanyDetailPage({
                     <Input value={newInterview.location} onChange={(e) => setNewInterview({ ...newInterview, location: e.target.value })} placeholder="オンライン / 本社" />
                   </div>
                   <div>
-                    <Label>結果</Label>
+                    <Label>ステータス</Label>
                     <Select
                       value={newInterview.result}
                       onValueChange={(value) =>
                         setNewInterview({ ...newInterview, result: value })
                       }
                     >
-                      <SelectTrigger className={cn(statusColors[newInterview.result], "transition-all duration-200 hover:shadow-md cursor-pointer")}>
+                      <SelectTrigger className={cn(statusColors[newInterview.result] || "bg-gray-100 text-gray-800", "transition-all duration-200 hover:shadow-md cursor-pointer")}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="結果待ち">結果待ち</SelectItem>
-                        <SelectItem value="通過">通過</SelectItem>
-                        <SelectItem value="不合格">不合格</SelectItem>
-                        <SelectItem value="辞退">辞退</SelectItem>
+                        {(config?.interviewStatuses || ["結果待ち", "通過", "不合格"]).map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1073,7 +1072,7 @@ export default function CompanyDetailPage({
                           />
                         </div>
                         <div>
-                          <Label>結果</Label>
+                          <Label>ステータス</Label>
                           <Select
                             value={editingInterview.result}
                             onValueChange={(value) =>
@@ -1083,14 +1082,13 @@ export default function CompanyDetailPage({
                               })
                             }
                           >
-                            <SelectTrigger className={cn(statusColors[editingInterview.result], "transition-all duration-200 hover:shadow-md cursor-pointer")}>
+                            <SelectTrigger className={cn(statusColors[editingInterview.result] || "bg-gray-100 text-gray-800", "transition-all duration-200 hover:shadow-md cursor-pointer")}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="結果待ち">結果待ち</SelectItem>
-                              <SelectItem value="通過">通過</SelectItem>
-                              <SelectItem value="不合格">不合格</SelectItem>
-                              <SelectItem value="辞退">辞退</SelectItem>
+                              {(config?.interviewStatuses || ["結果待ち", "通過", "不合格"]).map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>

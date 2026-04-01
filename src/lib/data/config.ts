@@ -12,6 +12,7 @@ export async function getConfig(): Promise<AppConfig> {
       defaultStages: [],
       industries: [],
       taskCategories: [],
+      interviewStatuses: ["通過", "結果待ち", "不合格"],
       notion: { apiKey: "", databaseId: "", enabled: false },
     };
   }
@@ -41,6 +42,7 @@ export async function getConfig(): Promise<AppConfig> {
     defaultStages: (configMap.defaultStages as string[]) || [],
     industries: (configMap.industries as string[]) || [],
     taskCategories: (configMap.taskCategories as string[]) || [],
+    interviewStatuses: (configMap.interviewStatuses as string[]) || ["通過", "結果待ち", "不合格"],
     notion: (configMap.notion as AppConfig["notion"]) || {
       apiKey: "",
       databaseId: "",
@@ -60,6 +62,7 @@ export async function updateConfig(
     { key: "defaultStages", value: updated.defaultStages },
     { key: "industries", value: updated.industries },
     { key: "taskCategories", value: updated.taskCategories },
+    { key: "interviewStatuses", value: updated.interviewStatuses },
     { key: "notion", value: updated.notion },
   ];
 

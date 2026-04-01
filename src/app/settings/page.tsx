@@ -16,7 +16,8 @@ import {
   ExternalLink,
   Loader2,
   Search,
-  ChevronRight
+  ChevronRight,
+  ListChecks
 } from "lucide-react";
 import {
   Card,
@@ -44,6 +45,7 @@ const DEFAULT_CONFIG: AppConfig = {
     databaseType: "database",
     enabled: false,
   },
+  interviewStatuses: ["通過", "結果待ち", "不合格"],
 };
 
 function normalizeConfig(data: unknown): AppConfig {
@@ -55,6 +57,7 @@ function normalizeConfig(data: unknown): AppConfig {
     taskCategories: Array.isArray(config.taskCategories)
       ? config.taskCategories
       : [],
+    interviewStatuses: Array.isArray(config.interviewStatuses) ? config.interviewStatuses : ["通過", "結果待ち", "不合格"],
     notion: {
       apiKey: config.notion?.apiKey || "",
       databaseId: config.notion?.databaseId || "",
@@ -86,9 +89,12 @@ export default function SettingsPage() {
   const [newIndustry, setNewIndustry] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
+  const [interviewStatuses, setInterviewStatuses] = useState<string[]>([]);
+  const [newInterviewStatus, setNewInterviewStatus] = useState("");
   const safeStages = Array.isArray(stages) ? stages : [];
   const safeIndustries = Array.isArray(industries) ? industries : [];
   const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeInterviewStatuses = Array.isArray(interviewStatuses) ? interviewStatuses : [];
 
   useEffect(() => {
     fetch("/api/config")
@@ -108,6 +114,7 @@ export default function SettingsPage() {
         setStages(normalized.defaultStages);
         setIndustries(normalized.industries);
         setCategories(normalized.taskCategories);
+        setInterviewStatuses(normalized.interviewStatuses);
       })
       .catch(() => {
         setConfig(DEFAULT_CONFIG);
@@ -123,6 +130,7 @@ export default function SettingsPage() {
       defaultStages: safeStages,
       industries: safeIndustries,
       taskCategories: safeCategories,
+      interviewStatuses: safeInterviewStatuses,
       notion: {
         apiKey: notionApiKey,
         databaseId: notionDbId,
@@ -368,9 +376,19 @@ export default function SettingsPage() {
             setNewVal: setNewCategory,
             icon: <Tag className="h-6 w-6" />,
             color: "bg-fuchsia-500"
+          },
+          { 
+            title: "面接ステータス", 
+            desc: "面接記録のステータスとして使用する選択肢", 
+            data: safeInterviewStatuses, 
+            setData: setInterviewStatuses, 
+            newVal: newInterviewStatus, 
+            setNewVal: setNewInterviewStatus,
+            icon: <ListChecks className="h-6 w-6" />,
+            color: "bg-emerald-500"
           }
         ].map((section, idx) => (
-          <Card key={idx} className={cn("border-none glass rounded-3xl overflow-hidden shadow-xl shadow-primary/5", idx === 2 && "md:col-span-2")}>
+          <Card key={idx} className={cn("border-none glass rounded-3xl overflow-hidden shadow-xl shadow-primary/5")}>
             <CardHeader className="p-6 pb-2">
               <div className="flex items-center gap-3 mb-2">
                  <div className={cn("h-10 w-10 rounded-xl text-white flex items-center justify-center shadow-md", section.color)}>

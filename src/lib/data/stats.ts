@@ -35,16 +35,7 @@ export async function getStats(): Promise<Stats> {
     .slice(0, 5);
 
   const allInterviews: (Interview & { companyName: string })[] = [];
-  const interviewResultCounts = {
-    通過: 0,
-    不合格: 0,
-    結果待ち: 0,
-  };
-
-
-
-
-  const companyMap = new Map(companies.map(c => [c.slug, c]));
+  const interviewResultCounts: Record<string, number> = {};  const companyMap = new Map(companies.map(c => [c.slug, c]));
 
   const validInterviews = rawAllInterviews.filter(i => companyMap.has(i.companySlug));
   const validESDocuments = rawAllESDocuments.filter(es => companyMap.has(es.companySlug));
@@ -55,13 +46,8 @@ export async function getStats(): Promise<Stats> {
   for (const interview of validInterviews) {
     const company = companyMap.get(interview.companySlug)!;
 
-    if (interview.result === "通過") {
-      interviewResultCounts.通過 += 1;
-    } else if (interview.result === "不合格") {
-      interviewResultCounts.不合格 += 1;
-    } else {
-      interviewResultCounts.結果待ち += 1;
-    }
+    const result = interview.result || "結果待ち";
+    interviewResultCounts[result] = (interviewResultCounts[result] || 0) + 1;
 
     if (interview.date >= today) {
       allInterviews.push({ ...interview, companyName: company.name });
