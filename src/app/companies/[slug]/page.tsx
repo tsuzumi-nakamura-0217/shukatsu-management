@@ -135,7 +135,7 @@ export default function CompanyDetailPage({
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
-  const [newEs, setNewEs] = useState({ title: "", content: "", characterLimit: undefined as number | undefined, characterLimitType: "" as "程度" | "以下" | "未満" | "" });
+  const [newEs, setNewEs] = useState({ title: "", content: "", characterLimit: undefined as number | undefined, characterLimitType: "" as "程度" | "以下" | "未満" | "", status: "未提出" as "未提出" | "提出済" | "結果待ち" | "通過" | "落選" | "" });
 
   // Keep memoContent/editingCompany in sync with SWR data
   useEffect(() => {
@@ -354,7 +354,7 @@ export default function CompanyDetailPage({
       if (res.ok) {
         toast.success("文書を作成しました");
         setNewEsOpen(false);
-        setNewEs({ title: "", content: "", characterLimit: undefined, characterLimitType: "" });
+        setNewEs({ title: "", content: "", characterLimit: undefined, characterLimitType: "", status: "未提出" });
         revalidate();
       }
     } finally {
@@ -375,7 +375,8 @@ export default function CompanyDetailPage({
           title: doc.title,
           content: doc.content,
           characterLimit: doc.characterLimit,
-          characterLimitType: doc.characterLimitType
+          characterLimitType: doc.characterLimitType,
+          status: doc.status
         }),
       });
       revalidate();
@@ -408,7 +409,8 @@ export default function CompanyDetailPage({
           title: duplicatedTitle,
           content: doc.content,
           characterLimit: doc.characterLimit,
-          characterLimitType: doc.characterLimitType
+          characterLimitType: doc.characterLimitType,
+          status: doc.status
         }),
       });
       if (res.ok) {
@@ -428,7 +430,8 @@ export default function CompanyDetailPage({
       editEsDoc.content !== localEsDocs.find(d => d.id === editEsDoc.id)?.content ||
       editEsDoc.title !== localEsDocs.find(d => d.id === editEsDoc.id)?.title ||
       editEsDoc.characterLimit !== localEsDocs.find(d => d.id === editEsDoc.id)?.characterLimit ||
-      editEsDoc.characterLimitType !== localEsDocs.find(d => d.id === editEsDoc.id)?.characterLimitType
+      editEsDoc.characterLimitType !== localEsDocs.find(d => d.id === editEsDoc.id)?.characterLimitType ||
+      editEsDoc.status !== localEsDocs.find(d => d.id === editEsDoc.id)?.status
     ),
     onSave: () => handleSaveEs(),
     delay: 1500,
@@ -788,15 +791,43 @@ export default function CompanyDetailPage({
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col gap-1 flex-1">
                         {editEsDoc?.id === doc.id ? (
-                          <Input
-                            className="text-base font-semibold h-8"
-                            value={editEsDoc.title}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => setEditEsDoc({ ...editEsDoc, title: e.target.value })}
-                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              className="text-base font-semibold h-8 flex-1"
+                              value={editEsDoc.title}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => setEditEsDoc({ ...editEsDoc, title: e.target.value })}
+                            />
+                            <Select
+                              value={editEsDoc.status || "未提出"}
+                              onValueChange={(val: any) => setEditEsDoc({ ...editEsDoc, status: val })}
+                            >
+                              <SelectTrigger className="w-[110px] h-8 text-xs font-medium" onClick={(e) => e.stopPropagation()}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="未提出">未提出</SelectItem>
+                                <SelectItem value="提出済">提出済</SelectItem>
+                                <SelectItem value="結果待ち">結果待ち</SelectItem>
+                                <SelectItem value="通過">通過</SelectItem>
+                                <SelectItem value="落選">落選</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             <CardTitle className="text-base">{doc.title}</CardTitle>
+                            {doc.status && (
+                              <Badge variant="outline" className={cn(
+                                "text-[10px] px-2 py-0",
+                                doc.status === "通過" && "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400",
+                                doc.status === "落選" && "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400",
+                                doc.status === "結果待ち" && "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+                                doc.status === "提出済" && "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                              )}>
+                                {doc.status}
+                              </Badge>
+                            )}
                           </div>
                         )}
                         <CardDescription className="flex flex-col gap-1.5">

@@ -14,6 +14,7 @@ export function rowToESDocument(row: Record<string, unknown>): ESDocument {
     content: (row.content as string) || "",
     characterLimit: (row.character_limit as number) || undefined,
     characterLimitType: (row.character_limit_type as "程度" | "以下" | "未満" | "") || undefined,
+    status: (row.status as any) || "未提出",
     updatedAt: (row.updated_at as string) || "",
   };
 }
@@ -47,7 +48,9 @@ export async function saveESDocument(
   title: string,
   content: string,
   characterLimit?: number,
-  characterLimitType?: string
+  characterLimitType?: string,
+  status?: string
+
 ): Promise<ESDocument> {
   const company = await getCompany(companySlug);
 
@@ -60,6 +63,7 @@ export async function saveESDocument(
         content,
         character_limit: characterLimit || null,
         character_limit_type: characterLimitType || null,
+        status: status || "未提出",
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -79,6 +83,7 @@ export async function saveESDocument(
       content,
       character_limit: characterLimit || null,
       character_limit_type: characterLimitType || null,
+      status: status || "未提出",
     };
 
     const { data, error } = await supabase

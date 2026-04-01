@@ -17,6 +17,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { cn, countCharacters, getSectionCharacterCounts } from "@/lib/utils";
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
@@ -33,6 +41,7 @@ export default function ESListPage() {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [editContent, setEditContent] = useState("");
   const [editTitle, setEditTitle] = useState("");
+  const [editStatus, setEditStatus] = useState("未提出");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -48,6 +57,7 @@ export default function ESListPage() {
           setSelected(docsWithCharCount[0]);
           setEditContent(docsWithCharCount[0].content);
           setEditTitle(docsWithCharCount[0].title);
+          setEditStatus(docsWithCharCount[0].status || "未提出");
         } else {
           const doc = docsWithCharCount.find((d: ESDocument) => d.id === selected.id);
           if (doc) {
@@ -90,7 +100,8 @@ export default function ESListPage() {
           title: duplicatedTitle,
           content: selected.content,
           characterLimit: selected.characterLimit,
-          characterLimitType: selected.characterLimitType
+          characterLimitType: selected.characterLimitType,
+          status: selected.status
         }),
       });
       if (res.ok) {
@@ -115,6 +126,9 @@ export default function ESListPage() {
           id: selected.id,
           title: editTitle,
           content: editContent,
+          characterLimit: selected.characterLimit,
+          characterLimitType: selected.characterLimitType,
+          status: editStatus,
         }),
       });
       if (res.ok) {
@@ -131,16 +145,17 @@ export default function ESListPage() {
 
   useAutoSave({
     enabled: !!selected,
-    hasChanges: !!selected && (editContent !== selected.content || editTitle !== selected.title),
+    hasChanges: !!selected && (editContent !== selected.content || editTitle !== selected.title || editStatus !== selected.status),
     onSave: handleSave,
     delay: 1500,
-    deps: [editContent, editTitle, selected?.id],
+    deps: [editContent, editTitle, editStatus, selected?.id],
   });
 
   const handleSelect = (doc: ESDocument) => {
     setSelected(doc);
     setEditContent(doc.content);
     setEditTitle(doc.title);
+    setEditStatus(doc.status || "未提出");
   };
 
   return (
@@ -246,6 +261,19 @@ export default function ESListPage() {
                           selected?.id === doc.id ? "text-primary-foreground/60" : "text-muted-foreground"
                         )}>
                           <span className="whitespace-normal break-all">{doc.companyName || doc.companySlug}</span>
+                          {doc.status && (
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-sm shrink-0 font-bold",
+                              selected?.id === doc.id ? "bg-white/20 text-white" : 
+                                doc.status === "通過" ? "bg-green-500/10 text-green-700 dark:text-green-400" :
+                                doc.status === "落選" ? "bg-red-500/10 text-red-700 dark:text-red-400" :
+                                doc.status === "結果待ち" ? "bg-blue-500/10 text-blue-700 dark:text-blue-400" :
+                                doc.status === "提出済" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" :
+                                "bg-muted/50 text-muted-foreground"
+                            )}>
+                              {doc.status}
+                            </span>
+                          )}
                           <span className="ml-auto shrink-0">{doc.charCount ?? 0}文字</span>
                         </div>
                       </div>
@@ -275,11 +303,25 @@ export default function ESListPage() {
                       {countCharacters(editContent)} Characters
                     </div>
                   </div>
-                  <input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="text-2xl font-black bg-transparent border-none focus-visible:ring-0 p-0 h-auto w-full text-foreground"
-                  />
+                  <div className="flex items-center gap-3 w-full">
+                    <input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="text-2xl font-black bg-transparent border-none focus-visible:ring-0 p-0 h-auto flex-1 text-foreground"
+                    />
+                    <Select value={editStatus} onValueChange={setEditStatus}>
+                      <SelectTrigger className="w-[120px] h-9 text-xs font-bold border-2 rounded-xl transition-all hover:bg-muted/10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="未提出">未提出</SelectItem>
+                        <SelectItem value="提出済">提出済</SelectItem>
+                        <SelectItem value="結果待ち">結果待ち</SelectItem>
+                        <SelectItem value="通過">通過</SelectItem>
+                        <SelectItem value="落選">落選</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {isSaving && (

@@ -27,14 +27,14 @@ export async function POST(
   return withAuthenticatedUser(request, async () => {
     try {
       const { slug } = await params;
-      const { title, content, characterLimit, characterLimitType } = await request.json();
+      const { title, content, characterLimit, characterLimitType, status } = await request.json();
       if (!title) {
         return NextResponse.json(
           { error: "タイトルは必須です" },
           { status: 400 }
         );
       }
-      const doc = await saveESDocument(slug, null, title, content || "", characterLimit, characterLimitType);
+      const doc = await saveESDocument(slug, null, title, content || "", characterLimit, characterLimitType, status);
       return NextResponse.json(doc, { status: 201 });
     } catch {
       return NextResponse.json(
@@ -52,8 +52,8 @@ export async function PUT(
   return withAuthenticatedUser(request, async () => {
     try {
       const { slug } = await params;
-      const { id, title, content, characterLimit, characterLimitType } = await request.json();
-      const doc = await saveESDocument(slug, id, title, content, characterLimit, characterLimitType);
+      const { id, title, content, characterLimit, characterLimitType, status } = await request.json();
+      const doc = await saveESDocument(slug, id, title, content, characterLimit, characterLimitType, status);
       return NextResponse.json(doc);
     } catch {
       return NextResponse.json(

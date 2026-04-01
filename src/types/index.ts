@@ -92,6 +92,7 @@ export interface ESDocument {
   charCount?: number;
   characterLimit?: number;
   characterLimitType?: "程度" | "以下" | "未満" | "";
+  status?: "未提出" | "提出済" | "結果待ち" | "通過" | "落選" | "";
 }
 
 // 自己分析メモの型定義

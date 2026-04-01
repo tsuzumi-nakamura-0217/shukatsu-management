@@ -65,12 +65,14 @@ CREATE TABLE es_documents (
   content TEXT DEFAULT '',
   character_limit INTEGER,
   character_limit_type TEXT,
+  status TEXT DEFAULT '未提出',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 COMMENT ON COLUMN es_documents.character_limit IS '目標文字数（字数指定）';
 COMMENT ON COLUMN es_documents.character_limit_type IS '字数指定の種別（程度、以下、未満など）';
+COMMENT ON COLUMN es_documents.status IS 'ESの提出・合否ステータス（未提出、提出済、結果待ち、通過、落選など）';
 
 -- 5. 自己分析テーブル
 CREATE TABLE self_analysis (
