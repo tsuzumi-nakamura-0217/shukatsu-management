@@ -113,11 +113,11 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
+    <aside className="hidden h-screen w-48 shrink-0 flex-col border-r bg-card md:flex">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b px-6">
         <GraduationCap className="h-6 w-6 text-primary" />
-        <span className="text-lg font-bold">就活マネージャー</span>
+        <span className="text-lg font-bold">就活管理</span>
       </div>
 
       {/* Navigation */}
@@ -154,7 +154,7 @@ export function MobileSidebar() {
           </VisuallyHidden.Root>
           <div className="flex h-14 items-center gap-2 border-b px-4">
             <GraduationCap className="h-5 w-5 text-primary" />
-            <span className="font-semibold">就活マネージャー</span>
+            <span className="font-semibold">就活管理</span>
           </div>
           <nav className="space-y-1 p-4">
             <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
@@ -164,7 +164,7 @@ export function MobileSidebar() {
           </nav>
         </SheetContent>
       </Sheet>
-      <span className="text-sm font-semibold">就活マネージャー</span>
+      <span className="text-sm font-semibold">就活管理</span>
       <div className="h-8 w-8" aria-hidden="true" />
     </div>
   );
