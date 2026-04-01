@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useCallback, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -66,6 +66,7 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
+import { useCompanyDetail, invalidateStats, invalidateAllTasks } from "@/hooks/use-api";
 import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
 
 function normalizeDateTimeForCompare(value: string): string {
@@ -99,11 +100,17 @@ export default function CompanyDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "es";
-  const [company, setCompany] = useState<Company | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [esDocs, setEsDocs] = useState<ESDocument[]>([]);
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const {
+    company, tasks, interviews, esDocs, config,
+    mutate: mutateDetail, revalidate,
+  } = useCompanyDetail(slug);
+  // Local state for tasks/interviews to allow optimistic updates
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const [localInterviews, setLocalInterviews] = useState<Interview[]>([]);
+  const [localEsDocs, setLocalEsDocs] = useState<ESDocument[]>([]);
+  useEffect(() => { setLocalTasks(tasks); }, [tasks]);
+  useEffect(() => { setLocalInterviews(interviews); }, [interviews]);
+  useEffect(() => { setLocalEsDocs(esDocs); }, [esDocs]);
   const [editMode, setEditMode] = useState(false);
   const [memoContent, setMemoContent] = useState("");
   const [editingCompany, setEditingCompany] = useState<Partial<Company>>({});
@@ -130,27 +137,13 @@ export default function CompanyDetailPage({
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
   const [newEs, setNewEs] = useState({ title: "", content: "", characterLimit: undefined as number | undefined, characterLimitType: "" as "程度" | "以下" | "未満" | "" });
 
-  function fetchAll() {
-    Promise.all([
-      fetch(`/api/companies/${slug}`).then((r) => r.json()),
-      fetch(`/api/tasks?companySlug=${slug}`).then((r) => r.json()),
-      fetch(`/api/companies/${slug}/interviews`).then((r) => r.json()),
-      fetch(`/api/companies/${slug}/es`).then((r) => r.json()),
-      fetch("/api/config").then((r) => r.json()),
-    ]).then(([companyData, tasksData, interviewsData, esData, configData]) => {
-      setCompany(companyData);
-      setMemoContent(companyData.memo || "");
-      setEditingCompany(companyData);
-      setTasks(Array.isArray(tasksData) ? tasksData : []);
-      setInterviews(Array.isArray(interviewsData) ? interviewsData : []);
-      setEsDocs(Array.isArray(esData) ? esData : []);
-      setConfig(configData);
-    });
-  }
-
+  // Keep memoContent/editingCompany in sync with SWR data
   useEffect(() => {
-    fetchAll();
-  }, [slug]);
+    if (company) {
+      setMemoContent(company.memo || "");
+      setEditingCompany(company);
+    }
+  }, [company]);
 
   const handleSaveCompany = async () => {
     if (isSavingMemo) return;
@@ -162,8 +155,11 @@ export default function CompanyDetailPage({
         body: JSON.stringify({ ...editingCompany, memo: memoContent }),
       });
       if (res.ok) {
-        // fetchAll(); // Avoid over-fetching if only memo/info changed
-        setCompany(prev => prev ? { ...prev, ...editingCompany, memo: memoContent } : null);
+        // Optimistic update via SWR
+        mutateDetail((current) => current ? {
+          ...current,
+          company: { ...current.company, ...editingCompany, memo: memoContent } as Company,
+        } : current, { revalidate: false });
       }
     } finally {
       setIsSavingMemo(false);
@@ -195,7 +191,7 @@ export default function CompanyDetailPage({
     });
     if (res.ok) {
       toast.success("ステータスを更新しました");
-      fetchAll();
+      revalidate();
     }
   };
 
@@ -212,7 +208,7 @@ export default function CompanyDetailPage({
         toast.success("タスクを追加しました");
         setNewTaskOpen(false);
         setNewTask({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
-        fetchAll();
+        revalidate();
       }
     } finally {
       setIsCreatingTask(false);
@@ -223,7 +219,7 @@ export default function CompanyDetailPage({
     const oldStatus = task.status;
 
     // 楽観的アップデート: UIを即座に更新
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+    setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
 
     try {
       const res = await fetch("/api/tasks", {
@@ -236,11 +232,11 @@ export default function CompanyDetailPage({
         throw new Error("Failed to update task status");
       }
 
-      // 成功時は最新データをバックグラウンドで取得（任意）
-      fetchAll();
+      // 成功時は最新データをバックグラウンドで取得
+      revalidate();
     } catch (error) {
       // エラー時は元のステータスに戻す
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
+      setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
       toast.error("タスクの更新に失敗しました");
       console.error(error);
     }
@@ -260,13 +256,13 @@ export default function CompanyDetailPage({
         // toast.success("タスクを更新しました");
         // setEditingTask(null);
       }
-      fetchAll();
+      revalidate();
     } finally {
       setIsSavingTask(false);
     }
   };
 
-  const originalEditingTask = editingTask ? tasks.find((t) => t.id === editingTask.id) : undefined;
+  const originalEditingTask = editingTask ? localTasks.find((t) => t.id === editingTask.id) : undefined;
 
   useAutoSave({
     enabled: !!editingTask,
@@ -284,7 +280,7 @@ export default function CompanyDetailPage({
       body: JSON.stringify({ id }),
     });
     toast.success("タスクを削除しました");
-    fetchAll();
+    revalidate();
   };
 
   const handleCreateInterview = async () => {
@@ -300,7 +296,7 @@ export default function CompanyDetailPage({
         toast.success("面接記録を追加しました");
         setNewInterviewOpen(false);
         setNewInterview({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
-        fetchAll();
+        revalidate();
       }
     } finally {
       setIsCreatingInterview(false);
@@ -321,7 +317,7 @@ export default function CompanyDetailPage({
         // toast.success("面接記録を更新しました");
         // setEditingInterview(null);
       }
-      fetchAll();
+      revalidate();
     } finally {
       setIsSavingInterview(false);
     }
@@ -329,7 +325,7 @@ export default function CompanyDetailPage({
 
   useAutoSave({
     enabled: !!editingInterview,
-    hasChanges: !!editingInterview && JSON.stringify(editingInterview) !== JSON.stringify(interviews.find(i => i.id === editingInterview.id)),
+    hasChanges: !!editingInterview && JSON.stringify(editingInterview) !== JSON.stringify(localInterviews.find(i => i.id === editingInterview.id)),
     onSave: () => handleSaveInterview(),
     delay: 1500,
     deps: [editingInterview],
@@ -343,7 +339,7 @@ export default function CompanyDetailPage({
       body: JSON.stringify({ id }),
     });
     toast.success("面接記録を削除しました");
-    fetchAll();
+    revalidate();
   };
 
   const handleCreateEs = async () => {
@@ -359,7 +355,7 @@ export default function CompanyDetailPage({
         toast.success("文書を作成しました");
         setNewEsOpen(false);
         setNewEs({ title: "", content: "", characterLimit: undefined, characterLimitType: "" });
-        fetchAll();
+        revalidate();
       }
     } finally {
       setIsCreatingEs(false);
@@ -382,7 +378,7 @@ export default function CompanyDetailPage({
           characterLimitType: doc.characterLimitType
         }),
       });
-      fetchAll();
+      revalidate();
     } finally {
       setIsSavingEs(false);
     }
@@ -398,7 +394,7 @@ export default function CompanyDetailPage({
     if (res.ok) {
       toast.success("文書を削除しました");
       if (editEsDoc?.id === id) setEditEsDoc(null);
-      fetchAll();
+      revalidate();
     }
   };
 
@@ -417,7 +413,7 @@ export default function CompanyDetailPage({
       });
       if (res.ok) {
         toast.success("文書を複製しました");
-        fetchAll();
+        revalidate();
       } else {
         toast.error("文書の複製に失敗しました");
       }
@@ -429,10 +425,10 @@ export default function CompanyDetailPage({
   useAutoSave({
     enabled: !!editEsDoc,
     hasChanges: !!editEsDoc && (
-      editEsDoc.content !== esDocs.find(d => d.id === editEsDoc.id)?.content ||
-      editEsDoc.title !== esDocs.find(d => d.id === editEsDoc.id)?.title ||
-      editEsDoc.characterLimit !== esDocs.find(d => d.id === editEsDoc.id)?.characterLimit ||
-      editEsDoc.characterLimitType !== esDocs.find(d => d.id === editEsDoc.id)?.characterLimitType
+      editEsDoc.content !== localEsDocs.find(d => d.id === editEsDoc.id)?.content ||
+      editEsDoc.title !== localEsDocs.find(d => d.id === editEsDoc.id)?.title ||
+      editEsDoc.characterLimit !== localEsDocs.find(d => d.id === editEsDoc.id)?.characterLimit ||
+      editEsDoc.characterLimitType !== localEsDocs.find(d => d.id === editEsDoc.id)?.characterLimitType
     ),
     onSave: () => handleSaveEs(),
     delay: 1500,
@@ -454,7 +450,7 @@ export default function CompanyDetailPage({
       } else {
         next.add(id);
         // Expanding: automatically enter edit mode
-        const doc = esDocs.find(d => d.id === id);
+        const doc = localEsDocs.find(d => d.id === id);
         if (doc) {
           setEditEsDoc(doc);
         }
@@ -770,11 +766,11 @@ export default function CompanyDetailPage({
               </DialogContent>
             </Dialog>
           </div>
-          {esDocs.length === 0 ? (
+          {localEsDocs.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">まだ文書がありません</p></CardContent></Card>
           ) : (
             <div className="space-y-4">
-              {esDocs.map((doc) => (
+              {localEsDocs.map((doc) => (
                 <Card
                   key={doc.id}
                   className={cn(
@@ -979,11 +975,11 @@ export default function CompanyDetailPage({
               </DialogContent>
             </Dialog>
           </div>
-          {interviews.length === 0 ? (
+          {localInterviews.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">まだ面接記録がありません</p></CardContent></Card>
           ) : (
             <div className="space-y-4">
-              {interviews.sort((a, b) => b.date.localeCompare(a.date)).map((interview) => (
+              {localInterviews.sort((a, b) => b.date.localeCompare(a.date)).map((interview) => (
                 <Card
                   key={interview.id}
                   className={cn(
@@ -1191,11 +1187,11 @@ export default function CompanyDetailPage({
               </DialogContent>
             </Dialog>
           </div>
-          {tasks.length === 0 ? (
+          {localTasks.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">まだタスクがありません</p></CardContent></Card>
           ) : (
             <div className="space-y-2">
-              {tasks.map((task) => (
+              {localTasks.map((task) => (
                 <div
                   key={task.id}
                   className={cn(

@@ -33,13 +33,15 @@ import { StatusBadge, TagBadge, statusColors } from "@/components/badges";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Company, AppConfig, Task } from "@/types";
+import { useCompanies, useTasks, useConfig } from "@/hooks/use-api";
 
 export default function CompaniesPage() {
   const searchParams = useSearchParams();
   const initialStatus = searchParams.get("status") || "all";
 
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const { companies, mutate: mutateCompanies } = useCompanies();
+  const { config } = useConfig();
+  const { tasks } = useTasks();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -59,33 +61,13 @@ export default function CompaniesPage() {
     location: "",
     priority: 3,
   });
-  const [tasks, setTasks] = useState<Task[]>([]);
 
-  function fetchCompanies() {
-    fetch("/api/companies")
-      .then((r) => r.json())
-      .then(setCompanies);
-  }
-
-  function fetchTasks() {
-    fetch("/api/tasks")
-      .then((r) => r.json())
-      .then(setTasks);
-  }
-
+  // Update industry default when config loads
   useEffect(() => {
-    fetchCompanies();
-    fetchTasks();
-    fetch("/api/config")
-      .then((r) => r.json())
-      .then((data: AppConfig) => {
-        setConfig(data);
-        setNewCompany((prev) => ({
-          ...prev,
-          industry: prev.industry || data.industries?.[0] || "",
-        }));
-      });
-  }, []);
+    if (config?.industries?.[0]) {
+      setNewCompany(prev => ({ ...prev, industry: prev.industry || config.industries[0] }));
+    }
+  }, [config]);
 
   const handleCreate = async () => {
     if (isCreating) return;
@@ -113,7 +95,7 @@ export default function CompaniesPage() {
           location: "",
           priority: 3,
         });
-        fetchCompanies();
+        mutateCompanies();
       } else {
         toast.error("企業の追加に失敗しました");
       }

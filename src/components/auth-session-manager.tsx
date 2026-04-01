@@ -24,6 +24,23 @@ export function AuthSessionManager() {
     const supabaseBrowser = getSupabaseBrowserClient();
     const originalFetch = window.fetch.bind(window);
 
+    // Cache the access token to avoid calling getSession() on every fetch
+    let cachedAccessToken: string | null = null;
+
+    // Initialize token immediately
+    supabaseBrowser.auth.getSession().then(({ data }) => {
+      cachedAccessToken = data.session?.access_token ?? null;
+      updateTokenCookie(cachedAccessToken);
+    });
+
+    // Update cached token on auth state changes
+    const {
+      data: { subscription },
+    } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
+      cachedAccessToken = session?.access_token ?? null;
+      updateTokenCookie(cachedAccessToken);
+    });
+
     window.fetch = async (
       input: RequestInfo | URL,
       init?: RequestInit
@@ -38,35 +55,18 @@ export function AuthSessionManager() {
         requestUrl.startsWith("/api") ||
         requestUrl.startsWith(`${window.location.origin}/api`);
 
-      if (!isSameOriginApi) {
-        return originalFetch(input, init);
-      }
-
-      const { data } = await supabaseBrowser.auth.getSession();
-      const token = data.session?.access_token;
-
-      if (!token) {
+      if (!isSameOriginApi || !cachedAccessToken) {
         return originalFetch(input, init);
       }
 
       const headers = new Headers(init?.headers ?? {});
-      headers.set("Authorization", `Bearer ${token}`);
+      headers.set("Authorization", `Bearer ${cachedAccessToken}`);
 
       return originalFetch(input, {
         ...init,
         headers,
       });
     };
-
-    supabaseBrowser.auth.getSession().then(({ data }) => {
-      updateTokenCookie(data.session?.access_token ?? null);
-    });
-
-    const {
-      data: { subscription },
-    } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
-      updateTokenCookie(session?.access_token ?? null);
-    });
 
     return () => {
       subscription.unsubscribe();

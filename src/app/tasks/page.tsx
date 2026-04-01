@@ -38,6 +38,7 @@ import { useAutoSave } from "@/hooks/use-auto-save";
 import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import type { Task, AppConfig, Company } from "@/types";
+import { useTasks, useCompanies, useConfig, invalidateStats, invalidateCompanyDetail } from "@/hooks/use-api";
 
 function normalizeDateTimeForCompare(value: string): string {
   if (!value) return "";
@@ -63,11 +64,13 @@ function hasTaskChanges(current: Task | null, original?: Task): boolean {
 
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const { tasks: swrTasks, mutate: mutateTasks } = useTasks();
+  const { companies } = useCompanies();
+  const { config } = useConfig();
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  useEffect(() => { setLocalTasks(swrTasks); }, [swrTasks]);
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("incomplete"); // all, incomplete, 未着手, 進行中, 完了
+  const [statusFilter, setStatusFilter] = useState("incomplete");
   const [search, setSearch] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
@@ -84,25 +87,22 @@ export default function TasksPage() {
     status: "未着手" as "未着手" | "進行中" | "完了",
   });
 
-  function fetchTasks() {
-    fetch("/api/tasks").then((r) => r.json()).then(setTasks);
-  }
+  // Update default values when config/companies load
+  useEffect(() => {
+    if (config?.taskCategories?.[0]) {
+      setNewTask(prev => ({ ...prev, category: prev.category || config.taskCategories[0] }));
+    }
+  }, [config]);
 
   useEffect(() => {
-    fetchTasks();
-    fetch("/api/config").then((r) => r.json()).then((data: AppConfig) => {
-      setConfig(data);
-      setNewTask((prev) => ({ ...prev, category: data.taskCategories?.[0] || "その他" }));
-    });
-    fetch("/api/companies").then((r) => r.json()).then((data: Company[]) => {
-      setCompanies(data);
-      setNewTask((prev) => ({ ...prev, companySlug: prev.companySlug || data[0]?.slug || "" }));
-    });
-  }, []);
+    if (companies.length > 0) {
+      setNewTask(prev => ({ ...prev, companySlug: prev.companySlug || companies[0]?.slug || "" }));
+    }
+  }, [companies]);
 
   const handleStatusChange = async (task: Task, newStatus: "未着手" | "進行中" | "完了") => {
     const oldStatus = task.status;
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+    setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
     try {
       const res = await fetch("/api/tasks", {
         method: "PUT",
@@ -110,9 +110,9 @@ export default function TasksPage() {
         body: JSON.stringify({ id: task.id, status: newStatus }),
       });
       if (!res.ok) throw new Error("Failed to update status");
-      fetchTasks();
+      mutateTasks();
     } catch (error) {
-      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
+      setLocalTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
       toast.error("ステータスの更新に失敗しました");
     }
   };
@@ -125,7 +125,7 @@ export default function TasksPage() {
       body: JSON.stringify({ id }),
     });
     toast.success("タスクを削除しました");
-    fetchTasks();
+    mutateTasks();
   };
 
   const handleCreateTask = async () => {
@@ -153,7 +153,7 @@ export default function TasksPage() {
           memo: "",
           status: "未着手",
         });
-        fetchTasks();
+        mutateTasks();
       } else {
         toast.error("タスクの作成に失敗しました");
       }
@@ -177,7 +177,7 @@ export default function TasksPage() {
           // toast.success("タスクを更新しました"); // Skip toast for auto-save
           // setEditingTask(null); // Don't close for auto-save
         }
-        fetchTasks();
+        mutateTasks();
       }
     } catch (error) {
       console.error(error);
@@ -187,7 +187,7 @@ export default function TasksPage() {
     }
   };
 
-  const originalEditingTask = editingTask ? tasks.find((t) => t.id === editingTask.id) : undefined;
+  const originalEditingTask = editingTask ? localTasks.find((t) => t.id === editingTask.id) : undefined;
 
   useAutoSave({
     enabled: !!editingTask,
@@ -209,7 +209,7 @@ export default function TasksPage() {
       if (data.results) {
         const success = data.results.filter((r: { success: boolean }) => r.success).length;
         toast.success(`${success}/${data.results.length} タスクをNotionに同期しました`);
-        fetchTasks();
+        mutateTasks();
       }
     } catch {
       toast.error("同期に失敗しました");
@@ -217,8 +217,7 @@ export default function TasksPage() {
     setSyncing(false);
   };
 
-
-  const filtered = tasks
+  const filtered = localTasks
     .filter((t) => {
       if (statusFilter === "incomplete" && t.status === "完了") return false;
       if (statusFilter !== "all" && statusFilter !== "incomplete" && t.status !== statusFilter) return false;
@@ -238,7 +237,7 @@ export default function TasksPage() {
       return 0;
     });
 
-  const incompleteCount = tasks.filter((t) => t.status !== "完了").length;
+  const incompleteCount = localTasks.filter((t) => t.status !== "完了").length;
 
   return (
     <div className="space-y-8 pb-10">

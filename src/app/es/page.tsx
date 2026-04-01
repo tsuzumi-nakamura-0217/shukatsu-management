@@ -22,60 +22,41 @@ import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
+import { useAllESDocs } from "@/hooks/use-api";
 import type { ESDocument } from "@/types";
 
 export default function ESListPage() {
-  const [esDocs, setEsDocs] = useState<ESDocument[]>([]);
+  const { esDocs: swrDocs, isLoading, mutate } = useAllESDocs();
+  const [esDocs, setEsDocs] = useState<(ESDocument & { charCount?: number })[]>([]);
   const [selected, setSelected] = useState<ESDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const [isLoading, setIsLoading] = useState(true);
   const [editContent, setEditContent] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchEsDocs = async (selectId?: string) => {
-    try {
-      const r = await fetch("/api/es");
-      const data = await r.json();
-
-      const docsWithCharCount = data.map((doc: ESDocument) => ({
+  useEffect(() => {
+    if (swrDocs) {
+      const docsWithCharCount = swrDocs.map((doc: ESDocument) => ({
         ...doc,
         charCount: countCharacters(doc.content)
       }));
-
       setEsDocs(docsWithCharCount);
 
       if (docsWithCharCount.length > 0) {
-        if (selectId) {
-          const doc = docsWithCharCount.find((d: ESDocument) => d.id === selectId);
-          if (doc) {
-            setSelected(doc);
-            setEditContent(doc.content);
-            setEditTitle(doc.title);
-          }
-        } else if (!selected) {
+        if (!selected) {
           setSelected(docsWithCharCount[0]);
           setEditContent(docsWithCharCount[0].content);
           setEditTitle(docsWithCharCount[0].title);
         } else {
-          // Update selected if it's already set
           const doc = docsWithCharCount.find((d: ESDocument) => d.id === selected.id);
           if (doc) {
             setSelected(doc);
           }
         }
       }
-    } catch (error) {
-      console.error("Failed to fetch ES documents", error);
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchEsDocs();
-  }, []);
+  }, [swrDocs]);
 
   const filteredDocs = useMemo(() => {
     if (!deferredSearchQuery) return esDocs;
@@ -114,7 +95,7 @@ export default function ESListPage() {
       });
       if (res.ok) {
         toast.success("文書を複製しました");
-        fetchEsDocs();
+        mutate();
       } else {
         toast.error("文書の複製に失敗しました");
       }
@@ -137,13 +118,7 @@ export default function ESListPage() {
         }),
       });
       if (res.ok) {
-        // Sync state without full reload if possible, but fetch ensures consistency
-        const r = await fetch("/api/es");
-        const data = await r.json();
-        setEsDocs(data.map((doc: ESDocument) => ({
-          ...doc,
-          charCount: countCharacters(doc.content)
-        })));
+        mutate();
       } else {
         toast.error("保存に失敗しました");
       }

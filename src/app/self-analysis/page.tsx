@@ -25,39 +25,34 @@ import dynamic from "next/dynamic";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
+import { useSelfAnalysis } from "@/hooks/use-api";
 import type { SelfAnalysis } from "@/types";
 import { cn } from "@/lib/utils";
 
 export default function SelfAnalysisPage() {
+  const { items: swrItems, isLoading, mutate } = useSelfAnalysis();
   const [items, setItems] = useState<SelfAnalysis[]>([]);
   const [selected, setSelected] = useState<SelfAnalysis | null>(null);
   const [editContent, setEditContent] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const deferredSearch = useDeferredValue(searchQuery);
 
-  const fetchItems = async () => {
-    try {
-      const r = await fetch("/api/self-analysis");
-      const data = await r.json();
-      setItems(data);
-      if (data.length > 0 && !selected) {
-        setSelected(data[0]);
-        setEditContent(data[0].content);
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchItems();
-  }, []);
+    if (swrItems) {
+      setItems(swrItems);
+      if (swrItems.length > 0 && !selected) {
+        setSelected(swrItems[0]);
+        setEditContent(swrItems[0].content);
+      } else if (selected) {
+        // keep selection updated if title changes
+        const sv = swrItems.find(i => i.id === selected.id);
+        if (sv) setSelected(sv);
+      }
+    }
+  }, [swrItems]);
 
   const filteredItems = useMemo(() => {
     return items.filter(item =>
@@ -85,9 +80,7 @@ export default function SelfAnalysisPage() {
         }),
       });
       // Refresh list to sync state
-      const r = await fetch("/api/self-analysis");
-      const data = await r.json();
-      setItems(data);
+      mutate();
     } catch (error) {
       console.error(error);
       toast.error("保存に失敗しました");
@@ -119,7 +112,7 @@ export default function SelfAnalysisPage() {
       if (res.ok) {
         const newItem = await res.json();
         toast.success("作成しました");
-        await fetchItems();
+        mutate();
         setSelected(newItem);
         setEditContent("");
       }
@@ -145,7 +138,7 @@ export default function SelfAnalysisPage() {
           setSelected(null);
           setEditContent("");
         }
-        fetchItems();
+        mutate();
       }
     } catch (error) {
       console.error(error);

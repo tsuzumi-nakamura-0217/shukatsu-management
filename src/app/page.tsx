@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Briefcase,
@@ -20,37 +20,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { Stats } from "@/types";
+import { useStats } from "@/hooks/use-api";
 
 
 export default function Home() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { stats, isLoading, error: fetchError } = useStats();
   const [greeting, setGreeting] = useState("こんにちは");
 
-  async function fetchStats() {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/stats");
-      if (!response.ok) {
-        throw new Error("ダッシュボードデータの取得に失敗しました");
-      }
-
-      const data = (await response.json()) as Stats;
-      setStats(data);
-    } catch {
-      setError("ダッシュボードデータの取得に失敗しました。時間をおいて再試行してください。");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    fetchStats();
-
-    // Set greeting based on time
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) setGreeting("おはようございます");
     else if (hour >= 12 && hour < 18) setGreeting("こんにちは");
@@ -66,6 +43,8 @@ export default function Home() {
     if (!stats) return [];
     return Object.entries(stats.statusCounts).sort((a, b) => b[1] - a[1]);
   }, [stats]);
+
+  const error = fetchError ? "ダッシュボードデータの取得に失敗しました。時間をおいて再試行してください。" : null;
 
   return (
     <div className="space-y-6 pb-8">
@@ -108,7 +87,13 @@ export default function Home() {
                   <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">{stats?.totalCompanies ?? 0}</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {isLoading ? (
+                  <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
+                ) : (
+                  stats?.totalCompanies ?? 0
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -127,7 +112,13 @@ export default function Home() {
                   <ListChecks className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">{completionRate}%</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {isLoading ? (
+                  <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
+                ) : (
+                  `${completionRate}%`
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
@@ -156,7 +147,13 @@ export default function Home() {
                   </Badge>
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold text-glow">{stats?.passRate ?? 0}%</CardTitle>
+              <CardTitle className="text-3xl font-bold text-glow">
+                {isLoading ? (
+                  <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
+                ) : (
+                  `${stats?.passRate ?? 0}%`
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">選考結果が出た企業ベース</p>
@@ -173,7 +170,13 @@ export default function Home() {
                   <CalendarClock className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">{stats?.totalInterviews ?? 0}</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {isLoading ? (
+                  <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
+                ) : (
+                  stats?.totalInterviews ?? 0
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider">
@@ -193,7 +196,13 @@ export default function Home() {
                   <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">{stats?.totalESDocuments ?? 0}</CardTitle>
+              <CardTitle className="text-3xl font-bold">
+                {isLoading ? (
+                  <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
+                ) : (
+                  stats?.totalESDocuments ?? 0
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">登録済みエントリーシート</p>
@@ -214,10 +223,18 @@ export default function Home() {
           </div>
           <Card className="border-none glass">
             <CardContent className="pt-6 space-y-3">
-              {loading ? (
-                <div className="py-12 text-center space-y-4">
-                  <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-sm text-muted-foreground">読み込み中...</p>
+              {isLoading ? (
+                <div className="py-6 space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 rounded-2xl bg-background/50 p-4">
+                      <div className="hidden sm:flex h-10 w-10 rounded-xl bg-muted animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-48 rounded bg-muted animate-pulse" />
+                        <div className="h-3 w-32 rounded bg-muted animate-pulse" />
+                      </div>
+                      <div className="h-6 w-20 rounded bg-muted animate-pulse" />
+                    </div>
+                  ))}
                 </div>
               ) : (stats?.upcomingDeadlines.length ?? 0) === 0 ? (
                 <div className="py-12 text-center space-y-3">
@@ -265,8 +282,21 @@ export default function Home() {
           </div>
           <Card className="border-none glass">
             <CardContent className="pt-6 space-y-3">
-              {loading ? (
-                <div className="py-12 text-center text-sm text-muted-foreground">読み込み中...</div>
+              {isLoading ? (
+                <div className="py-6 space-y-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-2xl bg-background/50 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />
+                        <div className="space-y-2">
+                          <div className="h-4 w-36 rounded bg-muted animate-pulse" />
+                          <div className="h-3 w-24 rounded bg-muted animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="h-5 w-20 rounded bg-muted animate-pulse" />
+                    </div>
+                  ))}
+                </div>
               ) : (stats?.upcomingInterviews.length ?? 0) === 0 ? (
                 <div className="py-12 text-center space-y-3">
                   <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
@@ -306,8 +336,15 @@ export default function Home() {
           </div>
           <Card className="border-none glass">
             <CardContent className="pt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {loading ? (
-                <div className="col-span-full py-12 text-center text-sm text-muted-foreground">読み込み中...</div>
+              {isLoading ? (
+                <div className="col-span-full py-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-2xl bg-background/50 p-4">
+                      <div className="h-6 w-20 rounded bg-muted animate-pulse" />
+                      <div className="h-6 w-12 rounded bg-muted animate-pulse" />
+                    </div>
+                  ))}
+                </div>
               ) : statusEntries.length === 0 ? (
                 <div className="col-span-full py-12 text-center text-sm text-muted-foreground">集計対象の企業がありません。</div>
               ) : (
@@ -329,4 +366,3 @@ export default function Home() {
     </div>
   );
 }
-

@@ -7,6 +7,7 @@ import { AuthSessionManager } from "@/components/auth-session-manager";
 import { AuthGuard } from "@/components/auth-guard";
 import { AppShell } from "@/components/app-shell";
 import { PWARegister } from "@/components/pwa-register";
+import { SWRProvider } from "@/components/swr-config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,13 +54,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased relative min-h-screen overflow-x-hidden`}
       >
         <PWARegister />
-        <TooltipProvider>
-          <AuthSessionManager />
-          <AuthGuard>
-            <AppShell>{children}</AppShell>
-            <Toaster />
-          </AuthGuard>
-        </TooltipProvider>
+        <SWRProvider>
+          <TooltipProvider>
+            <AuthSessionManager />
+            <AuthGuard>
+              <AppShell>{children}</AppShell>
+              <Toaster />
+            </AuthGuard>
+          </TooltipProvider>
+        </SWRProvider>
       </body>
     </html>
   );

@@ -6,8 +6,13 @@ import { todayStr } from "./utils";
 import type { Stats, Interview } from "@/types";
 
 export async function getStats(): Promise<Stats> {
-  const companies = await getAllCompanies();
-  const tasks = await getAllTasks();
+  // Fetch all data sources in parallel for maximum speed
+  const [companies, tasks, rawAllInterviews, rawAllESDocuments] = await Promise.all([
+    getAllCompanies(),
+    getAllTasks(),
+    getAllInterviews(),
+    getAllESDocuments(),
+  ]);
 
   const statusCounts: Record<string, number> = {};
   for (const company of companies) {
@@ -36,10 +41,8 @@ export async function getStats(): Promise<Stats> {
     結果待ち: 0,
   };
 
-  const [rawAllInterviews, rawAllESDocuments] = await Promise.all([
-    getAllInterviews(),
-    getAllESDocuments(),
-  ]);
+
+
 
   const companyMap = new Map(companies.map(c => [c.slug, c]));
 
