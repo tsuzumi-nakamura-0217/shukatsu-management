@@ -29,12 +29,18 @@ export function useLocalSync() {
     try {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
+        // If it's a known refresh token error, we don't need a scary warning, just log info
+        if (error.message.includes("Refresh Token Not Found") || 
+            error.message.includes("Invalid Refresh Token")) {
+          console.info(`[Sync] Session is invalid or expired. Skipping background sync.`);
+          return;
+        }
         console.warn(`[Sync] Failed to get session (${reason}):`, error.message);
         return;
       }
       session = data.session;
     } catch (e) {
-      console.warn(`[Sync] Unexpected error during session retrieval (${reason})`);
+      console.warn(`[Sync] Unexpected error during session retrieval (${reason})`, e);
       return;
     }
 

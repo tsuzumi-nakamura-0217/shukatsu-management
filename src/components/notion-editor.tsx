@@ -6,7 +6,6 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import { Image } from "@tiptap/extension-image";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { useEffect, useRef, useCallback } from "react";
 import {
@@ -29,7 +28,24 @@ import {
   TableCellsMerge,
   Plus,
   Trash2,
+  Columns2,
+  Columns3,
 } from "lucide-react";
+
+// Editor extensions
+import { ResizableImage } from "./editor/resizable-image";
+import { Columns, Column, ColumnsCommand } from "./editor/column-extension";
+import {
+  SlashCommand,
+  setImageUploadHandler,
+  slashCommandItems,
+} from "./editor/slash-command";
+import { SlashCommandList } from "./editor/slash-command-list";
+import type { SlashCommandItem } from "./editor/slash-command";
+
+import { ReactRenderer } from "@tiptap/react";
+import tippy, { type Instance as TippyInstance } from "tippy.js";
+import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
 // ── ツールバーボタン ──────────────────────────────
 function ToolbarButton({
@@ -100,6 +116,24 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
     return { type: "doc" as const, content: paragraphs };
   };
 
+  // editorRefで最新のeditorインスタンスを常に参照できるようにする
+  const editorRef = useRef<any>(null);
+
+  // 画像ファイル → base64 → エディタに挿入
+  const insertImageFromFile = useCallback(
+    (file: File) => {
+      const ed = editorRef.current;
+      if (!ed) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        ed.chain().focus().setImage({ src: base64 }).run();
+      };
+      reader.readAsDataURL(file);
+    },
+    []
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -109,9 +143,66 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
       TableRow,
       TableCell,
       TableHeader,
-      Image.configure({ allowBase64: true, inline: false }),
+      ResizableImage,
+      Columns,
+      Column,
+      ColumnsCommand,
       Placeholder.configure({
         placeholder: "メモを入力してください… (/ でコマンド)",
+      }),
+      SlashCommand.configure({
+        suggestion: {
+          items: ({ query }: { query: string }) => {
+            return slashCommandItems.filter((item: SlashCommandItem) =>
+              item.title.toLowerCase().includes(query.toLowerCase())
+            );
+          },
+          render: () => {
+            let component: ReactRenderer<any> | null = null;
+            let popup: TippyInstance[] | null = null;
+
+            return {
+              onStart: (props: SuggestionProps<SlashCommandItem>) => {
+                component = new ReactRenderer(SlashCommandList, {
+                  props,
+                  editor: props.editor,
+                });
+
+                if (!props.clientRect) return;
+
+                popup = tippy("body", {
+                  getReferenceClientRect: props.clientRect as () => DOMRect,
+                  appendTo: () => document.body,
+                  content: component.element,
+                  showOnCreate: true,
+                  interactive: true,
+                  trigger: "manual",
+                  placement: "bottom-start",
+                  animation: false,
+                });
+              },
+              onUpdate: (props: SuggestionProps<SlashCommandItem>) => {
+                component?.updateProps(props);
+                if (popup && props.clientRect) {
+                  popup[0]?.setProps({
+                    getReferenceClientRect: props.clientRect as () => DOMRect,
+                  });
+                }
+              },
+              onKeyDown: (props: SuggestionKeyDownProps) => {
+                if (props.event.key === "Escape") {
+                  popup?.[0]?.hide();
+                  return true;
+                }
+                return (component?.ref as any)?.onKeyDown?.(props) || false;
+              },
+              onExit: () => {
+                popup?.[0]?.destroy();
+                component?.destroy();
+              },
+            };
+          },
+        },
       }),
     ],
     content: parseContent(content),
@@ -155,6 +246,21 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
     },
   });
 
+  // editorRefを最新のeditorインスタンスでSync
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
+  // 画像アップロードハンドラをSlashCommandに登録
+  useEffect(() => {
+    setImageUploadHandler(() => {
+      fileInputRef.current?.click();
+    });
+    return () => {
+      setImageUploadHandler(() => {});
+    };
+  }, []);
+
   // 外部からの content 変更を反映（初回ロード後のfetch等）
   useEffect(() => {
     if (!editor || isInternalUpdate.current) {
@@ -173,20 +279,6 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
       editor.setEditable(!readOnly);
     }
   }, [readOnly, editor]);
-
-  // 画像ファイル → base64 → エディタに挿入
-  const insertImageFromFile = useCallback(
-    (file: File) => {
-      if (!editor) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result as string;
-        editor.chain().focus().setImage({ src: base64 }).run();
-      };
-      reader.readAsDataURL(file);
-    },
-    [editor]
-  );
 
   const handleImageUpload = () => {
     fileInputRef.current?.click();
@@ -343,6 +435,22 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
             </ToolbarButton>
           </>
         )}
+
+        <ToolbarDivider />
+
+        {/* カラムレイアウト */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().insertColumns(2).run()}
+          title="2カラムレイアウト"
+        >
+          <Columns2 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().insertColumns(3).run()}
+          title="3カラムレイアウト"
+        >
+          <Columns3 className="h-4 w-4" />
+        </ToolbarButton>
 
         <ToolbarDivider />
 

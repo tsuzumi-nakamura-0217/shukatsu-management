@@ -28,6 +28,7 @@
     "@tiptap/pm": "^3.20.1",
     "@tiptap/react": "^3.20.1",
     "@tiptap/starter-kit": "^3.20.1",
+    "@tiptap/suggestion": "^3.22.1",
     "@uiw/react-md-editor": "^4.0.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -48,6 +49,7 @@
     "sonner": "^2.0.7",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
+    "tippy.js": "^6.3.7",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

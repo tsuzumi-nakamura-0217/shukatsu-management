@@ -336,18 +336,107 @@
   pointer-events: none;
 }
 
-/* 画像 */
-.notion-editor-content img {
+/* ── リサイズ可能な画像 ── */
+.resizable-image-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 0.75rem 0;
+  line-height: 0;
+}
+
+.resizable-image-wrapper img {
   max-width: 100%;
   height: auto;
   border-radius: 0.5rem;
-  margin: 0.75rem 0;
   cursor: default;
+  display: block;
 }
 
-.notion-editor-content img.ProseMirror-selectednode {
+.resizable-image-wrapper.is-selected img {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+.resizable-image-wrapper .resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  color: var(--muted-foreground);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.resizable-image-wrapper:hover .resize-handle,
+.resizable-image-wrapper.is-selected .resize-handle,
+.resizable-image-wrapper.is-resizing .resize-handle {
+  opacity: 1;
+}
+
+.resizable-image-wrapper.is-resizing .resize-handle {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+/* ── カラムレイアウト ── */
+.notion-editor-content .columns-layout {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+  min-height: 60px;
+}
+
+.notion-editor-content .columns-layout[data-columns="2"] {
+  grid-template-columns: 1fr 1fr;
+}
+
+.notion-editor-content .columns-layout[data-columns="3"] {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.notion-editor-content .column-block {
+  border: 1.5px dashed var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  min-height: 60px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.notion-editor-content .column-block:hover {
+  border-color: var(--primary);
+  background: oklch(0.98 0.005 250 / 30%);
+}
+
+.notion-editor-content .column-block:focus-within {
+  border-color: var(--primary);
+  background: oklch(0.98 0.005 250 / 40%);
+}
+
+.notion-editor-content .column-block > *:first-child {
+  margin-top: 0;
+}
+
+.notion-editor-content .column-block > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive: stack columns on small screens */
+@media (max-width: 640px) {
+  .notion-editor-content .columns-layout {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* プレースホルダー */
@@ -390,4 +479,96 @@
 
 .notion-editor-content .resize-cursor {
   cursor: col-resize;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Slash Command Menu
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.slash-command-menu {
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 0.375rem;
+  max-height: 320px;
+  overflow-y: auto;
+  min-width: 240px;
+  z-index: 9999;
+}
+
+.slash-command-empty {
+  padding: 0.75rem 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.slash-command-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.1s;
+  color: var(--foreground);
+}
+
+.slash-command-item:hover,
+.slash-command-item.is-selected {
+  background: var(--accent);
+}
+
+.slash-command-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  background: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  color: var(--foreground);
+}
+
+.slash-command-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.slash-command-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.slash-command-description {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+
+/* Tippy.js reset – ensure no extra padding */
+.tippy-box {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.tippy-content {
+  padding: 0 !important;
+}
+
+.tippy-arrow {
+  display: none !important;
 }

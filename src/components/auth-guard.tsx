@@ -20,14 +20,34 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     let mounted = true;
     const supabaseBrowser = getSupabaseBrowserClient();
 
-    supabaseBrowser.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      if (!data.session) {
-        router.replace("/login");
-        return;
-      }
-      setReady(true);
-    });
+    supabaseBrowser.auth.getSession()
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        
+        if (error) {
+          console.error("Auth session error:", error.message);
+          // If the refresh token is missing or invalid, clear everything and go to login
+          if (error.message.includes("Refresh Token Not Found") || 
+              error.message.includes("Invalid Refresh Token")) {
+            supabaseBrowser.auth.signOut().finally(() => {
+              router.replace("/login");
+            });
+            return;
+          }
+        }
+
+        if (!data.session) {
+          router.replace("/login");
+          return;
+        }
+        setReady(true);
+      })
+      .catch((err) => {
+        console.error("Unexpected auth error:", err);
+        if (mounted) {
+          router.replace("/login");
+        }
+      });
 
     const {
       data: { subscription },

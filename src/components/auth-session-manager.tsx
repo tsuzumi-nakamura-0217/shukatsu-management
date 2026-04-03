@@ -28,10 +28,23 @@ export function AuthSessionManager() {
     let cachedAccessToken: string | null = null;
 
     // Initialize token immediately
-    supabaseBrowser.auth.getSession().then(({ data }) => {
-      cachedAccessToken = data.session?.access_token ?? null;
-      updateTokenCookie(cachedAccessToken);
-    });
+    supabaseBrowser.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("AuthSessionManager session error:", error.message);
+          // If token is invalid, we don't clear it here (AuthGuard will handle logout),
+          // but we ensure cachedAccessToken is null.
+          cachedAccessToken = null;
+        } else {
+          cachedAccessToken = data.session?.access_token ?? null;
+        }
+        updateTokenCookie(cachedAccessToken);
+      })
+      .catch((err) => {
+        console.error("AuthSessionManager unexpected error:", err);
+        cachedAccessToken = null;
+        updateTokenCookie(null);
+      });
 
     // Update cached token on auth state changes
     const {
