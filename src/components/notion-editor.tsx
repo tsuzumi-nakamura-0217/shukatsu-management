@@ -30,11 +30,13 @@ import {
   Trash2,
   Columns2,
   Columns3,
+  ChevronDown,
 } from "lucide-react";
 
 // Editor extensions
 import { ResizableImage } from "./editor/resizable-image";
 import { Columns, Column, ColumnsCommand } from "./editor/column-extension";
+import { Toggle, ToggleSummary, ToggleContent } from "./editor/toggle-extension";
 import {
   SlashCommand,
   setImageUploadHandler,
@@ -147,6 +149,9 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
       Columns,
       Column,
       ColumnsCommand,
+      Toggle,
+      ToggleSummary,
+      ToggleContent,
       Placeholder.configure({
         placeholder: "メモを入力してください… (/ でコマンド)",
       }),
@@ -450,6 +455,35 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
           title="3カラムレイアウト"
         >
           <Columns3 className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarDivider />
+
+        {/* トグル */}
+        <ToolbarButton
+          onClick={() =>
+            editor
+              .chain()
+              .focus()
+              .insertContent({
+                type: "toggle",
+                content: [
+                  {
+                    type: "toggleSummary",
+                    content: [{ type: "text", text: "トグル" }],
+                  },
+                  {
+                    type: "toggleContent",
+                    content: [{ type: "paragraph" }],
+                  },
+                ],
+              })
+              .run()
+          }
+          isActive={editor.isActive("toggle")}
+          title="トグルブロック"
+        >
+          <ChevronDown className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarDivider />

@@ -126,6 +126,30 @@ export const slashCommandItems: SlashCommandItem[] = [
       editor.chain().focus().toggleCodeBlock().run();
     },
   },
+  {
+    title: "トグル",
+    description: "開閉可能なブロック",
+    icon: "▶",
+    command: (editor) => {
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "toggle",
+          content: [
+            {
+              type: "toggleSummary",
+              content: [{ type: "text", text: "トグル" }],
+            },
+            {
+              type: "toggleContent",
+              content: [{ type: "paragraph" }],
+            },
+          ],
+        })
+        .run();
+    },
+  },
 ];
 
 export const SlashCommand = Extension.create({
