@@ -190,6 +190,13 @@ export default function CompanyDetailPage({
   };
 
   const handleUpdateStatus = async (status: string) => {
+    // 楽観的アップデートを行い、AutoSaveによる巻き戻りを防ぐ
+    setEditingCompany(prev => ({ ...prev, status }));
+    mutateDetail(
+      (current) => current ? { ...current, company: { ...current.company, status } as Company } : current,
+      { revalidate: false }
+    );
+
     const res = await fetch(`/api/companies/${slug}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
