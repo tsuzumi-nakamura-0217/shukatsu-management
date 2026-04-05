@@ -79,6 +79,7 @@ export interface InterviewCreate {
   date: string;
   location?: string;
   result?: string;
+  memo?: string;
 }
 
 // イベント記録の型定義

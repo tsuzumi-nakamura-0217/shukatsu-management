@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Plus, Search, LayoutGrid, List, Loader2, Building2, MapPin, Tag, Filter, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, Loader2, Building2, MapPin, Tag, Filter, CheckCircle2, XCircle, Clock, Calendar, Flag, Bell } from "lucide-react";
 import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import {
   Card,
@@ -31,10 +31,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { StatusBadge, TagBadge, statusColors } from "@/components/badges";
-import { cn, isFuzzyDatePassed } from "@/lib/utils";
+import { cn, isFuzzyDatePassed, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Company, AppConfig, Task } from "@/types";
-import { useCompanies, useTasks, useConfig } from "@/hooks/use-api";
+import { useCompanies, useTasks, useConfig, useEvents } from "@/hooks/use-api";
 
 export default function CompaniesPage() {
   const searchParams = useSearchParams();
@@ -43,6 +43,7 @@ export default function CompaniesPage() {
   const { companies, mutate: mutateCompanies } = useCompanies();
   const { config } = useConfig();
   const { tasks } = useTasks();
+  const { events } = useEvents();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -450,70 +451,109 @@ export default function CompaniesPage() {
                     </div>
                   </div>
                 </CardHeader>
+                  <CardContent className="px-4 pb-4 pt-1 mt-auto relative z-10 flex flex-col gap-2">
+                   {/* Status Items Unified Container */}
+                   <div className="space-y-1.5">
+                     {/* Event Item */}
+                     {(() => {
+                       const now = new Date();
+                       const nextEvent = events
+                         .filter(e => e.companySlug === company.slug && new Date(e.date) >= now)
+                         .sort((a, b) => a.date.localeCompare(b.date))[0];
 
-                <CardContent className="px-4 pb-4 pt-1 mt-auto relative z-10">
-                  {/* Next Deadline Section */}
-                  <div className="mb-2.5 space-y-1">
-                    {(() => {
-                      const nextTask = tasks
-                        .filter(t => t.companySlug === company.slug && t.status !== "完了" && t.deadline)
-                        .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
+                       if (!nextEvent) return null;
 
-                      if (!nextTask) return <div className="h-[38px]" />;
+                       return (
+                         <div className="group/item flex items-center gap-2 p-1.5 rounded-lg bg-purple-500/5 border border-purple-500/10 transition-all hover:bg-purple-500/10">
+                           <div className="h-5 w-5 rounded-md bg-purple-500/10 flex items-center justify-center shrink-0">
+                             <Calendar className="h-3 w-3 text-purple-600" />
+                           </div>
+                           <div className="min-w-0 flex-grow">
+                             <div className="flex items-center justify-between gap-1 mb-0.5">
+                               <span className="text-[7px] font-black uppercase tracking-widest text-purple-600/70">Next Event</span>
+                               <span className="text-[8px] font-bold text-purple-600 bg-purple-500/10 px-1 rounded truncate">
+                                 {formatDate(nextEvent.date)}
+                               </span>
+                             </div>
+                             <p className="text-[10px] font-bold text-foreground line-clamp-1 leading-none">
+                               {nextEvent.title}
+                             </p>
+                           </div>
+                         </div>
+                       );
+                     })()}
 
-                      return (
-                        <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-primary/5 border border-primary/10 transition-colors group-hover:bg-primary/10">
-                          <div className="flex items-center justify-between text-[8px] font-bold uppercase tracking-wider text-primary/70">
-                            <span>Next Deadline</span>
-                            <span className="text-primary">
-                              {nextTask.deadline.split('T')[0]}
+                     {/* Deadline Item */}
+                     {(() => {
+                       const nextTask = tasks
+                         .filter(t => t.companySlug === company.slug && t.status !== "完了" && t.deadline)
+                         .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
+
+                       if (!nextTask) return null;
+
+                       return (
+                         <div className="group/item flex items-center gap-2 p-1.5 rounded-lg bg-primary/5 border border-primary/10 transition-all hover:bg-primary/10">
+                           <div className="h-5 w-5 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                             <Bell className="h-3 w-3 text-primary" />
+                           </div>
+                           <div className="min-w-0 flex-grow">
+                             <div className="flex items-center justify-between gap-1 mb-0.5">
+                               <span className="text-[7px] font-black uppercase tracking-widest text-primary/70">Deadline</span>
+                               <span className="text-[8px] font-bold text-primary bg-primary/10 px-1 rounded truncate">
+                                 {formatDate(nextTask.deadline)}
+                               </span>
+                             </div>
+                             <p className="text-[10px] font-bold text-foreground line-clamp-1 leading-none">
+                               {nextTask.title}
+                             </p>
+                           </div>
+                         </div>
+                       );
+                     })()}
+
+                     {/* Result Item */}
+                     {company.expectedResultPeriod && (
+                       <div className={cn(
+                         "flex items-center gap-2 p-1.5 rounded-lg border transition-all",
+                         isFuzzyDatePassed(company.expectedResultPeriod)
+                           ? "bg-muted/10 border-transparent opacity-50 grayscale"
+                           : "bg-orange-500/5 border-orange-500/10 hover:bg-orange-500/10"
+                       )}>
+                         <div className={cn(
+                           "h-5 w-5 rounded-md flex items-center justify-center shrink-0",
+                           isFuzzyDatePassed(company.expectedResultPeriod) ? "bg-muted/20" : "bg-orange-500/10"
+                         )}>
+                           <Flag className={cn("h-3 w-3", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600")} />
+                         </div>
+                         <div className="min-w-0 flex-grow">
+                            <span className={cn("text-[7px] font-black uppercase tracking-widest block leading-none mb-1", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70")}>Result Expected</span>
+                            <span className={cn("text-[10px] font-bold leading-none truncate", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-700")}>
+                               {company.expectedResultPeriod}
                             </span>
-                          </div>
-                          <p className="text-[10px] font-bold text-foreground line-clamp-1">
-                            {nextTask.title}
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                         </div>
+                       </div>
+                     )}
+                   </div>
 
-                  {/* Expected Result Period Section */}
-                  {company.expectedResultPeriod && (
-                    <div className={cn(
-                      "mb-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500 transition-all",
-                      isFuzzyDatePassed(company.expectedResultPeriod)
-                        ? "bg-muted/30 border-transparent opacity-40 grayscale"
-                        : "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20"
-                    )}>
-                      <Clock className={cn("h-3.5 w-3.5", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600 dark:text-orange-400")} />
-                      <div className="flex flex-col">
-                        <span className={cn("text-[7px] font-bold uppercase tracking-tighter leading-none", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70 dark:text-orange-400/70")}>Result Expected</span>
-                        <span className={cn("text-[10px] font-black truncate leading-tight", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-700 dark:text-orange-300")}>
-                          {company.expectedResultPeriod}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-2.5 border-t border-white/10 dark:border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex items-center gap-0.5">
-                        {[...Array(5)].map((_, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "h-1 w-2 rounded-full transition-all duration-500",
-                              i < company.priority
-                                ? (company.priority >= 4 ? "bg-amber-500" : "bg-primary")
-                                : "bg-slate-200 dark:bg-slate-800"
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">Priority</span>
-                    </div>
-                  </div>
-                </CardContent>
+                   <div className="pt-2 border-t border-white/10 dark:border-white/5 flex items-center justify-between">
+                     <div className="flex items-center gap-1.5">
+                       <div className="flex items-center gap-0.5">
+                         {[...Array(5)].map((_, i) => (
+                           <div
+                             key={i}
+                             className={cn(
+                               "h-1 w-2 rounded-full transition-all duration-500",
+                               i < company.priority
+                                 ? (company.priority >= 4 ? "bg-amber-500" : "bg-primary")
+                                 : "bg-slate-200 dark:bg-slate-800"
+                             )}
+                           />
+                         ))}
+                       </div>
+                       <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">Priority</span>
+                     </div>
+                   </div>
+                 </CardContent>
               </Card>
             </Link>
           ))}
@@ -542,33 +582,53 @@ export default function CompaniesPage() {
                 </div>
                 <div className="flex items-center gap-6">
                   {(() => {
+                    const now = new Date();
+                    const nextEvent = events
+                      .filter(e => e.companySlug === company.slug && new Date(e.date) >= now)
+                      .sort((a, b) => a.date.localeCompare(b.date))[0];
+
+                    if (!nextEvent) return <div className="hidden lg:block w-44" />;
+
+                    return (
+                      <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/5 border border-purple-500/10 w-44 overflow-hidden">
+                        <Calendar className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                        <div className="flex-grow min-w-0">
+                          <p className="text-[10px] font-bold text-purple-600/70 uppercase tracking-tight leading-none mb-0.5">Event: {formatDate(nextEvent.date)}</p>
+                          <p className="text-xs font-bold text-foreground truncate">{nextEvent.title}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {(() => {
                     const nextTask = tasks
                       .filter(t => t.companySlug === company.slug && t.status !== "完了" && t.deadline)
                       .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
 
-                    if (!nextTask) return <div className="hidden md:block w-32" />;
+                    if (!nextTask) return <div className="hidden md:block w-48" />;
 
                     return (
-                      <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 w-48 overflow-hidden">
+                      <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 w-48 overflow-hidden">
+                        <Bell className="h-3.5 w-3.5 text-primary shrink-0" />
                         <div className="flex-grow min-w-0">
-                          <p className="text-[10px] font-bold text-primary/70 uppercase tracking-tight">Next: {nextTask.deadline}</p>
+                          <p className="text-[10px] font-bold text-primary/70 uppercase tracking-tight leading-none mb-0.5">Next: {formatDate(nextTask.deadline)}</p>
                           <p className="text-xs font-bold text-foreground truncate">{nextTask.title}</p>
                         </div>
                       </div>
                     );
                   })()}
 
-                  {company.expectedResultPeriod && (
+                   {company.expectedResultPeriod && (
                     <div className={cn(
                       "hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl border shadow-sm w-44 transition-all",
                       isFuzzyDatePassed(company.expectedResultPeriod)
-                        ? "bg-muted/30 border-transparent opacity-40 grayscale"
-                        : "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20"
+                        ? "bg-muted/10 border-transparent opacity-50 grayscale"
+                        : "bg-orange-500/5 border-orange-500/10"
                     )}>
-                      <Clock className={cn("h-3.5 w-3.5 shrink-0", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600 dark:text-orange-400")} />
+                      <Flag className={cn("h-3.5 w-3.5 shrink-0", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600")} />
                       <div className="flex flex-col min-w-0">
-                        <span className={cn("text-[7px] font-bold uppercase tracking-tighter leading-none", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70 dark:text-orange-400/70")}>Result Expected</span>
-                        <p className={cn("text-[10px] font-black truncate leading-tight", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-700 dark:text-orange-300")}>
+                        <span className={cn("text-[7px] font-black uppercase tracking-tighter leading-none mb-0.5", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70")}>Result Expected</span>
+                        <p className={cn("text-[10px] font-bold truncate leading-none", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-700")}>
                           {company.expectedResultPeriod}
                         </p>
                       </div>

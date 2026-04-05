@@ -61,6 +61,12 @@ export function useTasks() {
   return { tasks: data ?? (EMPTY_ARRAY as Task[]), error, isLoading, mutate };
 }
 
+// --- Events ---
+export function useEvents() {
+  const { data, error, isLoading, mutate } = useSWR<CompanyEvent[]>("/api/events");
+  return { events: data ?? (EMPTY_ARRAY as CompanyEvent[]), error, isLoading, mutate };
+}
+
 // --- Self Analysis ---
 export function useSelfAnalysis() {
   const { data, error, isLoading, mutate } = useSWR<SelfAnalysis[]>("/api/self-analysis");
