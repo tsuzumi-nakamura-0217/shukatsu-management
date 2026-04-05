@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import {
@@ -69,7 +70,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useCompanyDetail, invalidateStats, invalidateAllTasks } from "@/hooks/use-api";
-import type { Company, Task, Interview, ESDocument, AppConfig } from "@/types";
+import type { Company, Task, Interview, ESDocument, AppConfig, CompanyEvent } from "@/types";
 
 function normalizeDateTimeForCompare(value: string): string {
   if (!value) return "";
@@ -103,16 +104,18 @@ export default function CompanyDetailPage({
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "es";
   const {
-    company, tasks, interviews, esDocs, config,
+    company, tasks, interviews, esDocs, events, config,
     mutate: mutateDetail, revalidate,
   } = useCompanyDetail(slug);
   // Local state for tasks/interviews to allow optimistic updates
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [localInterviews, setLocalInterviews] = useState<Interview[]>([]);
   const [localEsDocs, setLocalEsDocs] = useState<ESDocument[]>([]);
+  const [localEvents, setLocalEvents] = useState<CompanyEvent[]>([]);
   useEffect(() => { setLocalTasks(tasks); }, [tasks]);
   useEffect(() => { setLocalInterviews(interviews); }, [interviews]);
   useEffect(() => { setLocalEsDocs(esDocs); }, [esDocs]);
+  useEffect(() => { setLocalEvents(events); }, [events]);
   const [editMode, setEditMode] = useState(false);
   const [memoContent, setMemoContent] = useState("");
   const [editingCompany, setEditingCompany] = useState<Partial<Company>>({});
@@ -122,23 +125,29 @@ export default function CompanyDetailPage({
   const [newTaskOpen, setNewTaskOpen] = useState(false);
   const [newInterviewOpen, setNewInterviewOpen] = useState(false);
   const [newEsOpen, setNewEsOpen] = useState(false);
+  const [newEventOpen, setNewEventOpen] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [isCreatingInterview, setIsCreatingInterview] = useState(false);
   const [isCreatingEs, setIsCreatingEs] = useState(false);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
   const [expandedEsIds, setExpandedEsIds] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CompanyEvent | null>(null);
   const [expandedInterviewIds, setExpandedInterviewIds] = useState<Set<string>>(new Set());
+  const [expandedEventIds, setExpandedEventIds] = useState<Set<string>>(new Set());
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [isSavingEs, setIsSavingEs] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [isSavingInterview, setIsSavingInterview] = useState(false);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
 
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
   const [newInterview, setNewInterview] = useState({ type: "", date: "", location: "", result: "結果待ち", memo: "" });
   const [newEs, setNewEs] = useState({ title: "", content: "", characterLimit: undefined as number | undefined, characterLimitType: "" as "程度" | "以下" | "未満" | "", status: "未提出" as "未提出" | "提出済" | "結果待ち" | "通過" | "落選" | "" });
+  const [newEvent, setNewEvent] = useState({ title: "", type: "説明会", date: "", endDate: "", location: "", memo: "" });
 
   const initializedCompanyId = useRef<string | null>(null);
 
@@ -353,6 +362,78 @@ export default function CompanyDetailPage({
     });
     toast.success("面接記録を削除しました");
     revalidate();
+  };
+
+  const handleCreateEvent = async () => {
+    if (isCreatingEvent) return;
+    setIsCreatingEvent(true);
+    try {
+      const res = await fetch(`/api/companies/${slug}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEvent),
+      });
+      if (res.ok) {
+        toast.success("イベントを追加しました");
+        setNewEventOpen(false);
+        setNewEvent({ title: "", type: "説明会", date: "", endDate: "", location: "", memo: "" });
+        revalidate();
+      }
+    } finally {
+      setIsCreatingEvent(false);
+    }
+  };
+
+  const handleSaveEvent = async (eventToSave?: CompanyEvent) => {
+    const target = eventToSave || editingEvent;
+    if (!target || isSavingEvent) return;
+    setIsSavingEvent(true);
+    try {
+      await fetch(`/api/companies/${slug}/events/${target.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(target),
+      });
+      revalidate();
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
+  useAutoSave({
+    enabled: !!editingEvent,
+    hasChanges: !!editingEvent && JSON.stringify(editingEvent) !== JSON.stringify(localEvents.find(e => e.id === editingEvent.id)),
+    onSave: () => handleSaveEvent(),
+    delay: 1500,
+    deps: [editingEvent],
+  });
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm("このイベントを削除しますか？")) return;
+    const res = await fetch(`/api/companies/${slug}/events/${id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      toast.success("イベントを削除しました");
+      if (editingEvent?.id === id) setEditingEvent(null);
+      revalidate();
+    }
+  };
+
+  const toggleEventExpand = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedEventIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        if (editingEvent?.id === id) setEditingEvent(null);
+      } else {
+        next.add(id);
+        const ev = localEvents.find(event => event.id === id);
+        if (ev) setEditingEvent(ev);
+      }
+      return next;
+    });
   };
 
   const handleCreateEs = async () => {
@@ -749,6 +830,9 @@ export default function CompanyDetailPage({
           </TabsTrigger>
           <TabsTrigger value="tasks" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
             <CheckSquare className="h-4 w-4" /> タスク
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
+            <CalendarIcon className="h-4 w-4" /> イベント
           </TabsTrigger>
           <TabsTrigger value="memo" className="gap-2 cursor-pointer hover:bg-muted/80 hover:text-foreground transition-all">
             <BookOpen className="h-4 w-4" /> 企業研究メモ
@@ -1444,6 +1528,190 @@ export default function CompanyDetailPage({
         </TabsContent>
 
         {/* Memo Tab */}
+        {/* Events Tab */}
+        <TabsContent value="events" className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-semibold">各種イベント（説明会・インターン等）</h3>
+            <Dialog open={newEventOpen} onOpenChange={setNewEventOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="transition-all"><Plus className="mr-2 h-4 w-4" /> 新規作成</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>イベントを追加</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>タイトル</Label>
+                    <Input value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} placeholder="1day サマーインターン等" />
+                  </div>
+                  <div>
+                    <Label>種類</Label>
+                    <Select
+                      value={newEvent.type}
+                      onValueChange={(val) => setNewEvent({ ...newEvent, type: val })}
+                    >
+                      <SelectTrigger className="cursor-pointer transition-all hover:shadow-md">
+                        <SelectValue placeholder="種類を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="説明会">説明会</SelectItem>
+                        <SelectItem value="サマーインターン">サマーインターン</SelectItem>
+                        <SelectItem value="秋冬インターン">秋冬インターン</SelectItem>
+                        <SelectItem value="座談会">座談会</SelectItem>
+                        <SelectItem value="その他">その他</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>開始日時</Label>
+                      <DateTimePicker
+                        date={newEvent.date ? new Date(newEvent.date) : undefined}
+                        onChange={(date) => setNewEvent({ ...newEvent, date: date?.toISOString() || "" })}
+                      />
+                    </div>
+                    <div>
+                      <Label>終了日時</Label>
+                      <DateTimePicker
+                        date={newEvent.endDate ? new Date(newEvent.endDate) : undefined}
+                        onChange={(date) => setNewEvent({ ...newEvent, endDate: date?.toISOString() || "" })}
+                        placeholder="終了日時（任意）"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>場所・URL</Label>
+                    <Input value={newEvent.location} onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })} placeholder="Zoom / 本社" />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={handleCreateEvent}
+                    disabled={isCreatingEvent || !newEvent.title || !newEvent.date}
+                  >
+                    {isCreatingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    追加
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          {localEvents.length === 0 ? (
+            <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">予定されているイベントはありません</p></CardContent></Card>
+          ) : (
+            <div className="space-y-4">
+              {localEvents.map((event) => {
+                const isExpanded = expandedEventIds.has(event.id);
+                const isEditing = editingEvent?.id === event.id;
+                
+                return (
+                  <Card key={event.id} className={cn("overflow-hidden transition-all duration-200 border", isEditing ? "ring-1 ring-primary/30 shadow-md bg-accent/5" : "hover:border-primary/20", "cursor-pointer")} onClick={(e) => toggleEventExpand(event.id, e)}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-1 flex-1">
+                          <div className="flex items-center gap-2">
+                             {isEditing ? (
+                               <Input
+                                 className="text-base font-semibold h-8 w-[200px]"
+                                 value={editingEvent.title}
+                                 onClick={(e) => e.stopPropagation()}
+                                 onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                               />
+                             ) : (
+                               <h4 className="text-base font-semibold">{event.title}</h4>
+                             )}
+                             {isEditing ? (
+                               <Select
+                                 value={editingEvent.type}
+                                 onValueChange={(val) => setEditingEvent({ ...editingEvent, type: val })}
+                               >
+                                 <SelectTrigger className="h-7 text-xs w-[120px]" onClick={(e) => e.stopPropagation()}>
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                    <SelectItem value="説明会">説明会</SelectItem>
+                                    <SelectItem value="サマーインターン">サマーインターン</SelectItem>
+                                    <SelectItem value="秋冬インターン">秋冬インターン</SelectItem>
+                                    <SelectItem value="座談会">座談会</SelectItem>
+                                    <SelectItem value="その他">その他</SelectItem>
+                                 </SelectContent>
+                               </Select>
+                             ) : (
+                               <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> {event.type}</Badge>
+                             )}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatDate(event.date)}
+                            {event.endDate && (
+                              <>
+                                <span className="mx-1">〜</span>
+                                {formatDate(event.endDate)}
+                              </>
+                            )}
+                          </div>
+                          {isSavingEvent && isEditing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    {isExpanded && (
+                       <div onClick={(e) => e.stopPropagation()}>
+                          <div className="px-6 py-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                 <Label className="text-xs mb-1 block">開始日時</Label>
+                                 <DateTimePicker
+                                   date={editingEvent?.date ? new Date(editingEvent.date) : event.date ? new Date(event.date) : undefined}
+                                   onChange={(date) => {
+                                      if (isEditing) setEditingEvent({ ...editingEvent, date: date?.toISOString() || "" });
+                                   }}
+                                 />
+                              </div>
+                              <div>
+                                 <Label className="text-xs mb-1 block">終了日時</Label>
+                                 <DateTimePicker
+                                   date={editingEvent?.endDate ? (editingEvent.endDate ? new Date(editingEvent.endDate) : undefined) : event.endDate ? new Date(event.endDate) : undefined}
+                                   onChange={(date) => {
+                                      if (isEditing) setEditingEvent({ ...editingEvent, endDate: date?.toISOString() || "" });
+                                   }}
+                                   placeholder="終了日時（任意）"
+                                 />
+                              </div>
+                              <div>
+                                 <Label className="text-xs mb-1 block">場所・URL</Label>
+                                 <Input 
+                                   value={isEditing ? editingEvent.location : event.location} 
+                                   onChange={(e) => { if (isEditing) setEditingEvent({ ...editingEvent, location: e.target.value }) }}
+                                   readOnly={!isEditing}
+                                 />
+                              </div>
+                          </div>
+                          
+                          {/* Rich Text Editor for Event Memo */}
+                          <div className="px-6 pb-6 pt-2">
+                             <Label className="text-xs mb-1 block">メモ</Label>
+                             <div className="min-h-[150px] border rounded-md">
+                               <NotionEditor
+                                  content={isEditing ? (editingEvent.memo || "") : (event.memo || "")}
+                                  onChange={(content) => {
+                                     if(isEditing) setEditingEvent({...editingEvent, memo: content});
+                                  }}
+                               />
+                             </div>
+                          </div>
+                       </div>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="memo" className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">企業研究メモ</h3>

@@ -1,11 +1,13 @@
 import { getAllCompanies } from "./companies";
 import { getAllTasks } from "./tasks";
 import { getAllInterviews } from "./interviews";
+import { getAllEvents } from "./events";
 
 export type CalendarEvent = {
   id: string;
   title: string;
   date: string;
+  end?: string;
   type: string;
   companySlug: string;
   companyName: string;
@@ -21,10 +23,10 @@ export async function getCalendarEvents(options?: {
   const tasks = await getAllTasks();
   const events: CalendarEvent[] = [];
 
-  // Interviews
-  const allInterviews = await getAllInterviews();
   const companyMap = new Map(companies.map(c => [c.slug, c]));
 
+  // Interviews
+  const allInterviews = await getAllInterviews();
   for (const interview of allInterviews) {
     const company = companyMap.get(interview.companySlug);
     if (!company) continue;
@@ -37,6 +39,24 @@ export async function getCalendarEvents(options?: {
       companySlug: company.slug,
       companyName: company.name,
       color: "#3b82f6", // blue
+    });
+  }
+
+  // Company Events (Information sessions, Internships, etc.)
+  const allCompanyEvents = await getAllEvents();
+  for (const ev of allCompanyEvents) {
+    const company = companyMap.get(ev.companySlug);
+    if (!company) continue;
+
+    events.push({
+      id: ev.id,
+      title: `${company.name} - ${ev.title}`,
+      date: ev.date,
+      end: ev.endDate || undefined,
+      type: "event",
+      companySlug: company.slug,
+      companyName: company.name,
+      color: "#a855f7", // purple
     });
   }
 

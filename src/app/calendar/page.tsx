@@ -14,12 +14,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/data/calendar";
 
-type FilterKey = "deadline" | "es" | "interview" | "completed";
+type FilterKey = "deadline" | "es" | "interview" | "event" | "completed";
 
 const FILTER_CONFIG: { key: FilterKey; label: string; dotColor: string; description: string }[] = [
   { key: "deadline", label: "締切", dotColor: "bg-red-500", description: "タスクの締切日" },
   { key: "es", label: "ES", dotColor: "bg-amber-500", description: "ES関連タスク" },
   { key: "interview", label: "面接", dotColor: "bg-blue-500", description: "面接スケジュール" },
+  { key: "event", label: "イベント", dotColor: "bg-purple-500", description: "説明会・インターン等" },
   { key: "completed", label: "完了済み", dotColor: "bg-emerald-500", description: "完了タスクも表示" },
 ];
 
@@ -30,6 +31,7 @@ export default function CalendarPage() {
     deadline: true,
     es: true,
     interview: true,
+    event: true,
     completed: false,
   });
 
@@ -51,12 +53,14 @@ export default function CalendarPage() {
         if (e.type === "deadline" && !filters.deadline) return false;
         if (e.type === "es" && !filters.es) return false;
         if (e.type === "interview" && !filters.interview) return false;
+        if (e.type === "event" && !filters.event) return false;
         return true;
       })
       .map((e) => ({
         id: e.id,
         title: e.title,
         start: e.date,
+        end: e.end,
         backgroundColor: e.status === "完了" ? "#6b7280" : e.color || "var(--primary)",
         borderColor: "transparent",
         extendedProps: { ...e },
@@ -65,6 +69,7 @@ export default function CalendarPage() {
           ...(e.type === "deadline" && e.status !== "完了" ? ["calendar-event-deadline"] : []),
           ...(e.type === "es" && e.status !== "完了" ? ["calendar-event-es"] : []),
           ...(e.type === "interview" ? ["calendar-event-interview"] : []),
+          ...(e.type === "event" ? ["calendar-event-enterprise"] : []),
         ],
       }));
   }, [rawEvents, filters]);
@@ -196,6 +201,11 @@ export default function CalendarPage() {
             color: #ffffff !important;
             border: 1px solid #1d4ed8 !important;
           }
+          .fc .fc-event.calendar-event-enterprise {
+            background: #a855f7 !important;
+            color: #ffffff !important;
+            border: 1px solid #9333ea !important;
+          }
           .fc .fc-event.calendar-event-completed {
             background: #6b7280 !important;
             color: #e5e7eb !important;
@@ -221,6 +231,10 @@ export default function CalendarPage() {
             background: #1d4ed8 !important;
             border-color: #1e40af !important;
           }
+          .dark .fc .fc-event.calendar-event-enterprise {
+            background: #7e22ce !important;
+            border-color: #6b21a8 !important;
+          }
           .dark .fc .fc-event.calendar-event-completed {
             background: #4b5563 !important;
             color: #9ca3af !important;
@@ -245,6 +259,7 @@ export default function CalendarPage() {
               if (type === "interview") tab = "interviews";
               if (type === "deadline") tab = "tasks";
               if (type === "es") tab = "es";
+              if (type === "event") tab = "events";
               
               router.push(`/companies/${companySlug}?tab=${tab}`);
             }

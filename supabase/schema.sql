@@ -138,6 +138,7 @@ ALTER TABLE self_analysis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tips ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_events ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY companies_owner_policy ON companies
   FOR ALL USING (auth.uid() = user_id)
@@ -173,3 +174,7 @@ CREATE POLICY config_read_shared_policy ON config
 CREATE POLICY config_write_owner_policy ON config
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY company_events_owner_policy ON company_events
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));

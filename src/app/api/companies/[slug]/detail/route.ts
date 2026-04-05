@@ -6,6 +6,7 @@ import { getAllTasks } from "@/lib/data/tasks";
 import { getInterviews } from "@/lib/data/interviews";
 import { getESDocuments } from "@/lib/data/es";
 import { getConfig } from "@/lib/data/config";
+import { getEvents } from "@/lib/data/events";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
 /**
@@ -28,13 +29,14 @@ export async function GET(
       }
 
       // Fetch all related data in parallel
-      const [tasks, interviews, esDocs, config] = await Promise.all([
+      const [tasks, interviews, esDocs, config, events] = await Promise.all([
         getAllTasks().then((all) =>
           all.filter((t) => t.companySlug === slug)
         ),
         getInterviews(slug),
         getESDocuments(slug),
         getConfig(),
+        getEvents(slug),
       ]);
 
       return NextResponse.json({
@@ -42,6 +44,7 @@ export async function GET(
         tasks,
         interviews,
         esDocs,
+        events,
         config,
       });
     } catch {

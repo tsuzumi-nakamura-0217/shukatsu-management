@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate as globalMutate } from "swr";
-import type { Stats, Company, Task, Interview, ESDocument, AppConfig, SelfAnalysis } from "@/types";
+import type { Stats, Company, Task, Interview, ESDocument, AppConfig, SelfAnalysis, CompanyEvent } from "@/types";
 
 const EMPTY_ARRAY: any[] = [];
 
@@ -29,6 +29,7 @@ interface CompanyDetailData {
   tasks: Task[];
   interviews: Interview[];
   esDocs: ESDocument[];
+  events: CompanyEvent[];
   config: AppConfig;
 }
 
@@ -42,6 +43,7 @@ export function useCompanyDetail(slug: string) {
     tasks: data?.tasks ?? (EMPTY_ARRAY as Task[]),
     interviews: data?.interviews ?? (EMPTY_ARRAY as Interview[]),
     esDocs: data?.esDocs ?? (EMPTY_ARRAY as ESDocument[]),
+    events: data?.events ?? (EMPTY_ARRAY as CompanyEvent[]),
     config: data?.config ?? null,
     error,
     isLoading,

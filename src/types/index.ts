@@ -79,6 +79,29 @@ export interface InterviewCreate {
   date: string;
   location?: string;
   result?: string;
+}
+
+// イベント記録の型定義
+export interface CompanyEvent {
+  id: string;
+  companyId: string;
+  companySlug: string;
+  title: string;
+  type: string; // "説明会", "サマーインターン", etc.
+  date: string;
+  endDate?: string;
+  location: string;
+  memo: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CompanyEventCreate {
+  title: string;
+  type: string;
+  date: string;
+  endDate?: string;
+  location?: string;
   memo?: string;
 }
 
