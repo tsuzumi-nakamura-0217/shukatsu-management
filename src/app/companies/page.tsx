@@ -514,7 +514,7 @@ export default function CompaniesPage() {
                      {/* Result Item */}
                      {company.expectedResultPeriod && (
                        <div className={cn(
-                         "flex items-center gap-2 p-1.5 rounded-lg border transition-all",
+                         "group/item flex items-center gap-2 p-1.5 rounded-lg border transition-all",
                          isFuzzyDatePassed(company.expectedResultPeriod)
                            ? "bg-muted/10 border-transparent opacity-50 grayscale"
                            : "bg-orange-500/5 border-orange-500/10 hover:bg-orange-500/10"
@@ -526,10 +526,15 @@ export default function CompaniesPage() {
                            <Flag className={cn("h-3 w-3", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600")} />
                          </div>
                          <div className="min-w-0 flex-grow">
-                            <span className={cn("text-[7px] font-black uppercase tracking-widest block leading-none mb-1", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70")}>Result Expected</span>
-                            <span className={cn("text-[10px] font-bold leading-none truncate", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-700")}>
-                               {company.expectedResultPeriod}
-                            </span>
+                            <div className="flex items-center justify-between gap-1 mb-0.5">
+                              <span className={cn("text-[7px] font-black uppercase tracking-widest", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70")}>Result Expected</span>
+                              <span className={cn("text-[8px] font-bold px-1 rounded truncate", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground bg-muted/20" : "text-orange-600 bg-orange-500/10")}>
+                                 {company.expectedResultPeriod}
+                              </span>
+                            </div>
+                            <p className={cn("text-[10px] font-bold line-clamp-1 leading-none", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-foreground")}>
+                               結果通知予定
+                            </p>
                          </div>
                        </div>
                      )}
@@ -627,9 +632,11 @@ export default function CompaniesPage() {
                     )}>
                       <Flag className={cn("h-3.5 w-3.5 shrink-0", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600")} />
                       <div className="flex flex-col min-w-0">
-                        <span className={cn("text-[7px] font-black uppercase tracking-tighter leading-none mb-0.5", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70")}>Result Expected</span>
-                        <p className={cn("text-[10px] font-bold truncate leading-none", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-700")}>
-                          {company.expectedResultPeriod}
+                        <p className={cn("text-[10px] font-bold uppercase tracking-tight leading-none mb-0.5", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-orange-600/70")}>
+                          Result: {company.expectedResultPeriod}
+                        </p>
+                        <p className={cn("text-xs font-bold truncate", isFuzzyDatePassed(company.expectedResultPeriod) ? "text-muted-foreground" : "text-foreground")}>
+                          結果通知予定
                         </p>
                       </div>
                     </div>
