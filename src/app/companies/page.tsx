@@ -60,6 +60,7 @@ export default function CompaniesPage() {
     mypageUrl: "",
     loginId: "",
     password: "",
+    examId: "",
     location: "",
     priority: 3,
     expectedResultPeriod: "",
@@ -95,6 +96,7 @@ export default function CompaniesPage() {
           mypageUrl: "",
           loginId: "",
           password: "",
+          examId: "",
           location: "",
           priority: 3,
           expectedResultPeriod: "",
@@ -264,6 +266,59 @@ export default function CompaniesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="mypageUrl" className="font-bold ml-1">マイページURL</Label>
+                  <Input
+                    id="mypageUrl"
+                    value={newCompany.mypageUrl}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, mypageUrl: e.target.value })
+                    }
+                    placeholder="https://mypage.example.com"
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="examId" className="font-bold ml-1">受験ID</Label>
+                  <Input
+                    id="examId"
+                    value={newCompany.examId}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, examId: e.target.value })
+                    }
+                    placeholder="Webテスト用受験ID"
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="loginId" className="font-bold ml-1">ログインID</Label>
+                  <Input
+                    id="loginId"
+                    value={newCompany.loginId}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, loginId: e.target.value })
+                    }
+                    placeholder="ID / メールアドレス"
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password" title="パスワードは暗号化されて保存されます" className="font-bold ml-1">パスワード</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newCompany.password}
+                    onChange={(e) =>
+                      setNewCompany({ ...newCompany, password: e.target.value })
+                    }
+                    placeholder="••••••••"
+                    className="rounded-xl"
+                  />
                 </div>
               </div>
               <div className="grid gap-2">

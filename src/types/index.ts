@@ -8,6 +8,7 @@ export interface Company {
   mypageUrl: string;
   loginId: string;
   password: string;
+  examId: string; // Add this
   location: string;
   status: string;
   priority: number; // 1-5
@@ -26,6 +27,7 @@ export interface CompanyCreate {
   mypageUrl?: string;
   loginId?: string;
   password?: string;
+  examId?: string; // Add this
   location?: string;
   status?: string;
   priority?: number;

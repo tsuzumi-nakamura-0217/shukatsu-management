@@ -217,6 +217,40 @@ export default function CompanyDetailPage({
     }
   };
 
+  const handleMypageClick = async () => {
+    if (!company) return;
+    
+    const loginId = company.loginId || "";
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(loginId);
+        if (loginId) {
+          toast.success("ログインIDをコピーしました");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to copy login ID:", err);
+    }
+    
+    if (company.mypageUrl) {
+      window.open(company.mypageUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleCopyExamId = async () => {
+    if (!company?.examId) return;
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(company.examId);
+        toast.success("受験IDをコピーしました");
+      } else {
+        toast.error("この接続環境ではクリップボードへのコピーが制限されています（HTTPSまたはlocalhostが必要です）");
+      }
+    } catch (err) {
+      console.error("Failed to copy exam ID:", err);
+    }
+  };
+
   const handleCreateTask = async () => {
     if (isCreatingTask) return;
     setIsCreatingTask(true);
@@ -633,10 +667,13 @@ export default function CompanyDetailPage({
             </Button>
           )}
           {company.mypageUrl && (
-            <Button variant="outline" size="sm" asChild className="h-8 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300">
-              <a href={company.mypageUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> マイページ
-              </a>
+            <Button variant="outline" size="sm" onClick={handleMypageClick} className="h-8 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300">
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> マイページ
+            </Button>
+          )}
+          {company.examId && (
+            <Button variant="outline" size="sm" onClick={handleCopyExamId} className="h-8 border-amber-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300">
+              <Copy className="mr-1.5 h-3.5 w-3.5" /> 受験IDコピー
             </Button>
           )}
           {isSavingMemo && (
@@ -789,6 +826,19 @@ export default function CompanyDetailPage({
                     )}
                   </Button>
                 </div>
+              </div>
+              <div>
+                <Label>受験ID</Label>
+                <Input
+                  value={editingCompany.examId || ""}
+                  onChange={(e) =>
+                    setEditingCompany({
+                      ...editingCompany,
+                      examId: e.target.value,
+                    })
+                  }
+                  placeholder="Webテスト用受験ID"
+                />
               </div>
               <div>
                 <Label>所在地</Label>
