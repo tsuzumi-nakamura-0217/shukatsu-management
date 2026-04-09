@@ -13,6 +13,7 @@ export async function getConfig(): Promise<AppConfig> {
       industries: [],
       taskCategories: [],
       interviewStatuses: ["通過", "結果待ち", "不合格"],
+      testCenterId: "",
       notion: { apiKey: "", databaseId: "", enabled: false },
     };
   }
@@ -43,6 +44,7 @@ export async function getConfig(): Promise<AppConfig> {
     industries: (configMap.industries as string[]) || [],
     taskCategories: (configMap.taskCategories as string[]) || [],
     interviewStatuses: (configMap.interviewStatuses as string[]) || ["通過", "結果待ち", "不合格"],
+    testCenterId: (configMap.testCenterId as string) || "",
     notion: (configMap.notion as AppConfig["notion"]) || {
       apiKey: "",
       databaseId: "",
@@ -63,6 +65,7 @@ export async function updateConfig(
     { key: "industries", value: updated.industries },
     { key: "taskCategories", value: updated.taskCategories },
     { key: "interviewStatuses", value: updated.interviewStatuses },
+    { key: "testCenterId", value: updated.testCenterId },
     { key: "notion", value: updated.notion },
   ];
 

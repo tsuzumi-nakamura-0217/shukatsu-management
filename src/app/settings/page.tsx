@@ -18,7 +18,8 @@ import {
   Search,
   ChevronRight,
   ListChecks,
-  GripVertical
+  GripVertical,
+  IdCard
 } from "lucide-react";
 import {
   DndContext,
@@ -63,6 +64,7 @@ const DEFAULT_CONFIG: AppConfig = {
     enabled: false,
   },
   interviewStatuses: ["通過", "結果待ち", "不合格"],
+  testCenterId: "",
 };
 
 function normalizeConfig(data: unknown): AppConfig {
@@ -75,6 +77,7 @@ function normalizeConfig(data: unknown): AppConfig {
       ? config.taskCategories
       : [],
     interviewStatuses: Array.isArray(config.interviewStatuses) ? config.interviewStatuses : ["通過", "結果待ち", "不合格"],
+    testCenterId: typeof config.testCenterId === "string" ? config.testCenterId : "",
     notion: {
       apiKey: config.notion?.apiKey || "",
       databaseId: config.notion?.databaseId || "",
@@ -132,6 +135,7 @@ function SortableBadge({ id, children, onRemove }: { id: string; children: React
 export default function SettingsPage() {
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
+  const [testCenterId, setTestCenterId] = useState("");
   const [notionApiKey, setNotionApiKey] = useState("");
   const [notionDbId, setNotionDbId] = useState("");
   const [notionDbType, setNotionDbType] = useState<"database" | "data_source">("database");
@@ -182,6 +186,7 @@ export default function SettingsPage() {
         setIndustries(normalized.industries);
         setCategories(normalized.taskCategories);
         setInterviewStatuses(normalized.interviewStatuses);
+        setTestCenterId(normalized.testCenterId);
       })
       .catch(() => {
         setConfig(DEFAULT_CONFIG);
@@ -198,6 +203,7 @@ export default function SettingsPage() {
       industries: safeIndustries,
       taskCategories: safeCategories,
       interviewStatuses: safeInterviewStatuses,
+      testCenterId,
       notion: {
         apiKey: notionApiKey,
         databaseId: notionDbId,
@@ -295,6 +301,38 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* User Information */}
+        <Card className="border-none glass shadow-xl shadow-primary/5 rounded-3xl overflow-hidden md:col-span-2">
+          <CardHeader className="p-8 pb-4">
+            <div className="flex items-center gap-4 mb-2">
+               <div className="h-12 w-12 rounded-2xl bg-black text-white flex items-center justify-center shadow-lg">
+                  <IdCard className="h-7 w-7" />
+               </div>
+               <div>
+                  <CardTitle className="text-2xl font-bold">ユーザー情報</CardTitle>
+                  <CardDescription className="font-medium font-bold">基本情報や各種IDを設定します</CardDescription>
+               </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 pt-4 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="space-y-3">
+                  <Label className="text-sm font-bold flex items-center gap-2">
+                     <div className="h-2 w-2 rounded-full bg-primary" />
+                     テストセンターID
+                  </Label>
+                  <Input
+                    value={testCenterId}
+                    onChange={(e) => setTestCenterId(e.target.value)}
+                    placeholder="例: TC-1234567"
+                    className="h-12 rounded-xl border-none glass bg-white/60 focus-visible:ring-2 focus-visible:ring-primary/20"
+                  />
+                  <p className="text-[10px] text-muted-foreground px-1 font-bold">よく使う共通のIDを登録しておくと便利です</p>
+               </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Notion Settings */}
         <Card className="border-none glass shadow-xl shadow-primary/5 rounded-3xl overflow-hidden md:col-span-2">
           <CardHeader className="p-8 pb-4">

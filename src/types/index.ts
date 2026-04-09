@@ -144,6 +144,7 @@ export interface AppConfig {
   industries: string[];
   taskCategories: string[];
   interviewStatuses: string[];
+  testCenterId: string;
   notion: NotionConfig;
 }
 
