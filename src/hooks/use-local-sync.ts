@@ -2,7 +2,6 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { toast } from "sonner";
 
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
@@ -70,11 +69,6 @@ export function useLocalSync() {
       }
 
       lastSyncTime.current = Date.now();
-      toast.info("ローカルデータを同期しました", {
-        description: reason === "mount" ? "ログイン中につき最新情報を取得しました" : 
-                     reason === "focus" ? "画面がアクティブになったため同期しました" : 
-                     "定期的なデータ同期を完了しました",
-      });
     } catch (error) {
       // Still log but maybe use warn for less noise in dev console
       console.warn("[Sync] Local sync operation failed:", error);

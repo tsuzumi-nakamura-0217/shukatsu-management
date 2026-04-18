@@ -114,9 +114,32 @@ CREATE TABLE tips (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 9. チャット会話テーブル
+CREATE TABLE chat_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+  title TEXT NOT NULL DEFAULT '新しいチャット',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  last_message_at TIMESTAMPTZ
+);
+
+-- 10. チャット履歴テーブル
+CREATE TABLE chat_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+  conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE UNIQUE INDEX companies_user_slug_key ON companies(user_id, slug);
 CREATE UNIQUE INDEX config_user_key_key ON config(user_id, key);
 CREATE UNIQUE INDEX config_global_key_key ON config(key) WHERE user_id IS NULL;
+CREATE INDEX chat_conversations_user_last_message_idx ON chat_conversations(user_id, last_message_at DESC, created_at DESC);
+CREATE INDEX chat_messages_user_created_idx ON chat_messages(user_id, created_at DESC);
+CREATE INDEX chat_messages_conversation_created_idx ON chat_messages(conversation_id, created_at ASC);
 
 -- 初期設定データの挿入
 INSERT INTO config (user_id, key, value) VALUES
@@ -139,6 +162,8 @@ ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tips ENABLE ROW LEVEL SECURITY;
 ALTER TABLE company_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY companies_owner_policy ON companies
   FOR ALL USING (auth.uid() = user_id)
@@ -178,3 +203,27 @@ CREATE POLICY config_write_owner_policy ON config
 CREATE POLICY company_events_owner_policy ON company_events
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
+
+CREATE POLICY chat_conversations_owner_policy ON chat_conversations
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = COALESCE(user_id, auth.uid()));
+
+CREATE POLICY chat_messages_owner_policy ON chat_messages
+  FOR ALL USING (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1
+      FROM chat_conversations c
+      WHERE c.id = conversation_id
+        AND c.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    auth.uid() = COALESCE(user_id, auth.uid())
+    AND EXISTS (
+      SELECT 1
+      FROM chat_conversations c
+      WHERE c.id = conversation_id
+        AND c.user_id = auth.uid()
+    )
+  );

@@ -8,3 +8,5 @@ export * from "./self-analysis";
 export * from "./stats";
 export * from "./calendar";
 export * from "./export";
+export * from "./chat-context";
+export * from "./chat";

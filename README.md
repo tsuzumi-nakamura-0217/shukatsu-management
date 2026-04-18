@@ -151,9 +151,14 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
+GEMINI_API_KEY=...
 ```
 
 `NEXT_PUBLIC_` はクライアント側ログイン処理用、`SUPABASE_*` はサーバー側API処理用です。
+`GEMINI_API_KEY` はサーバー側チャットAPI用です。
+
+Vercelにデプロイする場合は、Project Settings → Environment Variables に
+`GEMINI_API_KEY` を同名で登録してください。
 
 ### メールアドレス認証設定（Supabase）
 
@@ -169,6 +174,8 @@ SUPABASE_ANON_KEY=...
 RLSとユーザー分離カラムを有効にするため、以下のSQLを適用してください。
 
 - `supabase/migrations/20260313_add_google_auth_rls.sql`
+- `supabase/migrations/20260418_add_chat_messages.sql`（チャット履歴を保存する場合）
+- `supabase/migrations/20260418_update_chat_messages_for_conversations.sql`（会話スレッド機能を有効化）
 
 ### ビルド
 

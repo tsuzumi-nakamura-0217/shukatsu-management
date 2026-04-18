@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Menu,
   Lightbulb,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,11 @@ const navItems = [
     href: "/tips",
     label: "就活Tips",
     icon: Lightbulb,
+  },
+  {
+    href: "/chat",
+    label: "AIチャット",
+    icon: MessageSquare,
   },
   {
     href: "/settings",
@@ -145,7 +151,7 @@ export function MobileSidebar() {
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] p-0">
+        <SheetContent side="left" className="w-70 p-0">
           <VisuallyHidden.Root>
             <SheetTitle>ナビゲーションメニュー</SheetTitle>
           </VisuallyHidden.Root>

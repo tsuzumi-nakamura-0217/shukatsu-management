@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthSessionManager } from "@/components/auth-session-manager";
 import { AuthGuard } from "@/components/auth-guard";
 import { AppShell } from "@/components/app-shell";
+import { ChatSessionProvider } from "@/components/chat-session-provider";
 import { PWARegister } from "@/components/pwa-register";
 import { SWRProvider } from "@/components/swr-config";
 
@@ -58,8 +59,10 @@ export default function RootLayout({
           <TooltipProvider>
             <AuthSessionManager />
             <AuthGuard>
-              <AppShell>{children}</AppShell>
-              <Toaster />
+              <ChatSessionProvider>
+                <AppShell>{children}</AppShell>
+                <Toaster />
+              </ChatSessionProvider>
             </AuthGuard>
           </TooltipProvider>
         </SWRProvider>
