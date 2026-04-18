@@ -67,6 +67,13 @@ export function useEvents() {
   return { events: data ?? (EMPTY_ARRAY as CompanyEvent[]), error, isLoading, mutate };
 }
 
+// --- Interviews (All) ---
+export function useInterviews() {
+  const { data, error, isLoading, mutate } = useSWR<Interview[]>("/api/interviews");
+  return { interviews: data ?? (EMPTY_ARRAY as Interview[]), error, isLoading, mutate };
+}
+
+
 // --- Self Analysis ---
 export function useSelfAnalysis() {
   const { data, error, isLoading, mutate } = useSWR<SelfAnalysis[]>("/api/self-analysis");

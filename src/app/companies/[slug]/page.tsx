@@ -103,6 +103,7 @@ export default function CompanyDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "es";
+  const initialTaskId = searchParams.get("taskId");
   const {
     company, tasks, interviews, esDocs, events, config,
     mutate: mutateDetail, revalidate,
@@ -150,6 +151,7 @@ export default function CompanyDetailPage({
   const [newEvent, setNewEvent] = useState({ title: "", type: "説明会", date: "", endDate: "", location: "", memo: "" });
 
   const initializedCompanyId = useRef<string | null>(null);
+  const focusedTaskIdRef = useRef<string | null>(null);
 
   // Keep memoContent/editingCompany in sync with SWR data initially
   useEffect(() => {
@@ -159,6 +161,30 @@ export default function CompanyDetailPage({
       initializedCompanyId.current = company.id;
     }
   }, [company]);
+
+  useEffect(() => {
+    if (!initialTaskId) {
+      focusedTaskIdRef.current = null;
+      return;
+    }
+
+    if (focusedTaskIdRef.current === initialTaskId) {
+      return;
+    }
+
+    const targetTask = localTasks.find((task) => task.id === initialTaskId);
+    if (!targetTask) {
+      return;
+    }
+
+    setEditingTask(targetTask);
+    focusedTaskIdRef.current = initialTaskId;
+
+    requestAnimationFrame(() => {
+      const element = document.getElementById(`task-${initialTaskId}`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [initialTaskId, localTasks]);
 
   const handleSaveCompany = async () => {
     if (isSavingMemo) return;
@@ -1408,6 +1434,7 @@ export default function CompanyDetailPage({
               {localTasks.map((task) => (
                 <div
                   key={task.id}
+                  id={`task-${task.id}`}
                   className={cn(
                     "flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center transition-all duration-200",
                     editingTask?.id === task.id
