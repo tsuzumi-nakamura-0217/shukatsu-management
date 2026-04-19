@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Search, Loader2, Building2, Filter, XCircle, ChevronUp, ChevronDown, ChevronsUpDown, Calendar, Bell, Flag, CheckCircle2, Circle, Clock } from "lucide-react";
+import { Plus, Search, Loader2, Building2, Filter, XCircle, ChevronUp, ChevronDown, ChevronsUpDown, Calendar, Bell, Flag, CheckCircle2, Circle, Clock, ExternalLink } from "lucide-react";
 import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,23 @@ export default function CompaniesPage() {
     }
   };
 
+  const handleMypageClick = async (company: Company) => {
+    const loginId = company.loginId || "";
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(loginId);
+        if (loginId) {
+          toast.success("ログインIDをコピーしました");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to copy login ID:", err);
+    }
+
+    if (company.mypageUrl) {
+      window.open(company.mypageUrl, "_blank", "noopener,noreferrer");
+    }
+  };
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -451,7 +468,6 @@ export default function CompaniesPage() {
                   {[
                     { field: "name" as SortField, label: "企業名", hide: "" },
                     { field: "status" as SortField, label: "ステータス", hide: "" },
-                    { field: "industry" as SortField, label: "業界", hide: "hidden sm:table-cell" },
                     { field: "priority" as SortField, label: "優先度", hide: "hidden sm:table-cell" },
                     ...taskCategories.map(cat => ({
                       field: `cat_${cat}` as SortField,
@@ -499,18 +515,40 @@ export default function CompaniesPage() {
                       {/* 企業名 */}
                       <td className="px-3 py-2.5 whitespace-nowrap w-52">
                         <div className="flex items-center gap-2.5">
-                          <div
-                            className={cn(
-                              "h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 transition-transform group-hover:scale-110",
-                              company.priority >= 4
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                                : company.priority >= 2
-                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
-                                  : "bg-slate-100 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
-                            )}
-                          >
-                            {company.name.charAt(0)}
-                          </div>
+                          {company.mypageUrl ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMypageClick(company);
+                              }}
+                              title="マイページを開く"
+                              aria-label={`${company.name} のマイページを開く`}
+                              className={cn(
+                                "h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 transition-transform group-hover:scale-110 hover:opacity-85",
+                                company.priority >= 4
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                  : company.priority >= 2
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                                    : "bg-slate-100 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
+                              )}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </button>
+                          ) : (
+                            <div
+                              className={cn(
+                                "h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 transition-transform group-hover:scale-110",
+                                company.priority >= 4
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                  : company.priority >= 2
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                                    : "bg-slate-100 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
+                              )}
+                            >
+                              {company.name.charAt(0)}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground truncate max-w-44 group-hover:text-primary transition-colors">
                               {company.name}
@@ -527,13 +565,6 @@ export default function CompaniesPage() {
                       {/* ステータス */}
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <StatusBadge status={company.status} />
-                      </td>
-
-                      {/* 業界 */}
-                      <td className="px-3 py-2.5 whitespace-nowrap hidden sm:table-cell">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted/50 text-xs font-medium text-muted-foreground">
-                          {company.industry}
-                        </span>
                       </td>
 
                       {/* 優先度 */}
