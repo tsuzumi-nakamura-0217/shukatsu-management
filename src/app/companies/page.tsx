@@ -215,8 +215,39 @@ export default function CompaniesPage() {
       });
   }, [companies, search, statusFilter, industryFilter, excludeRejected, minPriority, sortField, sortDir, tasks, events]);
 
-  const allStatuses = config?.defaultStages || [];
+  const allStatuses = useMemo(() => {
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+
+    const defaultStages = Array.isArray(config?.defaultStages)
+      ? config.defaultStages
+      : [];
+
+    for (const raw of defaultStages) {
+      if (typeof raw !== "string") continue;
+      const stage = raw.trim();
+      if (!stage || seen.has(stage)) continue;
+      seen.add(stage);
+      ordered.push(stage);
+    }
+
+    for (const company of companies) {
+      const status = company.status.trim();
+      if (!status || seen.has(status)) continue;
+      seen.add(status);
+      ordered.push(status);
+    }
+
+    return ordered;
+  }, [config?.defaultStages, companies]);
   const allIndustries = config?.industries || [];
+
+  useEffect(() => {
+    if (statusFilter === "all") return;
+    if (!allStatuses.includes(statusFilter)) {
+      setStatusFilter("all");
+    }
+  }, [allStatuses, statusFilter]);
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ChevronsUpDown className="h-3 w-3 opacity-0 group-hover/th:opacity-40 transition-opacity" />;

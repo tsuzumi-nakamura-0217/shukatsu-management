@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use, useRef } from "react";
+import { useEffect, useState, useCallback, use, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -94,6 +94,23 @@ function hasTaskChanges(current: Task | null, original?: Task): boolean {
   );
 }
 
+function normalizeStageList(stages: unknown): string[] {
+  if (!Array.isArray(stages)) return [];
+
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of stages) {
+    if (typeof value !== "string") continue;
+    const stage = value.trim();
+    if (!stage || seen.has(stage)) continue;
+    seen.add(stage);
+    normalized.push(stage);
+  }
+
+  return normalized;
+}
+
 export default function CompanyDetailPage({
   params,
 }: {
@@ -143,6 +160,9 @@ export default function CompanyDetailPage({
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [isSavingInterview, setIsSavingInterview] = useState(false);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [pipelineStages, setPipelineStages] = useState<string[]>([]);
+  const [newPipelineStage, setNewPipelineStage] = useState("");
+  const [isSavingPipeline, setIsSavingPipeline] = useState(false);
 
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
@@ -152,6 +172,27 @@ export default function CompanyDetailPage({
 
   const initializedCompanyId = useRef<string | null>(null);
   const focusedTaskIdRef = useRef<string | null>(null);
+  const defaultStages = useMemo(() => normalizeStageList(config?.defaultStages), [config?.defaultStages]);
+  const currentCompanyStages = useMemo(() => {
+    const companyStages = normalizeStageList(company?.stages);
+    return companyStages.length > 0 ? companyStages : defaultStages;
+  }, [company?.stages, defaultStages]);
+  const currentCompanyStagesKey = useMemo(
+    () => currentCompanyStages.join("\u0001"),
+    [currentCompanyStages]
+  );
+  const currentCompanyStagesForSync = useMemo(
+    () => currentCompanyStages,
+    [currentCompanyStagesKey]
+  );
+  const editablePipelineStages = useMemo(
+    () => normalizeStageList(pipelineStages),
+    [pipelineStages]
+  );
+  const editablePipelineStagesKey = useMemo(
+    () => editablePipelineStages.join("\u0001"),
+    [editablePipelineStages]
+  );
 
   // Keep memoContent/editingCompany in sync with SWR data initially
   useEffect(() => {
@@ -161,6 +202,11 @@ export default function CompanyDetailPage({
       initializedCompanyId.current = company.id;
     }
   }, [company]);
+
+  useEffect(() => {
+    if (!company) return;
+    setPipelineStages(currentCompanyStagesForSync);
+  }, [company?.id, currentCompanyStagesForSync]);
 
   useEffect(() => {
     if (!initialTaskId) {
@@ -225,6 +271,10 @@ export default function CompanyDetailPage({
   };
 
   const handleUpdateStatus = async (status: string) => {
+    if (!company) return;
+
+    const previousStatus = company.status;
+
     // 楽観的アップデートを行い、AutoSaveによる巻き戻りを防ぐ
     setEditingCompany(prev => ({ ...prev, status }));
     mutateDetail(
@@ -232,14 +282,113 @@ export default function CompanyDetailPage({
       { revalidate: false }
     );
 
-    const res = await fetch(`/api/companies/${slug}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+    try {
+      const res = await fetch(`/api/companies/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const payload = await res.json().catch(() => null);
+
+      if (res.ok) {
+        toast.success("ステータスを更新しました");
+        revalidate();
+        return;
+      }
+
+      setEditingCompany(prev => ({ ...prev, status: previousStatus }));
+      mutateDetail(
+        (current) => current ? { ...current, company: { ...current.company, status: previousStatus } as Company } : current,
+        { revalidate: false }
+      );
+      toast.error(payload?.error || "ステータスの更新に失敗しました");
+    } catch {
+      setEditingCompany(prev => ({ ...prev, status: previousStatus }));
+      mutateDetail(
+        (current) => current ? { ...current, company: { ...current.company, status: previousStatus } as Company } : current,
+        { revalidate: false }
+      );
+      toast.error("ステータスの更新に失敗しました");
+    }
+  };
+
+  const handleAddPipelineStage = () => {
+    const stage = newPipelineStage.trim();
+    if (!stage) return;
+
+    setPipelineStages((prev) => {
+      const normalized = normalizeStageList(prev);
+      if (normalized.includes(stage)) {
+        toast.error("同じステージが既に存在します");
+        return normalized;
+      }
+      return [...normalized, stage];
     });
-    if (res.ok) {
-      toast.success("ステータスを更新しました");
+    setNewPipelineStage("");
+  };
+
+  const handleMovePipelineStage = (index: number, direction: -1 | 1) => {
+    setPipelineStages((prev) => {
+      const normalized = normalizeStageList(prev);
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= normalized.length) {
+        return normalized;
+      }
+
+      const next = [...normalized];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const handleRemovePipelineStage = (index: number) => {
+    setPipelineStages((prev) => {
+      const normalized = normalizeStageList(prev);
+      return normalized.filter((_, currentIndex) => currentIndex !== index);
+    });
+  };
+
+  const handleSavePipelineStages = async () => {
+    if (!company || isSavingPipeline) return;
+
+    const normalized = normalizeStageList(pipelineStages);
+    if (normalized.length === 0) {
+      toast.error("選考パイプラインを1件以上設定してください");
+      return;
+    }
+
+    setIsSavingPipeline(true);
+    try {
+      const res = await fetch(`/api/companies/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stages: normalized }),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        toast.error(payload?.error || "選考パイプラインの保存に失敗しました");
+        return;
+      }
+
+      const savedStages = normalizeStageList(payload?.stages);
+      const nextStages = savedStages.length > 0 ? savedStages : normalized;
+
+      setPipelineStages(nextStages);
+      setEditingCompany((prev) => ({ ...prev, stages: nextStages }));
+      mutateDetail(
+        (current) =>
+          current
+            ? { ...current, company: { ...current.company, stages: nextStages } as Company }
+            : current,
+        { revalidate: false }
+      );
+      toast.success("選考パイプラインを保存しました");
       revalidate();
+    } catch {
+      toast.error("選考パイプラインの保存に失敗しました");
+    } finally {
+      setIsSavingPipeline(false);
     }
   };
 
@@ -645,8 +794,9 @@ export default function CompanyDetailPage({
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">読み込み中...</p></div>;
   }
 
-  const stages = config?.defaultStages || company.stages || [];
+  const stages = currentCompanyStages;
   const currentStageIndex = stages.indexOf(company.status);
+  const hasPipelineChanges = editablePipelineStagesKey !== currentCompanyStagesKey;
 
   return (
     <div className="space-y-6">
@@ -745,6 +895,85 @@ export default function CompanyDetailPage({
                 </button>
               );
             })}
+          </div>
+
+          <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">企業別パイプライン編集</p>
+              <Button
+                size="sm"
+                className="h-7 px-3 text-xs"
+                onClick={handleSavePipelineStages}
+                disabled={isSavingPipeline || editablePipelineStages.length === 0 || !hasPipelineChanges}
+              >
+                {isSavingPipeline ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                保存
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={newPipelineStage}
+                onChange={(e) => setNewPipelineStage(e.target.value)}
+                placeholder="ステージを追加"
+                className="h-8 text-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddPipelineStage();
+                  }
+                }}
+              />
+              <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddPipelineStage}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> 追加
+              </Button>
+            </div>
+
+            <div className="space-y-1">
+              {editablePipelineStages.length === 0 ? (
+                <p className="text-xs text-destructive">ステージを1件以上設定してください</p>
+              ) : (
+                editablePipelineStages.map((stage, index) => (
+                  <div key={`${stage}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1.5">
+                    <span className="text-xs font-medium truncate">{index + 1}. {stage}</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleMovePipelineStage(index, -1)}
+                        disabled={index === 0 || isSavingPipeline}
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleMovePipelineStage(index, 1)}
+                        disabled={index === editablePipelineStages.length - 1 || isSavingPipeline}
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => handleRemovePipelineStage(index)}
+                        disabled={isSavingPipeline || editablePipelineStages.length <= 1}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <p className="text-[10px] text-muted-foreground">現在ステータスを含まない構成は保存できません。</p>
           </div>
 
           <div className="mt-1 pt-2 border-t border-border/50 flex flex-col gap-1.5 sm:flex-row sm:items-center">

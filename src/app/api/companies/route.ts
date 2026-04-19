@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-import { getAllCompanies, createCompany } from "@/lib/data/companies";
+import {
+  CompanyPipelineValidationError,
+  getAllCompanies,
+  createCompany,
+} from "@/lib/data/companies";
 import type { CompanyCreate } from "@/types";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
@@ -55,7 +59,14 @@ export async function POST(request: NextRequest) {
 
       const company = await createCompany(body);
       return NextResponse.json(company, { status: 201 });
-    } catch {
+    } catch (error) {
+      if (error instanceof CompanyPipelineValidationError) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
         { error: "企業の作成に失敗しました" },
         { status: 500 }

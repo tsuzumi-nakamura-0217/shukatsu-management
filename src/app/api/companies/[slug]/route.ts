@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-import { getCompany, saveCompany, deleteCompany } from "@/lib/data/companies";
+import {
+  CompanyPipelineValidationError,
+  ensureCompanyPipeline,
+  getCompany,
+  normalizeCompanyStages,
+  saveCompany,
+  deleteCompany,
+} from "@/lib/data/companies";
 import type { Company } from "@/types";
 import { withAuthenticatedUser } from "@/lib/auth-server";
 
@@ -69,10 +76,36 @@ export async function PUT(
         );
       }
 
-      const updated: Company = { ...company, ...body, slug };
+      const nextStages =
+        body.stages === undefined
+          ? normalizeCompanyStages(company.stages)
+          : normalizeCompanyStages(body.stages);
+      const nextStatus =
+        typeof body.status === "string"
+          ? body.status.trim()
+          : company.status.trim();
+
+      if (body.stages !== undefined || body.status !== undefined) {
+        ensureCompanyPipeline(nextStatus, nextStages);
+      }
+
+      const updated: Company = {
+        ...company,
+        ...body,
+        slug,
+        status: nextStatus,
+        stages: nextStages,
+      };
       await saveCompany(updated);
       return NextResponse.json(updated);
-    } catch {
+    } catch (error) {
+      if (error instanceof CompanyPipelineValidationError) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
         { error: "企業の更新に失敗しました" },
         { status: 500 }

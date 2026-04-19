@@ -4,6 +4,48 @@ import { generateSlug } from "./utils";
 import { getConfig } from "./config";
 import type { Company, CompanyCreate } from "@/types";
 
+export class CompanyPipelineValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CompanyPipelineValidationError";
+  }
+}
+
+export function normalizeCompanyStages(stages: unknown): string[] {
+  if (!Array.isArray(stages)) return [];
+
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of stages) {
+    if (typeof value !== "string") continue;
+    const stage = value.trim();
+    if (!stage || seen.has(stage)) continue;
+    seen.add(stage);
+    normalized.push(stage);
+  }
+
+  return normalized;
+}
+
+export function ensureCompanyPipeline(
+  status: string,
+  stages: string[]
+): void {
+  if (stages.length === 0) {
+    throw new CompanyPipelineValidationError("選考パイプラインを1件以上設定してください");
+  }
+
+  const normalizedStatus = status.trim();
+  if (!normalizedStatus) {
+    throw new CompanyPipelineValidationError("現在ステータスが空です");
+  }
+
+  if (!stages.includes(normalizedStatus)) {
+    throw new CompanyPipelineValidationError("現在ステータスが選考パイプラインに含まれていません");
+  }
+}
+
 export function rowToCompany(row: Record<string, unknown>): Company {
   let decryptedPassword = "";
   try {
@@ -25,9 +67,9 @@ export function rowToCompany(row: Record<string, unknown>): Company {
     password: decryptedPassword,
     examId: (row.exam_id as string) || "",
     location: (row.location as string) || "",
-    status: (row.status as string) || "未応募",
+    status: ((row.status as string) || "未応募").trim() || "未応募",
     priority: (row.priority as number) || 3,
-    stages: (row.stages as string[]) || [],
+    stages: normalizeCompanyStages(row.stages),
     createdAt: (row.created_at as string) || "",
     updatedAt: (row.updated_at as string) || "",
     memo: (row.memo as string) || "",
@@ -60,6 +102,12 @@ export async function createCompany(input: CompanyCreate): Promise<Company> {
   const config = await getConfig();
   let slug = generateSlug(input.name);
 
+  const stagesSource =
+    input.stages === undefined ? config.defaultStages : input.stages;
+  const normalizedStages = normalizeCompanyStages(stagesSource);
+  const normalizedStatus = (input.status || "").trim() || normalizedStages[0] || "未応募";
+  ensureCompanyPipeline(normalizedStatus, normalizedStages);
+
   // Ensure unique slug
   const { data: existing } = await supabase
     .from("companies")
@@ -81,9 +129,9 @@ export async function createCompany(input: CompanyCreate): Promise<Company> {
     password_encrypted: encryptCompanyPassword(input.password || ""),
     exam_id: input.examId || "",
     location: input.location || "",
-    status: input.status || "未応募",
+    status: normalizedStatus,
     priority: input.priority || 3,
-    stages: input.stages || config.defaultStages,
+    stages: normalizedStages,
     memo: "",
     expected_result_period: input.expectedResultPeriod || "",
   };
@@ -102,7 +150,11 @@ export async function createCompany(input: CompanyCreate): Promise<Company> {
 }
 
 export async function saveCompany(company: Company): Promise<void> {
-  await supabase
+  const normalizedStages = normalizeCompanyStages(company.stages);
+  const normalizedStatus = company.status.trim();
+  ensureCompanyPipeline(normalizedStatus, normalizedStages);
+
+  const { error } = await supabase
     .from("companies")
     .update({
       name: company.name,
@@ -113,14 +165,18 @@ export async function saveCompany(company: Company): Promise<void> {
       password_encrypted: encryptCompanyPassword(company.password),
       exam_id: company.examId || "",
       location: company.location,
-      status: company.status,
+      status: normalizedStatus,
       priority: company.priority,
-      stages: company.stages,
+      stages: normalizedStages,
       memo: company.memo,
       expected_result_period: company.expectedResultPeriod || "",
       updated_at: new Date().toISOString(),
     })
     .eq("slug", company.slug);
+
+  if (error) {
+    throw new Error(`Failed to save company: ${error.message}`);
+  }
 }
 
 export async function deleteCompany(slug: string): Promise<boolean> {
