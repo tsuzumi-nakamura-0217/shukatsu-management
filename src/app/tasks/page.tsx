@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge, TagBadge, statusColors } from "@/components/badges";
+import { TagBadge, taskStatusStyles } from "@/components/badges";
 import { cn, formatDate, getPlainText } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
@@ -348,7 +348,7 @@ export default function TasksPage() {
                     value={newTask.status}
                     onValueChange={(value: any) => setNewTask({ ...newTask, status: value })}
                   >
-                    <SelectTrigger className={cn("rounded-xl h-11 border-none bg-background/50 font-bold", statusColors[newTask.status])}>
+                    <SelectTrigger className={cn("rounded-xl h-11 border font-bold shadow-none", taskStatusStyles[newTask.status])}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -442,7 +442,7 @@ export default function TasksPage() {
                     >
                       <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
                         <Select value={task.status} onValueChange={(val: any) => handleStatusChange(task, val)}>
-                          <SelectTrigger className={cn("h-8 w-30 text-xs font-black", statusColors[task.status])}>
+                          <SelectTrigger className={cn("h-8 w-32 border text-xs font-bold shadow-none", taskStatusStyles[task.status])}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -586,7 +586,7 @@ export default function TasksPage() {
                                   value={editingTask.status}
                                   onValueChange={(value: any) => setEditingTask({ ...editingTask, status: value })}
                                 >
-                                  <SelectTrigger className={cn("w-32 rounded-lg font-bold h-9", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
+                                  <SelectTrigger className={cn("w-32 rounded-lg border font-bold h-9 shadow-none", taskStatusStyles[editingTask.status])}><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="未着手">未着手</SelectItem>
                                     <SelectItem value="進行中">進行中</SelectItem>

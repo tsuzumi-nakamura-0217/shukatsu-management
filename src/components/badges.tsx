@@ -3,6 +3,12 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+export const taskStatusStyles: Record<string, string> = {
+  "未着手": "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-400",
+  "進行中": "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200",
+  "完了": "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
+};
+
 export const statusColors: Record<string, string> = {
   // 企業選考ステータス
   "未応募": "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800/40 dark:text-slate-500",
@@ -16,9 +22,7 @@ export const statusColors: Record<string, string> = {
   "辞退": "bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800/20 dark:text-slate-600",
   
   // タスクステータス
-  "未着手": "bg-slate-100 text-slate-500 border-slate-200",
-  "進行中": "bg-zinc-800 text-zinc-100 border-zinc-900",
-  "完了": "bg-slate-200 text-slate-400 border-slate-300",
+  ...taskStatusStyles,
 };
 
 

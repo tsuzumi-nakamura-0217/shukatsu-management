@@ -58,7 +58,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusBadge, statusColors } from "@/components/badges";
+import { StatusBadge, statusColors, taskStatusStyles } from "@/components/badges";
 import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
@@ -155,6 +155,7 @@ export default function CompanyDetailPage({
   const [editingEvent, setEditingEvent] = useState<CompanyEvent | null>(null);
   const [expandedInterviewIds, setExpandedInterviewIds] = useState<Set<string>>(new Set());
   const [expandedEventIds, setExpandedEventIds] = useState<Set<string>>(new Set());
+  const [isMemoExpanded, setIsMemoExpanded] = useState(true);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [isSavingEs, setIsSavingEs] = useState(false);
   const [isSavingTask, setIsSavingTask] = useState(false);
@@ -1266,177 +1267,196 @@ export default function CompanyDetailPage({
           {localEsDocs.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">まだ文書がありません</p></CardContent></Card>
           ) : (
-            <div className="space-y-4">
-              {localEsDocs.map((doc) => (
-                <Card
-                  key={doc.id}
-                  className={cn(
-                    "overflow-hidden transition-all duration-200 border",
-                    editEsDoc?.id === doc.id
-                      ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
-                      : "hover:shadow-md hover:border-primary/20",
-                    editEsDoc?.id !== doc.id && "cursor-pointer"
-                  )}
-                  onClick={(e) => {
-                    toggleEsExpand(doc.id, e);
-                  }}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col gap-1 flex-1">
-                        {editEsDoc?.id === doc.id ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              className="text-base font-semibold h-8 flex-1"
-                              value={editEsDoc.title}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => setEditEsDoc({ ...editEsDoc, title: e.target.value })}
-                            />
-                            <Select
-                              value={editEsDoc.status || "未提出"}
-                              onValueChange={(val: any) => setEditEsDoc({ ...editEsDoc, status: val })}
-                            >
-                              <SelectTrigger className="w-[110px] h-8 text-xs font-medium" onClick={(e) => e.stopPropagation()}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="未提出">未提出</SelectItem>
-                                <SelectItem value="提出済">提出済</SelectItem>
-                                <SelectItem value="結果待ち">結果待ち</SelectItem>
-                                <SelectItem value="通過">通過</SelectItem>
-                                <SelectItem value="落選">落選</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-base">{doc.title}</CardTitle>
-                            {doc.status && (
-                              <Badge variant="outline" className={cn(
-                                "text-[10px] px-2 py-0",
-                                doc.status === "通過" && "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400",
-                                doc.status === "落選" && "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400",
-                                doc.status === "結果待ち" && "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-                                doc.status === "提出済" && "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                              )}>
-                                {doc.status}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        <CardDescription className="flex flex-col gap-1.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span>更新: {new Date(doc.updatedAt).toLocaleString("ja-JP")}</span>
-                            <span className={cn(
-                              "px-1.5 py-0.5 rounded-sm text-xs font-medium",
-                              doc.characterLimit
-                                ? (countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content) > doc.characterLimit ? "bg-red-100 text-red-800" : "bg-muted text-muted-foreground")
-                                : "bg-muted text-muted-foreground"
-                            )}>
-                              {countCharacters(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content)}
-                              {doc.characterLimit ? ` / ${doc.characterLimit}文字${doc.characterLimitType || ""}` : "文字"}
-                            </span>
-                          </div>
-                          {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                              {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).map((section, idx) => (
-                                <div key={idx} className="flex items-center gap-1 text-[10px] bg-muted/50 px-1.5 py-0.5 rounded-sm border border-transparent">
-                                  <span className="font-medium truncate max-w-[120px] text-muted-foreground" title={section.title}>{section.title}</span>
-                                  <span className="tabular-nums text-muted-foreground font-semibold">{section.count}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                        {isSavingEs && editEsDoc?.id === doc.id && (
-                          <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10 mr-1">
-                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                            <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                          </div>
-                        )}
-                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicateEs(doc); }} className="transition-all">
-                          <Copy className="mr-1 h-3 w-3" /> 複製
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all" onClick={(e) => { e.stopPropagation(); handleDeleteEs(doc.id); }}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="ml-2 w-8 h-8 p-0" onClick={(e) => toggleEsExpand(doc.id, e)}>
-                          {expandedEsIds.has(doc.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  {expandedEsIds.has(doc.id) && (
-                    <CardContent className="pt-2 border-t" onClick={(e) => e.stopPropagation()}>
-                      {doc.content || editEsDoc?.id === doc.id ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Label className="text-xs whitespace-nowrap">字数指定:</Label>
-                            <Input
-                              type="number"
-                              className="h-8 text-xs w-20"
-                              value={(editEsDoc?.id === doc.id ? editEsDoc.characterLimit : doc.characterLimit) || ""}
-                              onChange={(e) => {
-                                const esDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
-                                setEditEsDoc({ ...esDoc, characterLimit: e.target.value ? parseInt(e.target.value) : undefined });
-                              }}
-                              placeholder="制限なし"
-                            />
-                            <Select
-                              value={(editEsDoc?.id === doc.id ? editEsDoc.characterLimitType : doc.characterLimitType) || ""}
-                              onValueChange={(val: any) => {
-                                const esDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
-                                setEditEsDoc({ ...esDoc, characterLimitType: val === " " ? "" : val });
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs w-24 transition-all duration-200 hover:shadow-md cursor-pointer">
-                                <SelectValue placeholder="種別" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value=" ">指定なし</SelectItem>
-                                <SelectItem value="程度">程度</SelectItem>
-                                <SelectItem value="以下">以下</SelectItem>
-                                <SelectItem value="未満">未満</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <NotionEditor
-                            content={editEsDoc?.id === doc.id ? editEsDoc.content : doc.content}
-                            onChange={(val) => {
-                              const esDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
-                              setEditEsDoc({ ...esDoc, content: val });
-                            }}
-                          />
+            <div className="rounded-lg border border-border/70 bg-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-220 text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur">
+                    <tr className="border-b border-border/50 text-left">
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">タイトル</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">ステータス</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">更新日時</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">文字数</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {localEsDocs.map((doc) => {
+                      const isExpanded = expandedEsIds.has(doc.id);
+                      const draftDoc = editEsDoc?.id === doc.id ? editEsDoc : doc;
+                      const draftContent = draftDoc.content || "";
+                      const charCount = countCharacters(draftContent);
+                      const sectionCounts = getSectionCharacterCounts(draftContent);
+                      const overLimit = !!doc.characterLimit && charCount > doc.characterLimit;
 
-                          {/* Section Character Counts */}
-                          <div className="mt-4 pt-4 border-t border-dashed">
-                            <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).map((section, idx) => (
-                                <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
-                                  <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
-                                  <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
-                                </div>
-                              ))}
-                              {getSectionCharacterCounts(editEsDoc?.id === doc.id ? editEsDoc.content : doc.content).length === 0 && (
-                                <p className="text-[10px] text-muted-foreground italic col-span-2">
-                                  * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
-                                </p>
+                      return (
+                        <Fragment key={doc.id}>
+                          <tr
+                            className={cn(
+                              "border-b border-border/40 transition-colors",
+                              isExpanded
+                                ? "bg-primary/5"
+                                : "cursor-pointer hover:bg-muted/50"
+                            )}
+                            onClick={(e) => toggleEsExpand(doc.id, e)}
+                          >
+                            <td className="px-4 py-2 align-middle">
+                              <p className="font-medium">{draftDoc.title || "無題の文書"}</p>
+                              {draftContent && (
+                                <p className="mt-1 max-w-140 truncate text-xs text-muted-foreground">{getPlainText(draftContent)}</p>
                               )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center text-muted-foreground italic py-4">
-                          本文がありません
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
+                            </td>
+                            <td className="px-4 py-2 align-middle">
+                              {draftDoc.status && (
+                                <Badge variant="outline" className={cn(
+                                  "text-[10px] px-2 py-0",
+                                  draftDoc.status === "通過" && "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400",
+                                  draftDoc.status === "落選" && "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400",
+                                  draftDoc.status === "結果待ち" && "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+                                  draftDoc.status === "提出済" && "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+                                  draftDoc.status === "未提出" && "border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300"
+                                )}>
+                                  {draftDoc.status}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs text-muted-foreground">
+                              {new Date(doc.updatedAt).toLocaleString("ja-JP")}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs">
+                              <span className={cn(
+                                "inline-flex rounded-md px-2 py-1 font-semibold",
+                                overLimit
+                                  ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-300"
+                                  : "bg-muted text-muted-foreground"
+                              )}>
+                                {charCount}
+                                {doc.characterLimit ? ` / ${doc.characterLimit}文字${doc.characterLimitType || ""}` : "文字"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-primary/10"
+                                  onClick={() => handleDuplicateEs(doc)}
+                                  title="複製"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteEs(doc.id)}
+                                  title="削除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg"
+                                  onClick={(e) => toggleEsExpand(doc.id, e)}
+                                  title={isExpanded ? "閉じる" : "編集"}
+                                >
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="border-b border-border/40 bg-background/70">
+                              <td colSpan={5} className="p-4" onClick={(e) => e.stopPropagation()}>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+                                    <Input
+                                      className="md:col-span-2"
+                                      value={draftDoc.title}
+                                      onChange={(e) => setEditEsDoc({ ...draftDoc, title: e.target.value })}
+                                      placeholder="タイトル"
+                                    />
+                                    <Select
+                                      value={draftDoc.status || "未提出"}
+                                      onValueChange={(val: any) => setEditEsDoc({ ...draftDoc, status: val })}
+                                    >
+                                      <SelectTrigger className="md:col-span-2 transition-all duration-200 hover:shadow-md cursor-pointer">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="未提出">未提出</SelectItem>
+                                        <SelectItem value="提出済">提出済</SelectItem>
+                                        <SelectItem value="結果待ち">結果待ち</SelectItem>
+                                        <SelectItem value="通過">通過</SelectItem>
+                                        <SelectItem value="落選">落選</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <Input
+                                      type="number"
+                                      className="md:col-span-1"
+                                      value={draftDoc.characterLimit || ""}
+                                      onChange={(e) => setEditEsDoc({ ...draftDoc, characterLimit: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                                      placeholder="字数"
+                                    />
+                                    <Select
+                                      value={draftDoc.characterLimitType || ""}
+                                      onValueChange={(val: any) => setEditEsDoc({ ...draftDoc, characterLimitType: val === " " ? "" : val })}
+                                    >
+                                      <SelectTrigger className="md:col-span-1 transition-all duration-200 hover:shadow-md cursor-pointer">
+                                        <SelectValue placeholder="種別" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value=" ">指定なし</SelectItem>
+                                        <SelectItem value="程度">程度</SelectItem>
+                                        <SelectItem value="以下">以下</SelectItem>
+                                        <SelectItem value="未満">未満</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  <NotionEditor
+                                    content={draftContent}
+                                    onChange={(val) => setEditEsDoc({ ...draftDoc, content: val })}
+                                  />
+
+                                  <div className="mt-4 pt-4 border-t border-dashed">
+                                    <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {sectionCounts.map((section, idx) => (
+                                        <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
+                                          <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
+                                          <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
+                                        </div>
+                                      ))}
+                                      {sectionCounts.length === 0 && (
+                                        <p className="text-[10px] text-muted-foreground italic col-span-2">
+                                          * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex justify-end items-center gap-3">
+                                    {isSavingEs && editEsDoc?.id === doc.id && (
+                                      <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                        <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                                      </div>
+                                    )}
+                                    <Button variant="ghost" size="sm" onClick={() => toggleEsExpand(doc.id)} className="transition-all">
+                                      閉じる
+                                    </Button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -1514,123 +1534,146 @@ export default function CompanyDetailPage({
           {localInterviews.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">まだ面接記録がありません</p></CardContent></Card>
           ) : (
-            <div className="space-y-4">
-              {localInterviews.sort((a, b) => b.date.localeCompare(a.date)).map((interview) => (
-                <Card
-                  key={interview.id}
-                  className={cn(
-                    "overflow-hidden transition-all duration-200 border",
-                    editingInterview?.id === interview.id
-                      ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
-                      : "hover:shadow-md hover:border-primary/20",
-                    editingInterview?.id !== interview.id && "cursor-pointer"
-                  )}
-                  onClick={(e) => {
-                    toggleInterviewExpand(interview.id, e);
-                  }}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-2 flex-1">
-                        {editingInterview?.id === interview.id ? (
-                          <Input
-                            className="text-base font-semibold h-8 flex-1"
-                            value={editingInterview.type}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => setEditingInterview({ ...editingInterview, type: e.target.value })}
-                          />
-                        ) : (
-                          <CardTitle className="text-base">{interview.type}</CardTitle>
-                        )}
-                        <StatusBadge status={interview.result} />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <span className="text-sm text-muted-foreground mr-2">{formatDate(interview.date)}</span>
-                        <Button variant="outline" size="sm" onClick={(e) => { toggleInterviewExpand(interview.id, e); }} className="transition-all">
-                          <Edit className="mr-1 h-3 w-3" /> {expandedInterviewIds.has(interview.id) ? "完了" : "編集"}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all font-bold" onClick={(e) => { e.stopPropagation(); handleDeleteInterview(interview.id); }}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="ml-2 w-8 h-8 p-0" onClick={(e) => toggleInterviewExpand(interview.id, e)}>
-                          {expandedInterviewIds.has(interview.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    {interview.location && !expandedInterviewIds.has(interview.id) && (
-                      <CardDescription>📍 {interview.location}</CardDescription>
-                    )}
-                  </CardHeader>
+            <div className="rounded-lg border border-border/70 bg-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-210 text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur">
+                    <tr className="border-b border-border/50 text-left">
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">ステータス</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">面接タイプ</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">日時</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">場所</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...localInterviews].sort((a, b) => b.date.localeCompare(a.date)).map((interview) => {
+                      const isExpanded = expandedInterviewIds.has(interview.id);
+                      const draftInterview = editingInterview?.id === interview.id ? editingInterview : interview;
 
-                  {expandedInterviewIds.has(interview.id) && (
-                    <CardContent className="pt-2 border-t space-y-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-2">
-
-                        <div>
-                          <Label className="text-xs">日時</Label>
-                          <DateTimePicker
-                            date={new Date((editingInterview?.id === interview.id ? editingInterview.date : interview.date) || "")}
-                            onChange={(d) => {
-                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
-                              setEditingInterview({ ...target, date: d ? d.toISOString() : "" });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">場所</Label>
-                          <Input
-                            value={editingInterview?.id === interview.id ? editingInterview.location : interview.location}
-                            onChange={(e) => {
-                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
-                              setEditingInterview({ ...target, location: e.target.value });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">ステータス</Label>
-                          <Select
-                            value={editingInterview?.id === interview.id ? editingInterview.result : interview.result}
-                            onValueChange={(value) => {
-                              const target = editingInterview?.id === interview.id ? editingInterview : interview;
-                              setEditingInterview({ ...target, result: value });
-                            }}
+                      return (
+                        <Fragment key={interview.id}>
+                          <tr
+                            className={cn(
+                              "border-b border-border/40 transition-colors",
+                              isExpanded
+                                ? "bg-primary/5"
+                                : "cursor-pointer hover:bg-muted/50"
+                            )}
+                            onClick={(e) => toggleInterviewExpand(interview.id, e)}
                           >
-                            <SelectTrigger className={cn(statusColors[editingInterview?.id === interview.id ? editingInterview.result : interview.result] || "bg-gray-100 text-gray-800", "transition-all duration-200 hover:shadow-md cursor-pointer")}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(config?.interviewStatuses || ["結果待ち", "通過", "不合格"]).map(status => (
-                                <SelectItem key={status} value={status}>{status}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="min-h-[150px]">
-                        <Label className="text-xs">メモ</Label>
-                        <NotionEditor
-                          content={editingInterview?.id === interview.id ? editingInterview.memo : interview.memo}
-                          onChange={(val) => {
-                            const target = editingInterview?.id === interview.id ? editingInterview : interview;
-                            setEditingInterview({ ...target, memo: val });
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-end items-center gap-3">
-                        {isSavingInterview && editingInterview?.id === interview.id && (
-                          <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
-                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                            <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                          </div>
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => toggleInterviewExpand(interview.id)} className="transition-all">
-                          閉じる
-                        </Button>
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
+                            <td className="px-4 py-2 align-middle">
+                              <StatusBadge status={draftInterview.result} />
+                            </td>
+                            <td className="px-4 py-2 align-middle">
+                              <p className="font-medium">{draftInterview.type}</p>
+                              {draftInterview.memo && (
+                                <p className="mt-1 max-w-120 truncate text-xs text-muted-foreground">{getPlainText(draftInterview.memo)}</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs">
+                              {draftInterview.date ? formatDate(draftInterview.date) : "-"}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs text-muted-foreground">
+                              {draftInterview.location || "-"}
+                            </td>
+                            <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-primary/10"
+                                  onClick={(e) => toggleInterviewExpand(interview.id, e)}
+                                  title={isExpanded ? "閉じる" : "編集"}
+                                >
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteInterview(interview.id)}
+                                  title="削除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                            <tr className="border-b border-border/40 bg-background/70">
+                              <td colSpan={5} className="p-4" onClick={(e) => e.stopPropagation()}>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mt-2">
+                                    <div>
+                                      <Label className="text-xs">面接タイプ</Label>
+                                      <Input
+                                        value={draftInterview.type}
+                                        onChange={(e) => setEditingInterview({ ...draftInterview, type: e.target.value })}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">日時</Label>
+                                      <DateTimePicker
+                                        date={draftInterview.date ? new Date(draftInterview.date) : undefined}
+                                        onChange={(d) => setEditingInterview({ ...draftInterview, date: d ? d.toISOString() : "" })}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">場所</Label>
+                                      <Input
+                                        value={draftInterview.location || ""}
+                                        onChange={(e) => setEditingInterview({ ...draftInterview, location: e.target.value })}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">ステータス</Label>
+                                      <Select
+                                        value={draftInterview.result}
+                                        onValueChange={(value) => setEditingInterview({ ...draftInterview, result: value })}
+                                      >
+                                        <SelectTrigger className={cn(statusColors[draftInterview.result] || "bg-gray-100 text-gray-800", "transition-all duration-200 hover:shadow-md cursor-pointer")}>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(config?.interviewStatuses || ["結果待ち", "通過", "不合格"]).map((status) => (
+                                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+
+                                  <div className="min-h-37.5">
+                                    <Label className="text-xs">メモ</Label>
+                                    <NotionEditor
+                                      content={draftInterview.memo || ""}
+                                      onChange={(val) => setEditingInterview({ ...draftInterview, memo: val })}
+                                    />
+                                  </div>
+
+                                  <div className="flex justify-end items-center gap-3">
+                                    {isSavingInterview && editingInterview?.id === interview.id && (
+                                      <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                        <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                                      </div>
+                                    )}
+                                    <Button variant="ghost" size="sm" onClick={() => toggleInterviewExpand(interview.id)} className="transition-all">
+                                      閉じる
+                                    </Button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -1686,7 +1729,7 @@ export default function CompanyDetailPage({
                   <div className="space-y-2 pt-2">
                     <Label>ステータス</Label>
                     <Select value={newTask.status} onValueChange={(v: any) => setNewTask({ ...newTask, status: v })}>
-                      <SelectTrigger className={cn(statusColors[newTask.status], "transition-all duration-200 hover:shadow-md cursor-pointer")}><SelectValue /></SelectTrigger>
+                      <SelectTrigger className={cn(taskStatusStyles[newTask.status], "border transition-all duration-200 hover:shadow-md cursor-pointer")}><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="未着手">未着手</SelectItem>
                         <SelectItem value="進行中">進行中</SelectItem>
@@ -1752,7 +1795,7 @@ export default function CompanyDetailPage({
                               value={task.status}
                               onValueChange={(v: any) => handleStatusChangeTask(task, v)}
                             >
-                              <SelectTrigger className={cn("h-8 w-30 text-xs font-black", statusColors[task.status])}><SelectValue /></SelectTrigger>
+                              <SelectTrigger className={cn("h-8 w-32 border text-xs font-bold shadow-none", taskStatusStyles[task.status])}><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="未着手">未着手</SelectItem>
                                 <SelectItem value="進行中">進行中</SelectItem>
@@ -1898,7 +1941,7 @@ export default function CompanyDetailPage({
                                         })
                                       }
                                     >
-                                      <SelectTrigger className={cn("h-9 transition-all duration-200 hover:shadow-md cursor-pointer", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
+                                      <SelectTrigger className={cn("h-9 border transition-all duration-200 hover:shadow-md cursor-pointer", taskStatusStyles[editingTask.status])}><SelectValue /></SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="未着手">未着手</SelectItem>
                                         <SelectItem value="進行中">進行中</SelectItem>
@@ -2018,134 +2061,240 @@ export default function CompanyDetailPage({
           {localEvents.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">予定されているイベントはありません</p></CardContent></Card>
           ) : (
-            <div className="space-y-4">
-              {localEvents.map((event) => {
-                const isExpanded = expandedEventIds.has(event.id);
-                const isEditing = editingEvent?.id === event.id;
-                
-                return (
-                  <Card key={event.id} className={cn("overflow-hidden transition-all duration-200 border", isEditing ? "ring-1 ring-primary/30 shadow-md bg-accent/5" : "hover:border-primary/20", "cursor-pointer")} onClick={(e) => toggleEventExpand(event.id, e)}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-1 flex-1">
-                          <div className="flex items-center gap-2">
-                             {isEditing ? (
-                               <Input
-                                 className="text-base font-semibold h-8 w-[200px]"
-                                 value={editingEvent.title}
-                                 onClick={(e) => e.stopPropagation()}
-                                 onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
-                               />
-                             ) : (
-                               <h4 className="text-base font-semibold">{event.title}</h4>
-                             )}
-                             {isEditing ? (
-                               <Select
-                                 value={editingEvent.type}
-                                 onValueChange={(val) => setEditingEvent({ ...editingEvent, type: val })}
-                               >
-                                 <SelectTrigger className="h-7 text-xs w-[120px]" onClick={(e) => e.stopPropagation()}>
-                                   <SelectValue />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                    <SelectItem value="説明会">説明会</SelectItem>
-                                    <SelectItem value="サマーインターン">サマーインターン</SelectItem>
-                                    <SelectItem value="秋冬インターン">秋冬インターン</SelectItem>
-                                    <SelectItem value="座談会">座談会</SelectItem>
-                                    <SelectItem value="その他">その他</SelectItem>
-                                 </SelectContent>
-                               </Select>
-                             ) : (
-                               <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 flex items-center gap-1.5"><CalendarIcon className="h-3 w-3" /> {event.type}</Badge>
-                             )}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
-                            <Clock className="h-3.5 w-3.5" />
-                            {formatDate(event.date)}
-                            {event.endDate && (
-                              <>
-                                <span className="mx-1">〜</span>
-                                {formatDate(event.endDate)}
-                              </>
+            <div className="rounded-lg border border-border/70 bg-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-240 text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur">
+                    <tr className="border-b border-border/50 text-left">
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">種別</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">タイトル</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">開始</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">終了</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">場所</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {localEvents.map((event) => {
+                      const isExpanded = expandedEventIds.has(event.id);
+                      const draftEvent = editingEvent?.id === event.id ? editingEvent : event;
+
+                      return (
+                        <Fragment key={event.id}>
+                          <tr
+                            className={cn(
+                              "border-b border-border/40 transition-colors",
+                              isExpanded
+                                ? "bg-primary/5"
+                                : "cursor-pointer hover:bg-muted/50"
                             )}
-                          </div>
-                          {isSavingEvent && isEditing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    {isExpanded && (
-                       <div onClick={(e) => e.stopPropagation()}>
-                          <div className="px-6 py-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                 <Label className="text-xs mb-1 block">開始日時</Label>
-                                 <DateTimePicker
-                                   date={editingEvent?.date ? new Date(editingEvent.date) : event.date ? new Date(event.date) : undefined}
-                                   onChange={(date) => {
-                                      if (isEditing) setEditingEvent({ ...editingEvent, date: date?.toISOString() || "" });
-                                   }}
-                                 />
+                            onClick={(e) => toggleEventExpand(event.id, e)}
+                          >
+                            <td className="px-4 py-2 align-middle">
+                              <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800">
+                                {draftEvent.type}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2 align-middle">
+                              <p className="font-medium">{draftEvent.title}</p>
+                              {draftEvent.memo && (
+                                <p className="mt-1 max-w-120 truncate text-xs text-muted-foreground">{getPlainText(draftEvent.memo)}</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs">
+                              {draftEvent.date ? formatDate(draftEvent.date) : "-"}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs">
+                              {draftEvent.endDate ? formatDate(draftEvent.endDate) : "-"}
+                            </td>
+                            <td className="px-4 py-2 align-middle text-xs text-muted-foreground">
+                              {draftEvent.location || "-"}
+                            </td>
+                            <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                {isSavingEvent && editingEvent?.id === event.id && (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground mr-1" />
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-primary/10"
+                                  onClick={(e) => toggleEventExpand(event.id, e)}
+                                  title={isExpanded ? "閉じる" : "編集"}
+                                >
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteEvent(event.id)}
+                                  title="削除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <div>
-                                 <Label className="text-xs mb-1 block">終了日時</Label>
-                                 <DateTimePicker
-                                   date={editingEvent?.endDate ? (editingEvent.endDate ? new Date(editingEvent.endDate) : undefined) : event.endDate ? new Date(event.endDate) : undefined}
-                                   onChange={(date) => {
-                                      if (isEditing) setEditingEvent({ ...editingEvent, endDate: date?.toISOString() || "" });
-                                   }}
-                                   placeholder="終了日時（任意）"
-                                 />
-                              </div>
-                              <div>
-                                 <Label className="text-xs mb-1 block">場所・URL</Label>
-                                 <Input 
-                                   value={isEditing ? editingEvent.location : event.location} 
-                                   onChange={(e) => { if (isEditing) setEditingEvent({ ...editingEvent, location: e.target.value }) }}
-                                   readOnly={!isEditing}
-                                 />
-                              </div>
-                          </div>
-                          
-                          {/* Rich Text Editor for Event Memo */}
-                          <div className="px-6 pb-6 pt-2">
-                             <Label className="text-xs mb-1 block">メモ</Label>
-                             <div className="min-h-[150px] border rounded-md">
-                               <NotionEditor
-                                  content={isEditing ? (editingEvent.memo || "") : (event.memo || "")}
-                                  onChange={(content) => {
-                                     if(isEditing) setEditingEvent({...editingEvent, memo: content});
-                                  }}
-                               />
-                             </div>
-                          </div>
-                       </div>
-                    )}
-                  </Card>
-                )
-              })}
+                            </td>
+                          </tr>
+
+                          {isExpanded && (
+                            <tr className="border-b border-border/40 bg-background/70">
+                              <td colSpan={6} className="p-4" onClick={(e) => e.stopPropagation()}>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label className="text-xs mb-1 block">タイトル</Label>
+                                      <Input
+                                        value={draftEvent.title}
+                                        onChange={(e) => setEditingEvent({ ...draftEvent, title: e.target.value })}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs mb-1 block">種類</Label>
+                                      <Select
+                                        value={draftEvent.type}
+                                        onValueChange={(val) => setEditingEvent({ ...draftEvent, type: val })}
+                                      >
+                                        <SelectTrigger className="cursor-pointer transition-all hover:shadow-md">
+                                          <SelectValue placeholder="種類を選択" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="説明会">説明会</SelectItem>
+                                          <SelectItem value="サマーインターン">サマーインターン</SelectItem>
+                                          <SelectItem value="秋冬インターン">秋冬インターン</SelectItem>
+                                          <SelectItem value="座談会">座談会</SelectItem>
+                                          <SelectItem value="その他">その他</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs mb-1 block">開始日時</Label>
+                                      <DateTimePicker
+                                        date={draftEvent.date ? new Date(draftEvent.date) : undefined}
+                                        onChange={(date) => setEditingEvent({ ...draftEvent, date: date?.toISOString() || "" })}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs mb-1 block">終了日時</Label>
+                                      <DateTimePicker
+                                        date={draftEvent.endDate ? new Date(draftEvent.endDate) : undefined}
+                                        onChange={(date) => setEditingEvent({ ...draftEvent, endDate: date?.toISOString() || "" })}
+                                        placeholder="終了日時（任意）"
+                                      />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                      <Label className="text-xs mb-1 block">場所・URL</Label>
+                                      <Input
+                                        value={draftEvent.location || ""}
+                                        onChange={(e) => setEditingEvent({ ...draftEvent, location: e.target.value })}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="min-h-37.5">
+                                    <Label className="text-xs mb-1 block">メモ</Label>
+                                    <div className="border rounded-md">
+                                      <NotionEditor
+                                        content={draftEvent.memo || ""}
+                                        onChange={(content) => setEditingEvent({ ...draftEvent, memo: content })}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex justify-end">
+                                    <Button variant="ghost" size="sm" onClick={() => toggleEventExpand(event.id)} className="transition-all">
+                                      閉じる
+                                    </Button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="memo" className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-semibold">企業研究メモ</h3>
-            <div className="flex items-center gap-3">
-              {isSavingMemo && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
-                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                </div>
-              )}
-              <Button size="sm" onClick={() => handleSaveCompany()} disabled={isSavingMemo} className="transition-all">
-                <Save className="mr-2 h-4 w-4" /> 保存
-              </Button>
+          <div className="rounded-lg border border-border/70 bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-170 text-sm">
+                <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur">
+                  <tr className="border-b border-border/50 text-left">
+                    <th className="px-4 py-2 text-xs font-bold text-muted-foreground">タイトル</th>
+                    <th className="px-4 py-2 text-xs font-bold text-muted-foreground">更新日時</th>
+                    <th className="px-4 py-2 text-xs font-bold text-muted-foreground">文字数</th>
+                    <th className="px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    className={cn(
+                      "border-b border-border/40 transition-colors",
+                      isMemoExpanded ? "bg-primary/5" : "cursor-pointer hover:bg-muted/50"
+                    )}
+                    onClick={() => setIsMemoExpanded((prev) => !prev)}
+                  >
+                    <td className="px-4 py-2 align-middle">
+                      <p className="font-medium">企業研究メモ</p>
+                      <p className="text-xs text-muted-foreground">選考対策・企業分析メモ</p>
+                    </td>
+                    <td className="px-4 py-2 align-middle text-xs text-muted-foreground">
+                      {company.updatedAt ? new Date(company.updatedAt).toLocaleString("ja-JP") : "-"}
+                    </td>
+                    <td className="px-4 py-2 align-middle text-xs">
+                      <span className="inline-flex rounded-md bg-muted px-2 py-1 font-semibold text-muted-foreground">
+                        {countCharacters(memoContent)}文字
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        {isSavingMemo && (
+                          <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                            <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                          </div>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-lg hover:bg-primary/10"
+                          onClick={() => handleSaveCompany()}
+                          disabled={isSavingMemo}
+                          title="保存"
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 rounded-lg"
+                          onClick={() => setIsMemoExpanded((prev) => !prev)}
+                          title={isMemoExpanded ? "閉じる" : "編集"}
+                        >
+                          {isMemoExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {isMemoExpanded && (
+                    <tr className="border-b border-border/40 bg-background/70">
+                      <td colSpan={4} className="p-4">
+                        <div className="min-h-100">
+                          <NotionEditor content={memoContent} onChange={setMemoContent} />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
-          <div className="min-h-[400px]">
-            <NotionEditor content={memoContent} onChange={setMemoContent} />
           </div>
         </TabsContent>
       </Tabs>
