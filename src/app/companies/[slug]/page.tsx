@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use, useRef, useMemo } from "react";
+import { Fragment, useEffect, useState, useCallback, use, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -475,45 +475,62 @@ export default function CompanyDetailPage({
     }
   };
 
-  const handleSaveTask = async (taskToSave?: Task) => {
+  const handleSaveTask = async (taskToSave?: Task): Promise<boolean> => {
     const target = taskToSave || editingTask;
-    if (!target || isSavingTask) return;
+    if (!target || isSavingTask) return false;
     setIsSavingTask(true);
     try {
-      await fetch("/api/tasks", {
+      const res = await fetch("/api/tasks", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(target),
       });
+      if (!res.ok) {
+        throw new Error("Failed to save task");
+      }
       if (!taskToSave) {
         // toast.success("タスクを更新しました");
         // setEditingTask(null);
       }
       revalidate();
+      return true;
+    } catch {
+      toast.error("タスクの保存に失敗しました");
+      return false;
     } finally {
       setIsSavingTask(false);
     }
   };
 
   const originalEditingTask = editingTask ? localTasks.find((t) => t.id === editingTask.id) : undefined;
+  const hasEditingTaskChanges = hasTaskChanges(editingTask, originalEditingTask);
 
   useAutoSave({
     enabled: !!editingTask,
     hasChanges: hasTaskChanges(editingTask, originalEditingTask),
-    onSave: () => handleSaveTask(),
+    onSave: async () => {
+      await handleSaveTask();
+    },
     delay: 1500,
     deps: [editingTask, originalEditingTask],
   });
 
   const handleDeleteTask = async (id: string) => {
     if (!confirm("このタスクを削除しますか？")) return;
-    await fetch("/api/tasks", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    toast.success("タスクを削除しました");
-    revalidate();
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to delete task");
+      }
+      toast.success("タスクを削除しました");
+      revalidate();
+    } catch {
+      toast.error("タスクの削除に失敗しました");
+    }
   };
 
   const handleCreateInterview = async () => {
@@ -1649,13 +1666,15 @@ export default function CompanyDetailPage({
                   <div>
                     <Label>実施日</Label>
                     <DatePicker
+                      placeholder="実施日を選択"
                       date={newTask.executionDate ? new Date(newTask.executionDate) : undefined}
                       onChange={(d) => setNewTask((prev) => ({ ...prev, executionDate: d ? format(d, "yyyy-MM-dd") : "" }))}
                     />
                   </div>
                   <div>
-                    <Label>締切</Label>
+                    <Label>締切日時</Label>
                     <DateTimePicker
+                      placeholder="締切日時を選択"
                       date={newTask.deadline ? new Date(newTask.deadline) : undefined}
                       onChange={(d) => setNewTask((prev) => ({ ...prev, deadline: d ? d.toISOString() : "" }))}
                     />
@@ -1698,176 +1717,229 @@ export default function CompanyDetailPage({
           {localTasks.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">まだタスクがありません</p></CardContent></Card>
           ) : (
-            <div className="space-y-2">
-              {localTasks.map((task) => (
-                <div
-                  key={task.id}
-                  id={`task-${task.id}`}
-                  className={cn(
-                    "flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center transition-all duration-200",
-                    editingTask?.id === task.id
-                      ? "ring-1 ring-primary/30 border-primary/30 shadow-md bg-accent/5"
-                      : "hover:shadow-md hover:border-primary/20 cursor-pointer"
-                  )}
-                  onClick={() => {
-                    if (editingTask?.id !== task.id) {
-                      setEditingTask(task);
-                    }
-                  }}
-                >
-                  {editingTask?.id === task.id ? (
-                    <div className="flex-1 space-y-3" onClick={(e) => e.stopPropagation()}>
-                      <Input
-                        value={editingTask.title}
-                        onChange={(e) =>
-                          setEditingTask({ ...editingTask, title: e.target.value })
-                        }
-                        placeholder="タイトル"
-                      />
-                      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                        <Select
-                          value={editingTask.category}
-                          onValueChange={(value) =>
-                            setEditingTask({ ...editingTask, category: value })
-                          }
-                        >
-                          <SelectTrigger className="transition-all duration-200 hover:shadow-md cursor-pointer">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(config?.taskCategories || []).map((c) => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <DatePicker
-                          date={editingTask.executionDate ? new Date(editingTask.executionDate) : undefined}
-                          onChange={(d) =>
-                            setEditingTask((prev) =>
-                              prev
-                                ? {
-                                  ...prev,
-                                  executionDate: d ? format(d, "yyyy-MM-dd") : "",
-                                }
-                                : prev
-                            )
-                          }
-                        />
-                        <DateTimePicker
-                          date={editingTask.deadline ? new Date(editingTask.deadline) : undefined}
-                          onChange={(d) =>
-                            setEditingTask((prev) =>
-                              prev
-                                ? {
-                                  ...prev,
-                                  deadline: d ? d.toISOString() : "",
-                                }
-                                : prev
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="min-h-[150px]">
-                        <NotionEditor
-                          content={editingTask.memo || ""}
-                          onChange={(val) =>
-                            setEditingTask({ ...editingTask, memo: val })
-                          }
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="w-32">
-                          <Select
-                            value={editingTask.status}
-                            onValueChange={(v: any) =>
-                              setEditingTask({
-                                ...editingTask,
-                                status: v,
-                              })
-                            }
-                          >
-                            <SelectTrigger className={cn("h-9 transition-all duration-200 hover:shadow-md cursor-pointer", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="未着手">未着手</SelectItem>
-                              <SelectItem value="進行中">進行中</SelectItem>
-                              <SelectItem value="完了">完了</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex gap-2 items-center">
-                          {isSavingTask && (
-                            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
-                              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
-                            </div>
+            <div className="rounded-lg border border-border/70 bg-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-215 text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur">
+                    <tr className="border-b border-border/50 text-left">
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">ステータス</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">タスク</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">カテゴリ</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">実施日</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">期限日</th>
+                      <th className="px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {localTasks.map((task) => (
+                      <Fragment key={task.id}>
+                        <tr
+                          id={`task-${task.id}`}
+                          className={cn(
+                            "border-b border-border/40 transition-colors",
+                            editingTask?.id === task.id
+                              ? "bg-primary/5"
+                              : "cursor-pointer hover:bg-muted/50"
                           )}
-                          <Button variant="outline" size="sm" onClick={() => setEditingTask(null)} className="transition-all">
-                            完了
-                          </Button>
-                          <Button size="sm" onClick={() => handleSaveTask()} className="transition-all">保存</Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-24" onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={task.status}
-                          onValueChange={(v: any) => handleStatusChangeTask(task, v)}
-                        >
-                          <SelectTrigger className={cn("h-8 text-xs transition-all duration-200 hover:shadow-md cursor-pointer", statusColors[task.status])}><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="未着手">未着手</SelectItem>
-                            <SelectItem value="進行中">進行中</SelectItem>
-                            <SelectItem value="完了">完了</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex-1">
-                        <p className={`text-sm font-medium ${task.status === "完了" ? "line-through text-muted-foreground" : ""}`}>{task.title}</p>
-                        {task.memo && <p className="text-xs text-muted-foreground">{getPlainText(task.memo)}</p>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{task.category}</Badge>
-                        {task.executionDate && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
-                            <span className="font-medium text-[10px] uppercase text-slate-400">実施</span>
-                            <span>{formatDate(task.executionDate)}</span>
-                          </div>
-                        )}
-                        {task.deadline && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground border rounded-full px-2 py-0.5 bg-background">
-                            <span className="font-medium text-[10px] uppercase text-rose-400">締切</span>
-                            <span>{formatDate(task.deadline)}</span>
-                          </div>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingTask(task);
+                          onClick={() => {
+                            if (editingTask?.id !== task.id) {
+                              setEditingTask(task);
+                            }
                           }}
                         >
-                          <Edit className="mr-1 h-3 w-3" /> 編集
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTask(task.id);
-                          }}
-                        >
-                          <Trash2 className="mr-1 h-3 w-3" /> 削除
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
+                          <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={task.status}
+                              onValueChange={(v: any) => handleStatusChangeTask(task, v)}
+                            >
+                              <SelectTrigger className={cn("h-8 w-30 text-xs font-black", statusColors[task.status])}><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="未着手">未着手</SelectItem>
+                                <SelectItem value="進行中">進行中</SelectItem>
+                                <SelectItem value="完了">完了</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-4 py-2 align-middle">
+                            <p className={cn("font-medium", task.status === "完了" && "line-through text-muted-foreground")}>
+                              {task.title}
+                            </p>
+                            {task.memo && (
+                              <p className="mt-1 max-w-105 truncate text-xs text-muted-foreground">{getPlainText(task.memo)}</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 align-middle">
+                            <Badge variant="outline" className="text-xs">{task.category}</Badge>
+                          </td>
+                          <td className="px-4 py-2 align-middle text-xs">
+                            {task.executionDate ? (
+                              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 font-semibold text-foreground dark:bg-slate-800">
+                                {formatDate(task.executionDate)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/50">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 align-middle text-xs">
+                            {task.deadline ? (
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-md border px-2 py-1 font-semibold",
+                                  new Date(task.deadline) < new Date() && task.status !== "完了"
+                                    ? "border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-800 dark:bg-rose-950/20"
+                                    : "border-transparent bg-slate-100 text-foreground dark:bg-slate-800"
+                                )}
+                              >
+                                {formatDate(task.deadline)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/50">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg hover:bg-primary/10"
+                                onClick={() => setEditingTask(task)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteTask(task.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                        {editingTask?.id === task.id && (
+                          <tr className="border-b border-border/40 bg-background/70">
+                            <td colSpan={6} className="p-4">
+                              <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+                                <Input
+                                  value={editingTask.title}
+                                  onChange={(e) =>
+                                    setEditingTask({ ...editingTask, title: e.target.value })
+                                  }
+                                  placeholder="タイトル"
+                                />
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                                  <Select
+                                    value={editingTask.category}
+                                    onValueChange={(value) =>
+                                      setEditingTask({ ...editingTask, category: value })
+                                    }
+                                  >
+                                    <SelectTrigger className="transition-all duration-200 hover:shadow-md cursor-pointer">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(config?.taskCategories || []).map((c) => (
+                                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <div className="grid gap-1.5">
+                                    <Label className="text-xs text-muted-foreground">実施日</Label>
+                                    <DatePicker
+                                      placeholder="実施日を選択"
+                                      date={editingTask.executionDate ? new Date(editingTask.executionDate) : undefined}
+                                      onChange={(d) =>
+                                        setEditingTask((prev) =>
+                                          prev
+                                            ? {
+                                                ...prev,
+                                                executionDate: d ? format(d, "yyyy-MM-dd") : "",
+                                              }
+                                            : prev
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="grid gap-1.5">
+                                    <Label className="text-xs text-muted-foreground">期限日</Label>
+                                    <DateTimePicker
+                                      placeholder="期限日を選択"
+                                      date={editingTask.deadline ? new Date(editingTask.deadline) : undefined}
+                                      onChange={(d) =>
+                                        setEditingTask((prev) =>
+                                          prev
+                                            ? {
+                                                ...prev,
+                                                deadline: d ? d.toISOString() : "",
+                                              }
+                                            : prev
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                                <div className="min-h-37.5">
+                                  <NotionEditor
+                                    content={editingTask.memo || ""}
+                                    onChange={(val) =>
+                                      setEditingTask({ ...editingTask, memo: val })
+                                    }
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="w-32">
+                                    <Select
+                                      value={editingTask.status}
+                                      onValueChange={(v: any) =>
+                                        setEditingTask({
+                                          ...editingTask,
+                                          status: v,
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger className={cn("h-9 transition-all duration-200 hover:shadow-md cursor-pointer", statusColors[editingTask.status])}><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="未着手">未着手</SelectItem>
+                                        <SelectItem value="進行中">進行中</SelectItem>
+                                        <SelectItem value="完了">完了</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex gap-2 items-center">
+                                    {isSavingTask && (
+                                      <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/5 border border-primary/10">
+                                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                        <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Saving</span>
+                                      </div>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      className="transition-all"
+                                      onClick={async () => {
+                                        if (!hasEditingTaskChanges) {
+                                          setEditingTask(null);
+                                          return;
+                                        }
+                                        const saved = await handleSaveTask();
+                                        if (saved) {
+                                          setEditingTask(null);
+                                        }
+                                      }}
+                                    >
+                                      完了
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </TabsContent>
