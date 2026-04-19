@@ -183,7 +183,7 @@ export default function TipsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[700px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:h-[calc(100dvh-220px)] lg:min-h-175">
         {/* Left Sidebar - List */}
         <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-4 min-w-0">
           <div className="relative">
@@ -196,8 +196,8 @@ export default function TipsPage() {
             />
           </div>
 
-          <Card className="flex-grow border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5">
-            <ScrollArea className="h-full">
+          <Card className="border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 lg:grow">
+            <ScrollArea className="h-[38svh] min-h-65 lg:h-full">
               <div className="p-2 space-y-1">
                 {isLoading ? (
                   <div className="flex flex-col items-center justify-center p-20 gap-3">
@@ -255,7 +255,7 @@ export default function TipsPage() {
         {/* Right - Editor Area */}
         <div className="lg:col-span-8 xl:col-span-9 overflow-hidden">
           {selected ? (
-            <Card className="h-full border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col py-0!">
+            <Card className="border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col py-0! lg:h-full">
               <div className="border-b border-white/10 px-6 py-2 flex flex-col sm:flex-row justify-between shrink-0 min-h-[56px] gap-2 p-4">
                 <div className="flex-grow flex flex-col gap-1">
                   <input
@@ -291,7 +291,7 @@ export default function TipsPage() {
                 </div>
               </div>
               <CardContent className="flex-grow p-0 overflow-hidden relative">
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-[54svh] min-h-90 lg:h-full">
                   <div className="w-full p-4 lg:p-6 pt-2!">
                     <NotionEditor
                       key={selected.id}
@@ -303,7 +303,7 @@ export default function TipsPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="h-full border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col items-center justify-center p-12 text-center group">
+            <Card className="border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col items-center justify-center p-12 text-center group lg:h-full">
               <div className="relative mb-8">
                 <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 group-hover:scale-175 transition-transform duration-700" />
                 <div className="relative h-32 w-32 rounded-3xl bg-card border border-white/20 flex items-center justify-center shadow-2xl">
