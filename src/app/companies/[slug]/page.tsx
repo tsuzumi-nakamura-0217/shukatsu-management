@@ -877,7 +877,29 @@ export default function CompanyDetailPage({
 
       <Card className="px-4 py-3">
         <div className="space-y-3">
-          <CardTitle className="text-sm font-semibold">選考パイプライン</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-semibold">選考パイプライン</CardTitle>
+            <div className="flex items-center gap-1.5">
+              {hasPipelineChanges && (
+                <span className="text-[10px] font-medium text-amber-600">未保存</span>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[10px]"
+                onClick={() => setIsPipelineEditorOpen((prev) => !prev)}
+              >
+                {isPipelineEditorOpen ? "閉じる" : "編集"}
+                <ChevronDown
+                  className={cn(
+                    "ml-1 h-3 w-3 transition-transform",
+                    isPipelineEditorOpen && "rotate-180"
+                  )}
+                />
+              </Button>
+            </div>
+          </div>
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {stages.map((stage, i) => {
               const isCurrent = stage === company.status;
@@ -899,33 +921,8 @@ export default function CompanyDetailPage({
             })}
           </div>
 
-          <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">企業別パイプライン編集</p>
-              <div className="flex items-center gap-2">
-                {hasPipelineChanges && (
-                  <span className="text-[10px] font-medium text-amber-600">未保存の変更あり</span>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => setIsPipelineEditorOpen((prev) => !prev)}
-                >
-                  {isPipelineEditorOpen ? "閉じる" : "編集"}
-                  <ChevronDown
-                    className={cn(
-                      "ml-1.5 h-3.5 w-3.5 transition-transform",
-                      isPipelineEditorOpen && "rotate-180"
-                    )}
-                  />
-                </Button>
-              </div>
-            </div>
-
-            {isPipelineEditorOpen && (
-              <>
+          {isPipelineEditorOpen && (
+            <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
                     size="sm"
@@ -1015,9 +1012,8 @@ export default function CompanyDetailPage({
                 </div>
 
                 <p className="text-[10px] text-muted-foreground">現在ステータスを含まない構成は保存できません。</p>
-              </>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="mt-1 pt-2 border-t border-border/50 flex flex-col gap-1.5 sm:flex-row sm:items-center">
             <div className={cn(
