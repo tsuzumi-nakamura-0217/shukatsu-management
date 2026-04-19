@@ -163,6 +163,7 @@ export default function CompanyDetailPage({
   const [pipelineStages, setPipelineStages] = useState<string[]>([]);
   const [newPipelineStage, setNewPipelineStage] = useState("");
   const [isSavingPipeline, setIsSavingPipeline] = useState(false);
+  const [isPipelineEditorOpen, setIsPipelineEditorOpen] = useState(false);
 
   // New item forms
   const [newTask, setNewTask] = useState<{ title: string; category: string; executionDate: string; deadline: string; memo: string; status: "未着手" | "進行中" | "完了" }>({ title: "", category: "その他", executionDate: "", deadline: "", memo: "", status: "未着手" });
@@ -172,6 +173,7 @@ export default function CompanyDetailPage({
 
   const initializedCompanyId = useRef<string | null>(null);
   const focusedTaskIdRef = useRef<string | null>(null);
+  const pipelineInputComposingRef = useRef(false);
   const defaultStages = useMemo(() => normalizeStageList(config?.defaultStages), [config?.defaultStages]);
   const currentCompanyStages = useMemo(() => {
     const companyStages = normalizeStageList(company?.stages);
@@ -900,80 +902,121 @@ export default function CompanyDetailPage({
           <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">企業別パイプライン編集</p>
-              <Button
-                size="sm"
-                className="h-7 px-3 text-xs"
-                onClick={handleSavePipelineStages}
-                disabled={isSavingPipeline || editablePipelineStages.length === 0 || !hasPipelineChanges}
-              >
-                {isSavingPipeline ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-                保存
-              </Button>
+              <div className="flex items-center gap-2">
+                {hasPipelineChanges && (
+                  <span className="text-[10px] font-medium text-amber-600">未保存の変更あり</span>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setIsPipelineEditorOpen((prev) => !prev)}
+                >
+                  {isPipelineEditorOpen ? "閉じる" : "編集"}
+                  <ChevronDown
+                    className={cn(
+                      "ml-1.5 h-3.5 w-3.5 transition-transform",
+                      isPipelineEditorOpen && "rotate-180"
+                    )}
+                  />
+                </Button>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                value={newPipelineStage}
-                onChange={(e) => setNewPipelineStage(e.target.value)}
-                placeholder="ステージを追加"
-                className="h-8 text-xs"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddPipelineStage();
-                  }
-                }}
-              />
-              <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddPipelineStage}>
-                <Plus className="mr-1.5 h-3.5 w-3.5" /> 追加
-              </Button>
-            </div>
+            {isPipelineEditorOpen && (
+              <>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    size="sm"
+                    className="h-7 px-3 text-xs"
+                    onClick={handleSavePipelineStages}
+                    disabled={isSavingPipeline || editablePipelineStages.length === 0 || !hasPipelineChanges}
+                  >
+                    {isSavingPipeline ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                    保存
+                  </Button>
+                </div>
 
-            <div className="space-y-1">
-              {editablePipelineStages.length === 0 ? (
-                <p className="text-xs text-destructive">ステージを1件以上設定してください</p>
-              ) : (
-                editablePipelineStages.map((stage, index) => (
-                  <div key={`${stage}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1.5">
-                    <span className="text-xs font-medium truncate">{index + 1}. {stage}</span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => handleMovePipelineStage(index, -1)}
-                        disabled={index === 0 || isSavingPipeline}
-                      >
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => handleMovePipelineStage(index, 1)}
-                        disabled={index === editablePipelineStages.length - 1 || isSavingPipeline}
-                      >
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive hover:text-destructive"
-                        onClick={() => handleRemovePipelineStage(index)}
-                        disabled={isSavingPipeline || editablePipelineStages.length <= 1}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    value={newPipelineStage}
+                    onChange={(e) => setNewPipelineStage(e.target.value)}
+                    placeholder="ステージを追加"
+                    className="h-8 text-xs"
+                    onCompositionStart={() => {
+                      pipelineInputComposingRef.current = true;
+                    }}
+                    onCompositionEnd={() => {
+                      pipelineInputComposingRef.current = false;
+                    }}
+                    onKeyDown={(e) => {
+                      const isImeComposing =
+                        pipelineInputComposingRef.current ||
+                        e.nativeEvent.isComposing ||
+                        e.keyCode === 229;
+                      if (isImeComposing) {
+                        return;
+                      }
 
-            <p className="text-[10px] text-muted-foreground">現在ステータスを含まない構成は保存できません。</p>
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddPipelineStage();
+                      }
+                    }}
+                  />
+                  <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddPipelineStage}>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" /> 追加
+                  </Button>
+                </div>
+
+                <div className="space-y-1">
+                  {editablePipelineStages.length === 0 ? (
+                    <p className="text-xs text-destructive">ステージを1件以上設定してください</p>
+                  ) : (
+                    editablePipelineStages.map((stage, index) => (
+                      <div key={`${stage}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1.5">
+                        <span className="text-xs font-medium truncate">{index + 1}. {stage}</span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleMovePipelineStage(index, -1)}
+                            disabled={index === 0 || isSavingPipeline}
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleMovePipelineStage(index, 1)}
+                            disabled={index === editablePipelineStages.length - 1 || isSavingPipeline}
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => handleRemovePipelineStage(index)}
+                            disabled={isSavingPipeline || editablePipelineStages.length <= 1}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <p className="text-[10px] text-muted-foreground">現在ステータスを含まない構成は保存できません。</p>
+              </>
+            )}
           </div>
 
           <div className="mt-1 pt-2 border-t border-border/50 flex flex-col gap-1.5 sm:flex-row sm:items-center">
