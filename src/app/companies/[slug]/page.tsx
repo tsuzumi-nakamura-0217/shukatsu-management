@@ -111,6 +111,37 @@ function normalizeStageList(stages: unknown): string[] {
   return normalized;
 }
 
+function isInsideExpandedRow(target: Element, attributeName: string, expandedIds: Set<string>): boolean {
+  let current: Element | null = target;
+
+  while (current) {
+    const rowId = current.getAttribute(attributeName);
+    if (rowId && expandedIds.has(rowId)) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+
+  return false;
+}
+
+function isInsideRow(target: Element, attributeName: string, rowId: string): boolean {
+  let current: Element | null = target;
+
+  while (current) {
+    if (current.getAttribute(attributeName) === rowId) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+
+  return false;
+}
+
+function isInsideFloatingLayer(target: Element): boolean {
+  return Boolean(target.closest("[data-radix-popper-content-wrapper]"));
+}
+
 export default function CompanyDetailPage({
   params,
 }: {
@@ -809,6 +840,55 @@ export default function CompanyDetailPage({
     });
   };
 
+  useEffect(() => {
+    const hasExpandableOpen =
+      expandedEsIds.size > 0 ||
+      expandedInterviewIds.size > 0 ||
+      expandedEventIds.size > 0 ||
+      !!editingTask ||
+      isMemoExpanded;
+
+    if (!hasExpandableOpen) return;
+
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (isInsideFloatingLayer(target)) return;
+
+      if (expandedEsIds.size > 0 && !isInsideExpandedRow(target, "data-es-row-id", expandedEsIds)) {
+        setExpandedEsIds(new Set());
+        setEditEsDoc(null);
+      }
+
+      if (
+        expandedInterviewIds.size > 0 &&
+        !isInsideExpandedRow(target, "data-interview-row-id", expandedInterviewIds)
+      ) {
+        setExpandedInterviewIds(new Set());
+        setEditingInterview(null);
+      }
+
+      if (editingTask && !isInsideRow(target, "data-task-row-id", editingTask.id)) {
+        setEditingTask(null);
+      }
+
+      if (expandedEventIds.size > 0 && !isInsideExpandedRow(target, "data-event-row-id", expandedEventIds)) {
+        setExpandedEventIds(new Set());
+        setEditingEvent(null);
+      }
+
+      if (isMemoExpanded && !target.closest('[data-memo-row="company-research"]')) {
+        setIsMemoExpanded(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDownOutside);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
+    };
+  }, [expandedEsIds, expandedInterviewIds, expandedEventIds, editingTask, isMemoExpanded]);
+
 
   if (!company) {
     return <div className="flex items-center justify-center h-64"><p className="text-muted-foreground">読み込み中...</p></div>;
@@ -1291,6 +1371,7 @@ export default function CompanyDetailPage({
                       return (
                         <Fragment key={doc.id}>
                           <tr
+                            data-es-row-id={doc.id}
                             className={cn(
                               "border-b border-border/40 transition-colors",
                               isExpanded
@@ -1366,7 +1447,7 @@ export default function CompanyDetailPage({
                             </td>
                           </tr>
                           {isExpanded && (
-                            <tr className="border-b border-border/40 bg-background/70">
+                            <tr data-es-row-id={doc.id} className="border-b border-border/40 bg-background/70">
                               <td colSpan={5} className="p-4" onClick={(e) => e.stopPropagation()}>
                                 <div className="space-y-4">
                                   <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
@@ -1554,6 +1635,7 @@ export default function CompanyDetailPage({
                       return (
                         <Fragment key={interview.id}>
                           <tr
+                            data-interview-row-id={interview.id}
                             className={cn(
                               "border-b border-border/40 transition-colors",
                               isExpanded
@@ -1602,7 +1684,7 @@ export default function CompanyDetailPage({
                           </tr>
 
                           {isExpanded && (
-                            <tr className="border-b border-border/40 bg-background/70">
+                            <tr data-interview-row-id={interview.id} className="border-b border-border/40 bg-background/70">
                               <td colSpan={5} className="p-4" onClick={(e) => e.stopPropagation()}>
                                 <div className="space-y-4">
                                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mt-2">
@@ -1777,6 +1859,7 @@ export default function CompanyDetailPage({
                     {localTasks.map((task) => (
                       <Fragment key={task.id}>
                         <tr
+                          data-task-row-id={task.id}
                           id={`task-${task.id}`}
                           className={cn(
                             "border-b border-border/40 transition-colors",
@@ -1861,7 +1944,7 @@ export default function CompanyDetailPage({
                           </td>
                         </tr>
                         {editingTask?.id === task.id && (
-                          <tr className="border-b border-border/40 bg-background/70">
+                          <tr data-task-row-id={task.id} className="border-b border-border/40 bg-background/70">
                             <td colSpan={6} className="p-4">
                               <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                                 <Input
@@ -2082,6 +2165,7 @@ export default function CompanyDetailPage({
                       return (
                         <Fragment key={event.id}>
                           <tr
+                            data-event-row-id={event.id}
                             className={cn(
                               "border-b border-border/40 transition-colors",
                               isExpanded
@@ -2138,7 +2222,7 @@ export default function CompanyDetailPage({
                           </tr>
 
                           {isExpanded && (
-                            <tr className="border-b border-border/40 bg-background/70">
+                            <tr data-event-row-id={event.id} className="border-b border-border/40 bg-background/70">
                               <td colSpan={6} className="p-4" onClick={(e) => e.stopPropagation()}>
                                 <div className="space-y-4">
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2234,6 +2318,7 @@ export default function CompanyDetailPage({
                 </thead>
                 <tbody>
                   <tr
+                    data-memo-row="company-research"
                     className={cn(
                       "border-b border-border/40 transition-colors",
                       isMemoExpanded ? "bg-primary/5" : "cursor-pointer hover:bg-muted/50"
@@ -2284,7 +2369,7 @@ export default function CompanyDetailPage({
                   </tr>
 
                   {isMemoExpanded && (
-                    <tr className="border-b border-border/40 bg-background/70">
+                    <tr data-memo-row="company-research" className="border-b border-border/40 bg-background/70">
                       <td colSpan={4} className="p-4">
                         <div className="min-h-100">
                           <NotionEditor content={memoContent} onChange={setMemoContent} />
