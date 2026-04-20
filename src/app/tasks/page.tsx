@@ -455,12 +455,6 @@ export default function TasksPage() {
                       <td className="px-4 py-2 align-middle">
                         <div className="flex items-center gap-2">
                           <span className={cn("font-semibold", task.status === "完了" && "line-through text-muted-foreground")}>{task.title}</span>
-                          {task.notionPageId && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                              <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
-                              NOTION
-                            </span>
-                          )}
                         </div>
                         {task.memo && (
                           <p className="mt-1 max-w-110 truncate text-xs text-muted-foreground">

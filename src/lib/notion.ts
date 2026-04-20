@@ -144,18 +144,10 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
     } else {
       // Create new page
       const databaseType = config.notion.databaseType || "database";
-      const parent: {
-        type?: "data_source_id" | "database_id";
-        data_source_id?: string;
-        database_id?: string;
-      } = {};
-      if (databaseType === "data_source") {
-        parent.type = "data_source_id";
-        parent.data_source_id = databaseId;
-      } else {
-        parent.type = "database_id";
-        parent.database_id = databaseId;
-      }
+      const parent =
+        databaseType === "data_source"
+          ? { type: "data_source_id" as const, data_source_id: databaseId }
+          : { type: "database_id" as const, database_id: databaseId };
 
       const response = await client.pages.create({
         parent,
@@ -237,11 +229,14 @@ export async function searchNotionDatabases(
     });
 
     const databases = response.results
-      .filter((item) => item.object === "database" || item.object === "data_source")
+      .filter((item) => {
+        const objectType = (item as { object: string }).object;
+        return objectType === "database" || objectType === "data_source";
+      })
       .map((db) => ({
         id: db.id,
         title: getNotionTitle(db as { title?: Array<{ plain_text?: string }> }),
-        type: db.object, // "database" or "data_source"
+        type: (db as { object: string }).object, // "database" or "data_source"
       }));
 
     return { success: true, databases };
