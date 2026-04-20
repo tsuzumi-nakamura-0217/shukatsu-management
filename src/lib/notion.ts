@@ -1,6 +1,122 @@
 import { Client } from "@notionhq/client";
 import { getConfig } from "./data/config";
 import type { Task } from "@/types";
+import { getPlainText } from "./utils";
+
+const NOTION_TIME_ZONE = "Asia/Tokyo";
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const NOTION_RICH_TEXT_LIMIT = 1800;
+
+function formatDateTimeForTimeZone(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(value);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  const year = getPart("year");
+  const month = getPart("month");
+  const day = getPart("day");
+  const hour = getPart("hour");
+  const minute = getPart("minute");
+  const second = getPart("second");
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+}
+
+function toNotionDateValue(value: string | null | undefined): { start: string; time_zone?: string } | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (DATE_ONLY_PATTERN.test(trimmed)) {
+    return { start: trimmed };
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return {
+    start: formatDateTimeForTimeZone(parsed, NOTION_TIME_ZONE),
+    time_zone: NOTION_TIME_ZONE,
+  };
+}
+
+function chunkText(value: string, maxLength: number): string[] {
+  if (value.length <= maxLength) return [value];
+
+  const chunks: string[] = [];
+  for (let index = 0; index < value.length; index += maxLength) {
+    chunks.push(value.slice(index, index + maxLength));
+  }
+
+  return chunks;
+}
+
+function toNotionRichText(value: string | null | undefined): Array<{ text: { content: string } }> {
+  const plainText = getPlainText(value || "").trim();
+  if (!plainText) {
+    return [];
+  }
+
+  return chunkText(plainText, NOTION_RICH_TEXT_LIMIT).map((content) => ({
+    text: { content },
+  }));
+}
+
+function buildTaskProperties(task: Task) {
+  return {
+    title: {
+      title: [{ text: { content: task.title } }],
+    },
+    "企業名": {
+      rich_text: [{ text: { content: task.companyName || "" } }],
+    },
+    "カテゴリ": {
+      select: { name: task.category },
+    },
+    "日付": {
+      date: toNotionDateValue(task.executionDate),
+    },
+    "締切": {
+      date: toNotionDateValue(task.deadline),
+    },
+    "ステータス": {
+      status: { name: task.status },
+    },
+    "メモ": {
+      rich_text: toNotionRichText(task.memo),
+    },
+  };
+}
+
+function getNotionTitle(entity: { title?: Array<{ plain_text?: string }> } | undefined): string {
+  return entity?.title?.[0]?.plain_text || "Untitled";
+}
+
+function getErrorMeta(error: unknown): { message?: string; code?: string; body?: unknown } {
+  if (typeof error !== "object" || error === null) {
+    return {};
+  }
+
+  const record = error as Record<string, unknown>;
+  return {
+    message: typeof record.message === "string" ? record.message : undefined,
+    code: typeof record.code === "string" ? record.code : undefined,
+    body: record.body,
+  };
+}
 
 
 async function getNotionClient(): Promise<Client | null> {
@@ -22,35 +138,17 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
       // Update existing page
       await client.pages.update({
         page_id: task.notionPageId,
-        properties: {
-          title: {
-            title: [{ text: { content: task.title } }],
-          },
-          "企業名": {
-            rich_text: [{ text: { content: task.companyName || "" } }],
-          },
-          "カテゴリ": {
-            select: { name: task.category },
-          },
-          "日付": task.executionDate
-            ? { date: { start: task.executionDate } }
-            : { date: null },
-          "締切": task.deadline
-            ? { date: { start: task.deadline } }
-            : { date: null },
-          "ステータス": {
-            status: { name: task.status },
-          },
-          "メモ": {
-            rich_text: [{ text: { content: task.memo || "" } }],
-          },
-        },
+        properties: buildTaskProperties(task),
       });
       return task.notionPageId;
     } else {
       // Create new page
       const databaseType = config.notion.databaseType || "database";
-      const parent: any = {};
+      const parent: {
+        type?: "data_source_id" | "database_id";
+        data_source_id?: string;
+        database_id?: string;
+      } = {};
       if (databaseType === "data_source") {
         parent.type = "data_source_id";
         parent.data_source_id = databaseId;
@@ -61,37 +159,16 @@ export async function syncTaskToNotion(task: Task): Promise<string | null> {
 
       const response = await client.pages.create({
         parent,
-        properties: {
-          title: {
-            title: [{ text: { content: task.title } }],
-          },
-          "企業名": {
-            rich_text: [{ text: { content: task.companyName || "" } }],
-          },
-          "カテゴリ": {
-            select: { name: task.category },
-          },
-          "日付": task.executionDate
-            ? { date: { start: task.executionDate } }
-            : { date: null },
-          "締切": task.deadline
-            ? { date: { start: task.deadline } }
-            : { date: null },
-          "ステータス": {
-            status: { name: task.status },
-          },
-          "メモ": {
-            rich_text: [{ text: { content: task.memo || "" } }],
-          },
-        },
+        properties: buildTaskProperties(task),
       });
       return response.id;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const meta = getErrorMeta(error);
     console.error("Notion sync error:", {
-      message: error.message,
-      code: error.code,
-      body: error.body,
+      message: meta.message,
+      code: meta.code,
+      body: meta.body,
     });
     return null;
   }
@@ -105,10 +182,11 @@ export async function deleteTaskFromNotion(pageId: string, apiKey: string): Prom
       archived: true,
     });
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const meta = getErrorMeta(error);
     console.error("Notion delete error:", {
-      message: error.message,
-      code: error.code,
+      message: meta.message,
+      code: meta.code,
     });
     return false;
   }
@@ -126,11 +204,11 @@ export async function testNotionConnection(
     const searchRes = await client.search({
       filter: { property: "object", value: "data_source" },
     });
-    const found = searchRes.results.find((r: any) => r.id === databaseId);
+    const found = searchRes.results.find((r) => r.id === databaseId);
     if (found) {
       return {
         success: true,
-        message: `接続成功: " ${(found as any).title?.[0]?.plain_text || "Untitled"}" に接続しました`,
+        message: `接続成功: " ${getNotionTitle(found as { title?: Array<{ plain_text?: string }> })}" に接続しました`,
       };
     } else {
       return {
@@ -159,10 +237,10 @@ export async function searchNotionDatabases(
     });
 
     const databases = response.results
-      .filter((item: any) => item.object === "database" || item.object === "data_source")
-      .map((db: any) => ({
+      .filter((item) => item.object === "database" || item.object === "data_source")
+      .map((db) => ({
         id: db.id,
-        title: db.title?.[0]?.plain_text || "Untitled",
+        title: getNotionTitle(db as { title?: Array<{ plain_text?: string }> }),
         type: db.object, // "database" or "data_source"
       }));
 
