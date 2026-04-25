@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,16 +8,6 @@ import { AppShell } from "@/components/app-shell";
 import { ChatSessionProvider } from "@/components/chat-session-provider";
 import { PWARegister } from "@/components/pwa-register";
 import { SWRProvider } from "@/components/swr-config";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "就活管理",
@@ -52,7 +41,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192x192.svg" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased relative min-h-screen overflow-x-hidden`}
+        className={`antialiased relative min-h-screen overflow-x-hidden`}
       >
         <PWARegister />
         <SWRProvider>
