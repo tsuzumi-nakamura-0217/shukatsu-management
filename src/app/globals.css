@@ -139,8 +139,10 @@
   border-radius: 0.75rem;
   background: var(--card);
   position: relative;
+  width: 100%;
   max-width: 100%;
-  /* overflow: hidden; */ /* Remove to allow position:sticky on children */
+  min-width: 0;
+  overflow-x: clip; /* Clips horizontal overflow without breaking position: sticky */
 }
 
 /* ── ツールバー ── */
@@ -205,7 +207,9 @@
   overflow-wrap: break-word;
   word-wrap: break-word;
   word-break: break-word;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
 }
 
 @media (min-width: 640px) {
