@@ -350,7 +350,7 @@ export const NotionEditor = forwardRef<NotionEditorHandle, NotionEditorProps>(fu
     addCommentHighlight: (from: number, to: number, commentId: string) => {
       if (!editor) return;
       editor.commands.setTextSelection({ from, to });
-      editor.commands.setHighlight({ commentId });
+      editor.commands.setHighlight({ commentId } as any);
       // Clear selection so the user can continue typing normally
       editor.commands.setTextSelection(to);
       isInternalUpdate.current = true;
