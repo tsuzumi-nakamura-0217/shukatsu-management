@@ -50,18 +50,18 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-6 pb-8">
       {/* Compact Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-card p-3 px-4 sm:p-4 sm:px-8 shadow-lg shadow-primary/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-primary/10 blur-[40px]" />
 
-        <div className="relative flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <LayoutDashboard className="h-6 w-6 text-primary" />
+        <div className="relative flex items-center gap-3 sm:gap-4">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <LayoutDashboard className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
               {greeting}！
             </h1>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5 hidden sm:block">
               Welcome back to your job hunt management
             </p>
           </div>
@@ -82,7 +82,7 @@ export default function Home() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-2 lg:grid-cols-5">
         <Link href="/companies" className="group">
           <Card className="hover-lift h-full border-none glass overflow-hidden">
             <CardHeader className="pb-2">
@@ -92,7 +92,7 @@ export default function Home() {
                   <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {isLoading ? (
                   <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
                 ) : (
@@ -117,7 +117,7 @@ export default function Home() {
                   <ListChecks className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {isLoading ? (
                   <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
                 ) : (
@@ -152,7 +152,7 @@ export default function Home() {
                   </Badge>
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold text-glow">
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-glow">
                 {isLoading ? (
                   <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
                 ) : (
@@ -175,7 +175,7 @@ export default function Home() {
                   <CalendarClock className="h-4 w-4 text-sky-600 dark:text-sky-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {isLoading ? (
                   <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
                 ) : (
@@ -220,7 +220,7 @@ export default function Home() {
                   <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
               </div>
-              <CardTitle className="text-3xl font-bold">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">
                 {isLoading ? (
                   <div className="h-9 w-16 rounded-md bg-muted animate-pulse" />
                 ) : (
@@ -235,7 +235,7 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-12">
+      <div className="grid gap-6 sm:gap-8 lg:grid-cols-12">
         {/* Recent Tasks */}
         <div className="lg:col-span-12 xl:col-span-7 space-y-4">
           <div className="flex items-center justify-between px-2">
@@ -272,7 +272,7 @@ export default function Home() {
                   <Link
                     key={task.id}
                     href={`/companies/${task.companySlug}?tab=tasks`}
-                    className="group flex flex-col gap-3 rounded-2xl border border-transparent bg-background/50 p-4 transition-all hover:bg-muted/50 dark:hover:bg-card hover:border-border hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
+                    className="group flex flex-col gap-2 sm:gap-3 rounded-2xl border border-transparent bg-background/50 p-3 sm:p-4 transition-all hover:bg-muted/50 dark:hover:bg-card hover:border-border hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
@@ -283,9 +283,9 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground font-medium">{task.companyName || "企業未設定"}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                       <TagBadge name={task.category} color="blue" />
-                      <div className="px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold ring-1 ring-rose-200 dark:ring-rose-800/50">
+                      <div className="px-2 sm:px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-[11px] sm:text-xs font-bold ring-1 ring-rose-200 dark:ring-rose-800/50">
                         {formatDate(task.deadline)}
                       </div>
                     </div>

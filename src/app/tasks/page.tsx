@@ -254,15 +254,15 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col gap-6 pb-10">
       {/* Compact Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-card p-3 px-4 sm:p-4 sm:px-8 shadow-lg shadow-primary/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-rose-500/10 blur-[40px]" />
 
-        <div className="relative flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <ListChecks className="h-6 w-6 text-primary" />
+        <div className="relative flex items-center gap-3 sm:gap-4">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <ListChecks className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
               タスク管理
             </h1>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
@@ -273,7 +273,7 @@ export default function TasksPage() {
 
         <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="rounded-xl h-10 px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all">
+            <Button size="sm" className="rounded-xl h-9 sm:h-10 px-3 sm:px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               新規タスク
             </Button>
@@ -370,7 +370,7 @@ export default function TasksPage() {
         </Dialog>
       </div>
 
-      <div className="flex flex-col gap-4 glass p-4 rounded-2xl md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 sm:gap-4 glass p-3 sm:p-4 rounded-2xl md:flex-row md:items-center">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -409,16 +409,16 @@ export default function TasksPage() {
 
       <Card className="border-none glass overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-245 text-sm">
+          <table className="w-full min-w-[600px] sm:min-w-[800px] text-sm">
             <thead className="sticky top-0 z-10 bg-muted/40 backdrop-blur">
               <tr className="border-b border-border/50 text-left">
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground">ステータス</th>
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground">タスク</th>
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground hidden md:table-cell">企業</th>
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground">カテゴリ</th>
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground">実施日</th>
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground">期限日</th>
-                <th className="px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground">ステータス</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground">タスク</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground hidden md:table-cell">企業</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground hidden sm:table-cell">カテゴリ</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground hidden sm:table-cell">実施日</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground">期限日</th>
+                <th className="px-3 sm:px-4 py-2 text-xs font-bold text-muted-foreground">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -440,9 +440,9 @@ export default function TasksPage() {
                       )}
                       onClick={() => setEditingTask(task)}
                     >
-                      <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 sm:px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
                         <Select value={task.status} onValueChange={(val: any) => handleStatusChange(task, val)}>
-                          <SelectTrigger className={cn("h-8 w-32 border text-xs font-bold shadow-none", taskStatusStyles[task.status])}>
+                          <SelectTrigger className={cn("h-8 w-24 sm:w-32 border text-[11px] sm:text-xs font-bold shadow-none", taskStatusStyles[task.status])}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -452,25 +452,25 @@ export default function TasksPage() {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-4 py-2 align-middle">
+                      <td className="px-3 sm:px-4 py-2 align-middle">
                         <div className="flex items-center gap-2">
-                          <span className={cn("font-semibold", task.status === "完了" && "line-through text-muted-foreground")}>{task.title}</span>
+                          <span className={cn("font-semibold text-sm", task.status === "完了" && "line-through text-muted-foreground")}>{task.title}</span>
                         </div>
                         {task.memo && (
-                          <p className="mt-1 max-w-110 truncate text-xs text-muted-foreground">
+                          <p className="mt-1 max-w-40 sm:max-w-110 truncate text-xs text-muted-foreground">
                             {getPlainText(task.memo)}
                           </p>
                         )}
                       </td>
-                      <td className="px-4 py-2 align-middle hidden md:table-cell">
+                      <td className="px-3 sm:px-4 py-2 align-middle hidden md:table-cell">
                         <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                           {task.companyName || "-"}
                         </span>
                       </td>
-                      <td className="px-4 py-2 align-middle">
+                      <td className="px-3 sm:px-4 py-2 align-middle hidden sm:table-cell">
                         <TagBadge name={task.category} color="slate" />
                       </td>
-                      <td className="px-4 py-2 align-middle text-xs">
+                      <td className="px-3 sm:px-4 py-2 align-middle text-xs hidden sm:table-cell">
                         {task.executionDate ? (
                           <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-semibold text-foreground dark:bg-slate-800">
                             <CalendarClock className="h-3 w-3 opacity-60" />
@@ -480,7 +480,7 @@ export default function TasksPage() {
                           <span className="text-muted-foreground/50">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 align-middle text-xs">
+                      <td className="px-3 sm:px-4 py-2 align-middle text-xs">
                         {task.deadline ? (
                           <span
                             className={cn(
@@ -497,7 +497,7 @@ export default function TasksPage() {
                           <span className="text-muted-foreground/50">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 sm:px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"

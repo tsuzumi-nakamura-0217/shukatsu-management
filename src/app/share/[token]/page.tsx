@@ -360,15 +360,15 @@ export default function SharedESPage() {
   return (
     <div className="flex flex-col gap-6 pb-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-card p-3 px-4 sm:p-4 sm:px-8 shadow-lg shadow-primary/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-orange-500/10 blur-[40px]" />
 
-        <div className="relative flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <FileText className="h-6 w-6 text-primary" />
+        <div className="relative flex items-center gap-3 sm:gap-4">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
               ES添削モード
             </h1>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
@@ -463,17 +463,17 @@ export default function SharedESPage() {
       {/* Editor area */}
       <div className="grid grid-cols-1 gap-6 lg:h-[calc(100dvh-220px)] lg:min-h-175">
         <Card className="border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col py-0! lg:h-full">
-          <div className="border-b border-white/10 px-6 py-2 flex flex-row items-center justify-between shrink-0 min-h-[56px]">
-            <div className="flex-grow mr-4">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-tight whitespace-normal break-all max-w-[60%]">
+          <div className="border-b border-white/10 px-3 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 min-h-[56px] gap-2">
+            <div className="flex-grow mr-0 sm:mr-4 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-tight whitespace-normal break-all max-w-full sm:max-w-[60%]">
                   {companyLabel}
                 </div>
                 <div className="bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">
                   {countCharacters(editContent)} Characters
                 </div>
               </div>
-              <h2 className="text-2xl font-black text-foreground">
+              <h2 className="text-lg sm:text-2xl font-black text-foreground">
                 {docData.title}
               </h2>
             </div>

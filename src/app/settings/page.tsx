@@ -276,23 +276,23 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 pb-10">
       {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-8 shadow-xl shadow-primary/5">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-card p-4 sm:p-8 shadow-xl shadow-primary/5">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-48 w-48 rounded-full bg-slate-500/10 blur-[60px]" />
         <div className="absolute bottom-0 left-0 -ml-12 -mb-12 h-48 w-48 rounded-full bg-slate-500/10 blur-[60px]" />
         
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <Settings className="h-10 w-10 text-primary" />
+            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground flex items-center gap-2 sm:gap-3">
+              <Settings className="h-7 w-7 sm:h-10 sm:w-10 text-primary" />
               設定
             </h1>
-            <p className="text-muted-foreground mt-1 font-medium">
+            <p className="text-muted-foreground mt-1 font-medium text-sm sm:text-base">
               アプリケーションの動作環境とデータ連携を管理しましょう
             </p>
           </div>
           <Button 
             onClick={handleSave}
-            className="rounded-2xl h-12 px-8 font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
+            className="rounded-2xl h-11 sm:h-12 px-6 sm:px-8 font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 w-full sm:w-auto"
           >
             <Save className="h-5 w-5 mr-2" />
             設定を保存

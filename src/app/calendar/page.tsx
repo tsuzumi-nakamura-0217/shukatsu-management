@@ -132,7 +132,7 @@ export default function CalendarPage() {
     <div className="relative flex flex-col gap-6 pb-6">
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 rounded-[2rem] bg-[radial-gradient(circle_at_18%_0%,rgba(14,165,233,0.14),transparent_48%),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.14),transparent_42%)]" />
 
-      <div className="relative overflow-hidden rounded-3xl border border-white/25 bg-linear-to-br from-card via-card to-primary/5 p-5 shadow-xl shadow-primary/10 sm:p-6">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/25 bg-linear-to-br from-card via-card to-primary/5 p-3 shadow-xl shadow-primary/10 sm:p-6">
         <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-400/15 blur-3xl" />
         <div className="absolute -left-14 bottom-0 h-36 w-36 rounded-full bg-emerald-400/10 blur-2xl" />
 
@@ -142,8 +142,8 @@ export default function CalendarPage() {
               <Calendar className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">カレンダー</h1>
-              <p className="mt-1 text-xs font-medium text-muted-foreground">締切・面接・イベントを一覧で可視化</p>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">カレンダー</h1>
+              <p className="mt-1 text-xs font-medium text-muted-foreground hidden sm:block">締切・面接・イベントを一覧で可視化</p>
             </div>
           </div>
 
@@ -200,7 +200,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <Card className="calendar-surface min-h-175 overflow-hidden rounded-3xl border border-white/20 bg-white/70 p-4 shadow-2xl shadow-primary/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/3 sm:p-6">
+      <Card className="calendar-surface min-h-125 sm:min-h-175 overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-white/70 p-2 shadow-2xl shadow-primary/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/3 sm:p-6">
         
 
         <style jsx global>{`

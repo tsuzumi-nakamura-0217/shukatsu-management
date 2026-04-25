@@ -286,20 +286,20 @@ export default function CompaniesPage() {
   return (
     <div className="flex flex-col gap-4 pb-10">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center shrink-0">
             <Building2 className="h-4 w-4 text-foreground/60" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">企業一覧</h1>
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground leading-none">企業一覧</h1>
             <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{companies.length} 件の企業を管理中</p>
           </div>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="rounded-lg h-8 px-3 text-xs font-semibold gap-1.5">
+            <Button size="sm" className="rounded-lg h-8 px-3 text-xs font-semibold gap-1.5 w-full sm:w-auto">
               <Plus className="h-3.5 w-3.5" />
               新規追加
             </Button>

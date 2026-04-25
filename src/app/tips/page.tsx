@@ -158,15 +158,15 @@ export default function TipsPage() {
   return (
     <div className="flex flex-col gap-6 pb-6">
       {/* Compact Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-card p-3 px-4 sm:p-4 sm:px-8 shadow-lg shadow-primary/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-yellow-500/10 blur-[40px]" />
 
-        <div className="relative flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Lightbulb className="h-6 w-6 text-primary" />
+        <div className="relative flex items-center gap-3 sm:gap-4">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Lightbulb className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
               就活Tips
             </h1>
           </div>
@@ -176,7 +176,7 @@ export default function TipsPage() {
           onClick={handleCreate}
           disabled={isCreating}
           size="sm"
-          className="rounded-xl h-10 px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-105 active:scale-95"
+          className="rounded-xl h-9 sm:h-10 px-3 sm:px-4 font-bold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
         >
           {isCreating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
           新規作成

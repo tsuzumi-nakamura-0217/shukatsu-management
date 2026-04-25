@@ -340,15 +340,15 @@ export default function ESListPage() {
   return (
     <div className="flex flex-col gap-6 pb-6">
       {/* Compact Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-card p-4 px-8 shadow-lg shadow-primary/5 flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/20 bg-card p-3 px-4 sm:p-4 sm:px-8 shadow-lg shadow-primary/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="absolute top-0 right-0 -mr-12 -mt-12 h-32 w-32 rounded-full bg-orange-500/10 blur-[40px]" />
 
-        <div className="relative flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <FileText className="h-6 w-6 text-primary" />
+        <div className="relative flex items-center gap-3 sm:gap-4">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
               エントリーシート管理
             </h1>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
@@ -357,7 +357,7 @@ export default function ESListPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {selected && (
             <>
               <Button
@@ -365,32 +365,33 @@ export default function ESListPage() {
                 variant="outline"
                 size="sm"
                 disabled={isGeneratingShare}
-                className="rounded-xl h-10 px-4 font-bold border-2 hover:border-amber-500 hover:text-amber-600 transition-all gap-2"
+                className="rounded-xl h-8 sm:h-10 px-2 sm:px-4 font-bold border-2 hover:border-amber-500 hover:text-amber-600 transition-all gap-1 sm:gap-2 text-xs sm:text-sm"
               >
                 {isGeneratingShare ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                 ) : (
-                  <Share2 className="h-4 w-4" />
+                  <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 )}
-                {selected.shareToken ? "共有中" : "共有リンク"}
+                <span className="hidden sm:inline">{selected.shareToken ? "共有中" : "共有リンク"}</span>
+                <span className="sm:hidden">共有</span>
               </Button>
               <Button
                 onClick={handleDuplicate}
                 variant="outline"
                 size="sm"
-                className="rounded-xl h-10 px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-2"
+                className="rounded-xl h-8 sm:h-10 px-2 sm:px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-1 sm:gap-2 text-xs sm:text-sm"
               >
-                <CopyPlus className="h-4 w-4" />
+                <CopyPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 複製
               </Button>
               <Button
                 onClick={handleCopy}
                 variant="outline"
                 size="sm"
-                className="rounded-xl h-10 px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-2"
+                className="rounded-xl h-8 sm:h-10 px-2 sm:px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-1 sm:gap-2 text-xs sm:text-sm"
               >
-                <Copy className="h-4 w-4" />
-                テキストをコピー
+                <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">テキストを</span>コピー
               </Button>
             </>
           )}
@@ -486,24 +487,24 @@ export default function ESListPage() {
         <div className="lg:col-span-8 xl:col-span-9 overflow-hidden">
           {selected ? (
             <Card className="border-none glass overflow-hidden rounded-3xl shadow-xl shadow-primary/5 flex flex-col py-0! lg:h-full">
-              <div className="border-b border-white/10 px-6 py-2 flex flex-row items-center justify-between shrink-0 min-h-[56px]">
-                <div className="flex-grow mr-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-tight whitespace-normal break-all max-w-[60%]">
+              <div className="border-b border-white/10 px-3 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 min-h-[56px] gap-2">
+                <div className="flex-grow mr-0 sm:mr-4 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-tight whitespace-normal break-all max-w-full sm:max-w-[60%]">
                       {selected.companyName || selected.companySlug}
                     </div>
                     <div className="bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">
                       {countCharacters(editContent)} Characters
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 w-full">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full">
                     <input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="text-2xl font-black bg-transparent border-none focus-visible:ring-0 p-0 h-auto flex-1 text-foreground"
+                      className="text-lg sm:text-2xl font-black bg-transparent border-none focus-visible:ring-0 p-0 h-auto flex-1 min-w-0 text-foreground"
                     />
                     <Select value={editStatus} onValueChange={setEditStatus}>
-                      <SelectTrigger className="w-[120px] h-9 text-xs font-bold border-2 rounded-xl transition-all hover:bg-muted/10">
+                      <SelectTrigger className="w-[90px] sm:w-[120px] h-8 sm:h-9 text-[11px] sm:text-xs font-bold border-2 rounded-xl transition-all hover:bg-muted/10 shrink-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
