@@ -123,6 +123,19 @@ export interface ESDocument {
   status?: "未提出" | "提出済" | "結果待ち" | "通過" | "落選" | "";
 }
 
+// ESコメントの型定義
+export interface ESComment {
+  id: string;
+  esDocumentId: string;
+  content: string;
+  highlightedText: string;
+  positionFrom: number;
+  positionTo: number;
+  resolved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 自己分析メモの型定義
 export interface SelfAnalysis {
   id: string;

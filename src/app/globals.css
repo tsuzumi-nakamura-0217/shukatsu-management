@@ -641,3 +641,267 @@
 .tippy-arrow {
   display: none !important;
 }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ES Comment Functionality
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* テキストハイライト (TipTapのHighlight拡張用) */
+.es-comment-highlight {
+  background-color: rgb(254 240 138 / 0.6); /* amber/yellow-200 tinted */
+  border-bottom: 2px solid rgb(250 204 21); /* yellow-400 */
+  border-radius: 2px;
+  padding: 0.1em 0.2em;
+  margin: 0 -0.2em;
+  transition: background-color 0.2s, border-bottom-color 0.2s;
+  cursor: pointer;
+}
+
+.dark .es-comment-highlight {
+  background-color: rgb(133 77 14 / 0.5); /* yellow-800 tinted */
+  border-bottom-color: rgb(202 138 4); /* yellow-600 */
+}
+
+.es-comment-highlight:hover,
+.es-comment-highlight.is-active {
+  background-color: rgb(253 224 71 / 0.8); /* yellow-300 */
+  border-bottom-color: rgb(234 179 8); /* yellow-500 */
+}
+
+.dark .es-comment-highlight:hover,
+.dark .es-comment-highlight.is-active {
+  background-color: rgb(161 98 7 / 0.8); /* yellow-700 */
+  border-bottom-color: rgb(234 179 8); /* yellow-500 */
+}
+
+/* コメントパネル全体 */
+.es-comment-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.es-comment-panel-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+}
+
+.es-comment-badge {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+/* コメント追加フォーム */
+.es-comment-add-form {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.es-comment-quote {
+  background: var(--card);
+  border-left: 3px solid var(--primary);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.es-comment-quote-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+  color: var(--primary);
+}
+
+.es-comment-quote-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.es-comment-textarea {
+  font-size: 0.875rem;
+  resize: none;
+  min-height: 80px;
+  border-radius: 0.5rem;
+  @apply focus-visible:ring-1 focus-visible:ring-primary;
+}
+
+/* コメントリストエリア */
+.es-comment-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.es-comment-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  opacity: 0.7;
+}
+
+/* コメントカード */
+.es-comment-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.es-comment-card:hover {
+  border-color: oklch(var(--primary) / 0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+.es-comment-card.is-active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.es-comment-card.is-resolved {
+  opacity: 0.65;
+  background: var(--muted);
+}
+.es-comment-card.is-resolved:hover {
+  opacity: 0.9;
+}
+
+.es-comment-card-quote {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+  margin-bottom: 0.5rem;
+  border-left: 2px solid oklch(var(--primary)/0.3);
+  padding-left: 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.es-comment-card-content {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.es-comment-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.es-comment-card-time {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+}
+
+.es-comment-card-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.es-comment-card:hover .es-comment-card-actions,
+.es-comment-card.is-active .es-comment-card-actions {
+  opacity: 1;
+}
+
+.es-comment-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.es-comment-action-btn:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.es-comment-action-resolve:hover {
+  color: rgb(22 163 74); /* green-600 */
+  background: rgb(220 252 231); /* green-100 */
+}
+.dark .es-comment-action-resolve:hover {
+  background: rgb(20 83 45 / 0.3); /* green-900 */
+}
+
+.es-comment-action-delete:hover {
+  color: var(--destructive);
+  background: oklch(var(--destructive) / 0.1);
+}
+
+/* 解決済みセクション */
+.es-comment-resolved-section {
+  margin-top: 1rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.es-comment-resolved-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  transition: color 0.2s;
+}
+
+.es-comment-resolved-toggle:hover {
+  color: var(--foreground);
+}

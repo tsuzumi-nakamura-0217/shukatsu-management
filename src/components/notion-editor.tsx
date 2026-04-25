@@ -7,7 +7,9 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { Placeholder } from "@tiptap/extension-placeholder";
-import { useEffect, useRef, useCallback } from "react";
+import { Highlight } from "@tiptap/extension-highlight";
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from "react";
+import type { ESComment } from "@/types";
 import {
   Bold,
   Italic,
@@ -31,6 +33,7 @@ import {
   Columns2,
   Columns3,
   ChevronDown,
+  MessageSquarePlus,
 } from "lucide-react";
 
 // Editor extensions
@@ -49,7 +52,6 @@ import { ReactRenderer } from "@tiptap/react";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion";
 
-// ── ツールバーボタン ──────────────────────────────
 function ToolbarButton({
   onClick,
   isActive = false,
@@ -67,6 +69,10 @@ function ToolbarButton({
     <button
       type="button"
       onClick={onClick}
+      onMouseDown={(e) => {
+        // エディタの選択状態（フォーカス）が外れるのを防ぐ
+        e.preventDefault();
+      }}
       disabled={disabled}
       title={title}
       className={`notion-toolbar-btn ${isActive ? "is-active" : ""}`}
@@ -81,13 +87,30 @@ function ToolbarDivider() {
 }
 
 // ── メインエディタ ──────────────────────────────
+export interface EditorSelectionInfo {
+  text: string;
+  from: number;
+  to: number;
+}
+
+export interface NotionEditorHandle {
+  getSelectionInfo: () => EditorSelectionInfo | null;
+  applyCommentHighlights: (comments: ESComment[]) => void;
+  scrollToPosition: (from: number) => void;
+  addCommentHighlight: (from: number, to: number, commentId: string) => void;
+  removeCommentHighlight: (commentId: string) => void;
+}
+
 interface NotionEditorProps {
   content: string;
   onChange: (json: string) => void;
   readOnly?: boolean;
+  comments?: ESComment[];
+  onAddCommentClick?: () => void;
+  activeCommentId?: string | null;
 }
 
-export function NotionEditor({ content, onChange, readOnly = false }: NotionEditorProps) {
+export const NotionEditor = forwardRef<NotionEditorHandle, NotionEditorProps>(function NotionEditorInner({ content, onChange, readOnly = false, comments, onAddCommentClick, activeCommentId }, ref) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isInternalUpdate = useRef(false);
 
@@ -136,6 +159,8 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
     []
   );
 
+  const [, forceUpdate] = useState({});
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -152,6 +177,26 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
       Toggle,
       ToggleSummary,
       ToggleContent,
+      Highlight.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            commentId: {
+              default: null,
+              parseHTML: element => element.getAttribute('data-comment-id'),
+              renderHTML: attributes => {
+                if (!attributes.commentId) return {}
+                return { 'data-comment-id': attributes.commentId }
+              },
+            },
+          }
+        },
+      }).configure({
+        multicolor: true,
+        HTMLAttributes: {
+          class: "es-comment-highlight",
+        },
+      }),
       Placeholder.configure({
         placeholder: "メモを入力してください… (/ でコマンド)",
       }),
@@ -217,9 +262,29 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
       isInternalUpdate.current = true;
       onChange(JSON.stringify(editor.getJSON()));
     },
+    onSelectionUpdate: () => {
+      // ツールバーのDisabled状態等を再計算するために強制レンダリング
+      forceUpdate({});
+    },
     editorProps: {
       attributes: {
         class: "notion-editor-content",
+      },
+      handleClick: (view, pos, event) => {
+        // If clicking on a highlight, select that comment
+        if (event.target instanceof HTMLElement) {
+          const highlightEl = event.target.closest('.es-comment-highlight');
+          if (highlightEl) {
+            const cId = highlightEl.getAttribute('data-comment-id');
+            // If we have an onAddCommentClick, we are probably in a context that can route this back up
+            // We can dispatch a custom event or just accept we don't have direct access to setActiveCommentId
+            // A quick hack is to dispatch a custom DOM event
+            if (cId) {
+               window.dispatchEvent(new CustomEvent('es-comment-clicked', { detail: cId }));
+            }
+          }
+        }
+        return false;
       },
       handleDrop: (view, event) => {
         const files = event.dataTransfer?.files;
@@ -255,6 +320,80 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
+
+  // Sync highlight classes
+  useEffect(() => {
+    if (!editor) return;
+    const elements = editor.view.dom.querySelectorAll('.es-comment-highlight');
+    elements.forEach((el) => {
+      const cId = el.getAttribute('data-comment-id');
+      if (cId === activeCommentId) {
+        el.classList.add('is-active');
+      } else {
+        el.classList.remove('is-active');
+      }
+    });
+  }, [editor, activeCommentId, comments]);
+
+  // expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    getSelectionInfo: () => {
+      if (!editor) return null;
+      const { from, to } = editor.state.selection;
+      if (from === to) return null; // no selection
+      const text = editor.state.doc.textBetween(from, to, " ");
+      return { text, from, to };
+    },
+    applyCommentHighlights: (commentsToApply: ESComment[]) => {
+      // Highlights are stored in content natively, but we could sync them here if needed.
+    },
+    addCommentHighlight: (from: number, to: number, commentId: string) => {
+      if (!editor) return;
+      editor.commands.setTextSelection({ from, to });
+      editor.commands.setHighlight({ commentId });
+      // Clear selection so the user can continue typing normally
+      editor.commands.setTextSelection(to);
+      isInternalUpdate.current = true;
+      onChange(JSON.stringify(editor.getJSON()));
+    },
+    removeCommentHighlight: (commentId: string) => {
+      if (!editor) return;
+      
+      const { tr, doc } = editor.state;
+      let hasChanges = false;
+      
+      doc.descendants((node, pos) => {
+        if (node.isText && node.marks.length > 0) {
+          const highlightMark = node.marks.find((m: any) => m.type.name === 'highlight' && m.attrs.commentId === commentId);
+          if (highlightMark) {
+            tr.removeMark(pos, pos + node.nodeSize, highlightMark);
+            hasChanges = true;
+          }
+        }
+      });
+      
+      if (hasChanges) {
+        editor.view.dispatch(tr);
+        isInternalUpdate.current = true;
+        onChange(JSON.stringify(editor.getJSON()));
+      }
+    },
+    scrollToPosition: (from: number) => {
+      if (!editor) return;
+      try {
+        const resolvedPos = editor.state.doc.resolve(Math.min(from, editor.state.doc.content.size));
+        editor.commands.setTextSelection(resolvedPos.pos);
+        // Scroll to selection
+        const domAtPos = editor.view.domAtPos(resolvedPos.pos);
+        if (domAtPos?.node) {
+          const element = domAtPos.node instanceof Element ? domAtPos.node : domAtPos.node.parentElement;
+          element?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      } catch {
+        // Position might be invalid after content changes.
+      }
+    },
+  }), [editor]);
 
   // 画像アップロードハンドラをSlashCommandに登録
   useEffect(() => {
@@ -502,6 +641,20 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
 
         <ToolbarDivider />
 
+        {/* コメント */}
+        {onAddCommentClick && (
+          <>
+            <ToolbarButton
+              onClick={onAddCommentClick}
+              disabled={editor.state.selection.from === editor.state.selection.to}
+              title="コメントを追加"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </ToolbarButton>
+            <ToolbarDivider />
+          </>
+        )}
+
         {/* Undo / Redo */}
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
@@ -524,4 +677,4 @@ export function NotionEditor({ content, onChange, readOnly = false }: NotionEdit
       <EditorContent editor={editor} />
     </div>
   );
-}
+});

@@ -27,11 +27,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn, countCharacters, getSectionCharacterCounts } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { ESCommentPanel } from "@/components/es-comment-panel";
+import type { EditorSelectionInfo } from "@/components/notion-editor";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import { useAllESDocs } from "@/hooks/use-api";
+import { useAllESDocs, useESComments } from "@/hooks/use-api";
 import type { ESDocument } from "@/types";
+import { useRef } from "react";
 
 export default function ESListPage() {
   const { esDocs: swrDocs, isLoading, mutate } = useAllESDocs();
@@ -43,6 +46,13 @@ export default function ESListPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editStatus, setEditStatus] = useState("未提出");
   const [isSaving, setIsSaving] = useState(false);
+
+  // ES Comments State
+  const { comments: esComments, mutate: mutateESComments } = useESComments(selected?.id || null);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [commentSelection, setCommentSelection] = useState<EditorSelectionInfo | null>(null);
+  const editorRef = useRef<any>(null);
 
   useEffect(() => {
     if (swrDocs) {
@@ -58,6 +68,9 @@ export default function ESListPage() {
           setEditContent(docsWithCharCount[0].content);
           setEditTitle(docsWithCharCount[0].title);
           setEditStatus(docsWithCharCount[0].status || "未提出");
+          setShowCommentForm(false);
+          setCommentSelection(null);
+          setActiveCommentId(null);
         } else {
           const doc = docsWithCharCount.find((d: ESDocument) => d.id === selected.id);
           if (doc) {
@@ -156,6 +169,100 @@ export default function ESListPage() {
     setEditContent(doc.content);
     setEditTitle(doc.title);
     setEditStatus(doc.status || "未提出");
+  };
+
+  // Comment Handlers
+  const handleAddCommentClick = () => {
+    if (!editorRef.current) return;
+    const info = editorRef.current.getSelectionInfo();
+    if (info) {
+      setCommentSelection(info);
+      setShowCommentForm(true);
+    } else {
+      toast.error("コメントを追加するテキストを選択してください");
+    }
+  };
+
+  const handleAddComment = async (content: string) => {
+    if (!selected || !commentSelection) return;
+    try {
+      const res = await fetch(`/api/es/${selected.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          highlightedText: commentSelection.text,
+          positionFrom: commentSelection.from,
+          positionTo: commentSelection.to
+        })
+      });
+      if (!res.ok) throw new Error("Failed");
+      const newComment = await res.json();
+      
+      if (editorRef.current) {
+        editorRef.current.addCommentHighlight(commentSelection.from, commentSelection.to, newComment.id);
+      }
+      
+      mutateESComments();
+      setShowCommentForm(false);
+      setCommentSelection(null);
+      toast.success("コメントを追加しました");
+    } catch {
+      toast.error("コメントの追加に失敗しました");
+    }
+  };
+
+  const handleUpdateComment = async (id: string, content: string) => {
+    if (!selected) return;
+    try {
+      await fetch(`/api/es/${selected.id}/comments`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: id, content })
+      });
+      mutateESComments();
+    } catch {
+      toast.error("コメントの更新に失敗しました");
+    }
+  };
+
+  const handleResolveComment = async (id: string, resolved: boolean) => {
+    if (!selected) return;
+    try {
+      await fetch(`/api/es/${selected.id}/comments`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: id, resolved })
+      });
+      mutateESComments();
+    } catch {
+      toast.error("状態の更新に失敗しました");
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (!selected) return;
+    try {
+      await fetch(`/api/es/${selected.id}/comments`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: id })
+      });
+      mutateESComments();
+      if (activeCommentId === id) setActiveCommentId(null);
+      if (editorRef.current) {
+        editorRef.current.removeCommentHighlight(id);
+      }
+    } catch {
+      toast.error("コメントの削除に失敗しました");
+    }
+  };
+
+  const handleCommentClick = (comment: import("@/types").ESComment) => {
+    setActiveCommentId(comment.id);
+    if (editorRef.current && !comment.resolved) {
+      editorRef.current.scrollToPosition(comment.positionFrom);
+    }
   };
 
   return (
@@ -336,27 +443,49 @@ export default function ESListPage() {
                 <ScrollArea className="h-[54svh] min-h-90 lg:h-full">
                   <div className="w-full p-4 lg:p-6 pt-2!">
                     {selected.content || true ? (
-                      <div className="space-y-4">
-                        <NotionEditor
-                          key={selected.id}
-                          content={editContent}
-                          onChange={setEditContent}
-                        />
-                        <div className="mt-4 pt-4 border-t border-white/10 lg:pl-10">
-                          <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {getSectionCharacterCounts(editContent).map((section, idx) => (
-                              <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/10 text-xs border border-transparent transition-all">
-                                <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
-                                <span className="font-bold tabular-nums whitespace-nowrap opacity-70">{section.count} 文字</span>
-                              </div>
-                            ))}
-                            {getSectionCharacterCounts(editContent).length === 0 && (
-                              <p className="text-[10px] text-muted-foreground italic col-span-full">
-                                * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
-                              </p>
-                            )}
+                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
+                        <div className="flex flex-col min-w-0 space-y-4">
+                          <NotionEditor
+                            ref={editorRef}
+                            key={selected.id}
+                            content={editContent}
+                            onChange={setEditContent}
+                            comments={esComments}
+                            onAddCommentClick={handleAddCommentClick}
+                            activeCommentId={activeCommentId}
+                          />
+                          <div className="mt-4 pt-4 border-t border-white/10 lg:pl-10">
+                            <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {getSectionCharacterCounts(editContent).map((section, idx) => (
+                                <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/10 text-xs border border-transparent transition-all">
+                                  <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
+                                  <span className="font-bold tabular-nums whitespace-nowrap opacity-70">{section.count} 文字</span>
+                                </div>
+                              ))}
+                              {getSectionCharacterCounts(editContent).length === 0 && (
+                                <p className="text-[10px] text-muted-foreground italic col-span-full">
+                                  * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
+                                </p>
+                              )}
+                            </div>
                           </div>
+                        </div>
+
+                        {/* Sidebar Comments Panel */}
+                        <div className="hidden lg:block border rounded-lg overflow-hidden bg-card/50 max-h-[700px]">
+                          <ESCommentPanel
+                            comments={esComments}
+                            activeCommentId={activeCommentId}
+                            onAddComment={handleAddComment}
+                            onUpdateComment={handleUpdateComment}
+                            onResolveComment={handleResolveComment}
+                            onDeleteComment={handleDeleteComment}
+                            onCommentClick={handleCommentClick}
+                            showAddForm={showCommentForm}
+                            selectedText={commentSelection?.text || ""}
+                            onCancelAdd={() => setShowCommentForm(false)}
+                          />
                         </div>
                       </div>
                     ) : (

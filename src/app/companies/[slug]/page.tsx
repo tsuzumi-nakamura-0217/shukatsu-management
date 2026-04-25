@@ -62,6 +62,8 @@ import { StatusBadge, statusColors, taskStatusStyles } from "@/components/badges
 import { cn } from "@/lib/utils";
 // Markdown components were replaced by NotionEditor
 import dynamic from "next/dynamic";
+import { ESCommentPanel } from "@/components/es-comment-panel";
+import type { EditorSelectionInfo } from "@/components/notion-editor";
 const NotionEditor = dynamic(() => import("@/components/notion-editor").then(mod => mod.NotionEditor), { ssr: false });
 import { countCharacters, formatDate, getSectionCharacterCounts, getPlainText, isFuzzyDatePassed } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -69,7 +71,7 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import { useCompanyDetail, invalidateStats, invalidateAllTasks } from "@/hooks/use-api";
+import { useCompanyDetail, invalidateStats, invalidateAllTasks, useESComments } from "@/hooks/use-api";
 import type { Company, Task, Interview, ESDocument, AppConfig, CompanyEvent } from "@/types";
 
 function normalizeDateTimeForCompare(value: string): string {
@@ -180,6 +182,14 @@ export default function CompanyDetailPage({
   const [isCreatingEs, setIsCreatingEs] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
+  
+  // ES Comments State
+  const { comments: esComments, mutate: mutateESComments } = useESComments(editEsDoc?.id || null);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [commentSelection, setCommentSelection] = useState<EditorSelectionInfo | null>(null);
+  const editorRef = useRef<any>(null);
+
   const [expandedEsIds, setExpandedEsIds] = useState<Set<string>>(new Set());
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
@@ -810,6 +820,9 @@ export default function CompanyDetailPage({
         const doc = localEsDocs.find(d => d.id === id);
         if (doc) {
           setEditEsDoc(doc);
+          setShowCommentForm(false);
+          setCommentSelection(null);
+          setActiveCommentId(null);
         }
       }
       return next;
@@ -856,6 +869,9 @@ export default function CompanyDetailPage({
       if (isInsideFloatingLayer(target)) return;
 
       if (expandedEsIds.size > 0 && !isInsideExpandedRow(target, "data-es-row-id", expandedEsIds)) {
+        // Do not close automatically when clicking inside a comment panel
+        if (target.closest('.es-comment-panel')) return;
+        
         setExpandedEsIds(new Set());
         setEditEsDoc(null);
       }
@@ -888,6 +904,100 @@ export default function CompanyDetailPage({
       document.removeEventListener("pointerdown", handlePointerDownOutside);
     };
   }, [expandedEsIds, expandedInterviewIds, expandedEventIds, editingTask, isMemoExpanded]);
+
+  // Comment Handlers
+  const handleAddCommentClick = () => {
+    if (!editorRef.current) return;
+    const info = editorRef.current.getSelectionInfo();
+    if (info) {
+      setCommentSelection(info);
+      setShowCommentForm(true);
+    } else {
+      toast.error("コメントを追加するテキストを選択してください");
+    }
+  };
+
+  const handleAddComment = async (content: string) => {
+    if (!editEsDoc || !commentSelection) return;
+    try {
+      const res = await fetch(`/api/es/${editEsDoc.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          highlightedText: commentSelection.text,
+          positionFrom: commentSelection.from,
+          positionTo: commentSelection.to
+        })
+      });
+      if (!res.ok) throw new Error("Failed");
+      const newComment = await res.json();
+      
+      if (editorRef.current) {
+        editorRef.current.addCommentHighlight(commentSelection.from, commentSelection.to, newComment.id);
+      }
+      
+      mutateESComments();
+      setShowCommentForm(false);
+      setCommentSelection(null);
+      toast.success("コメントを追加しました");
+    } catch {
+      toast.error("コメントの追加に失敗しました");
+    }
+  };
+
+  const handleUpdateComment = async (id: string, content: string) => {
+    if (!editEsDoc) return;
+    try {
+      await fetch(`/api/es/${editEsDoc.id}/comments`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: id, content })
+      });
+      mutateESComments();
+    } catch {
+      toast.error("コメントの更新に失敗しました");
+    }
+  };
+
+  const handleResolveComment = async (id: string, resolved: boolean) => {
+    if (!editEsDoc) return;
+    try {
+      await fetch(`/api/es/${editEsDoc.id}/comments`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: id, resolved })
+      });
+      mutateESComments();
+    } catch {
+      toast.error("状態の更新に失敗しました");
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (!editEsDoc) return;
+    try {
+      await fetch(`/api/es/${editEsDoc.id}/comments`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId: id })
+      });
+      mutateESComments();
+      if (activeCommentId === id) setActiveCommentId(null);
+      if (editorRef.current) {
+        editorRef.current.removeCommentHighlight(id);
+      }
+    } catch {
+      toast.error("コメントの削除に失敗しました");
+    }
+  };
+
+  const handleCommentClick = (comment: import("@/types").ESComment) => {
+    setActiveCommentId(comment.id);
+    if (editorRef.current && !comment.resolved) {
+      editorRef.current.scrollToPosition(comment.positionFrom);
+    }
+  };
 
 
   if (!company) {
@@ -1495,25 +1605,49 @@ export default function CompanyDetailPage({
                                     </Select>
                                   </div>
 
-                                  <NotionEditor
-                                    content={draftContent}
-                                    onChange={(val) => setEditEsDoc({ ...draftDoc, content: val })}
-                                  />
-
-                                  <div className="mt-4 pt-4 border-t border-dashed">
-                                    <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                      {sectionCounts.map((section, idx) => (
-                                        <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
-                                          <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
-                                          <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
+                                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 mt-6">
+                                    <div className="flex flex-col min-w-0">
+                                      <NotionEditor
+                                        ref={editorRef}
+                                        content={draftContent}
+                                        onChange={(val) => setEditEsDoc({ ...draftDoc, content: val })}
+                                        comments={esComments}
+                                        onAddCommentClick={handleAddCommentClick}
+                                        activeCommentId={activeCommentId}
+                                      />
+                                      
+                                      <div className="mt-4 pt-4 border-t border-dashed">
+                                        <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          {sectionCounts.map((section, idx) => (
+                                            <div key={idx} className="flex justify-between items-center p-2 rounded-md bg-muted/30 text-xs border border-transparent hover:border-muted-foreground/20 transition-all">
+                                              <span className="font-medium truncate mr-2" title={section.title}>{section.title}</span>
+                                              <span className="font-bold tabular-nums whitespace-nowrap">{section.count} 文字</span>
+                                            </div>
+                                          ))}
+                                          {sectionCounts.length === 0 && (
+                                            <p className="text-[10px] text-muted-foreground italic col-span-2">
+                                              * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
+                                            </p>
+                                          )}
                                         </div>
-                                      ))}
-                                      {sectionCounts.length === 0 && (
-                                        <p className="text-[10px] text-muted-foreground italic col-span-2">
-                                          * 見出し1〜3を追加すると、セクションごとの文字数がここに表示されます。
-                                        </p>
-                                      )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Sidebar Comments Panel */}
+                                    <div className="hidden lg:block border rounded-lg overflow-hidden bg-card/50 max-h-[800px]">
+                                      <ESCommentPanel
+                                        comments={esComments}
+                                        activeCommentId={activeCommentId}
+                                        onAddComment={handleAddComment}
+                                        onUpdateComment={handleUpdateComment}
+                                        onResolveComment={handleResolveComment}
+                                        onDeleteComment={handleDeleteComment}
+                                        onCommentClick={handleCommentClick}
+                                        showAddForm={showCommentForm}
+                                        selectedText={commentSelection?.text || ""}
+                                        onCancelAdd={() => setShowCommentForm(false)}
+                                      />
                                     </div>
                                   </div>
 

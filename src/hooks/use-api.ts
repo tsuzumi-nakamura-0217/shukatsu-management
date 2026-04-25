@@ -86,6 +86,15 @@ export function useAllESDocs() {
   return { esDocs: data ?? (EMPTY_ARRAY as ESDocument[]), error, isLoading, mutate };
 }
 
+// --- ES Comments ---
+export function useESComments(esDocId: string | null) {
+  const { data, error, isLoading, mutate } = useSWR<import("@/types").ESComment[]>(
+    esDocId ? `/api/es/${esDocId}/comments` : null,
+    { fallbackData: EMPTY_ARRAY }
+  );
+  return { comments: data ?? EMPTY_ARRAY, error, isLoading, mutate };
+}
+
 // --- Helpers for cross-key mutation ---
 export function invalidateStats() {
   globalMutate("/api/stats");
