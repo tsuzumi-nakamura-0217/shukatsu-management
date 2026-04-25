@@ -23,13 +23,15 @@ export async function GET(
     }
 
     const comments = await getCommentsByShareToken(token);
+    const companyName = esDoc.companyName?.trim() || "企業名不明";
 
     // Return document info without sensitive data
     return NextResponse.json({
       id: esDoc.id,
       title: esDoc.title,
       content: esDoc.content,
-      companyName: esDoc.companyName || "",
+      companyName,
+      companySlug: esDoc.companySlug,
       characterLimit: esDoc.characterLimit,
       characterLimitType: esDoc.characterLimitType,
       status: esDoc.status,

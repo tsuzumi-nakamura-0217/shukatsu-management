@@ -62,6 +62,7 @@ CREATE TABLE es_documents (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
   company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
   company_slug TEXT NOT NULL,
+  company_name TEXT DEFAULT '',
   title TEXT NOT NULL,
   content TEXT DEFAULT '',
   character_limit INTEGER,

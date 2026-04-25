@@ -3,14 +3,29 @@ import { getSupabaseAdmin } from "../supabase-admin";
 import { getCompany } from "./companies";
 import type { ESDocument } from "@/types";
 
+function extractCompanyName(companies: unknown): string {
+  if (Array.isArray(companies)) {
+    const first = companies[0] as { name?: string | null } | undefined;
+    return (first?.name || "").trim();
+  }
+
+  if (companies && typeof companies === "object") {
+    const obj = companies as { name?: string | null };
+    return (obj.name || "").trim();
+  }
+
+  return "";
+}
+
 export function rowToESDocument(row: Record<string, unknown>): ESDocument {
-  const companyData = row.companies as { name: string } | undefined;
+  const companyNameFromJoin = extractCompanyName(row.companies);
+  const companyNameFromColumn = ((row.company_name as string) || "").trim();
 
   return {
     id: row.id as string,
     companyId: (row.company_id as string) || "",
     companySlug: (row.company_slug as string) || "",
-    companyName: companyData?.name || "",
+    companyName: companyNameFromJoin || companyNameFromColumn,
     title: (row.title as string) || "",
     content: (row.content as string) || "",
     characterLimit: (row.character_limit as number) || undefined,
@@ -63,6 +78,7 @@ export async function saveESDocument(
       .update({
         title,
         content,
+        company_name: company?.name || "",
         character_limit: characterLimit || null,
         character_limit_type: characterLimitType || null,
         status: status || "未提出",
@@ -81,6 +97,7 @@ export async function saveESDocument(
     const row = {
       company_id: company?.id || null,
       company_slug: companySlug,
+      company_name: company?.name || "",
       title,
       content,
       character_limit: characterLimit || null,
@@ -157,7 +174,44 @@ export async function getESDocumentByShareToken(shareToken: string): Promise<ESD
     .single();
 
   if (error || !data) return null;
-  return rowToESDocument(data);
+
+  const esDoc = rowToESDocument(data);
+  if (esDoc.companyName) {
+    return esDoc;
+  }
+
+  const companyId = ((data.company_id as string) || "").trim();
+  const companySlug = ((data.company_slug as string) || "").trim();
+  const ownerUserId = ((data.user_id as string) || "").trim();
+
+  if (companyId) {
+    const { data: companyById } = await admin
+      .from("companies")
+      .select("name")
+      .eq("id", companyId)
+      .maybeSingle();
+
+    const nameFromId = ((companyById?.name as string) || "").trim();
+    if (nameFromId) {
+      return { ...esDoc, companyName: nameFromId };
+    }
+  }
+
+  if (companySlug && ownerUserId) {
+    const { data: companyBySlugAndOwner } = await admin
+      .from("companies")
+      .select("name")
+      .eq("slug", companySlug)
+      .eq("user_id", ownerUserId)
+      .maybeSingle();
+
+    const nameFromSlugAndOwner = ((companyBySlugAndOwner?.name as string) || "").trim();
+    if (nameFromSlugAndOwner) {
+      return { ...esDoc, companyName: nameFromSlugAndOwner };
+    }
+  }
+
+  return esDoc;
 }
 
 /**

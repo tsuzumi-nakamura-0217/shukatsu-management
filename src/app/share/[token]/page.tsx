@@ -37,6 +37,7 @@ interface SharedDocData {
   title: string;
   content: string;
   companyName: string;
+  companySlug: string;
   characterLimit?: number;
   characterLimitType?: string;
   status?: string;
@@ -277,6 +278,9 @@ export default function SharedESPage() {
     );
   }
 
+  const companyLabel =
+    docData.companyName?.trim() || "企業名不明";
+
   // Name input step (optional — shown before editing)
   if (!isNameSet) {
     return (
@@ -290,7 +294,7 @@ export default function SharedESPage() {
         <div className="text-center mb-2">
           <h2 className="text-2xl font-bold mb-1">ES添削のご依頼</h2>
           <p className="text-muted-foreground font-medium text-sm max-w-sm">
-            「{docData.companyName}」の「{docData.title}」の添削をお願いされています。
+            「{companyLabel}」の「{docData.title}」の添削をお願いされています。
           </p>
         </div>
 
@@ -368,7 +372,7 @@ export default function SharedESPage() {
               ES添削モード
             </h1>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
-              Shared Review — {reviewerName || "匿名"}
+              Shared Review - {reviewerName || "匿名"} - {companyLabel}
             </p>
           </div>
         </div>
@@ -463,7 +467,7 @@ export default function SharedESPage() {
             <div className="flex-grow mr-4">
               <div className="flex items-center gap-2 mb-1">
                 <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-tight whitespace-normal break-all max-w-[60%]">
-                  {docData.companyName}
+                  {companyLabel}
                 </div>
                 <div className="bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest leading-none">
                   {countCharacters(editContent)} Characters

@@ -11,6 +11,14 @@ import { Highlight } from "@tiptap/extension-highlight";
 import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from "react";
 import type { ESComment } from "@/types";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Bold,
   Italic,
   Strikethrough,
@@ -40,6 +48,12 @@ import {
 import { ResizableImage } from "./editor/resizable-image";
 import { Columns, Column, ColumnsCommand } from "./editor/column-extension";
 import { Toggle, ToggleSummary, ToggleContent } from "./editor/toggle-extension";
+import {
+  TextColor,
+  NOTION_TEXT_COLOR_ITEMS,
+  getNotionTextColorClass,
+  type NotionTextColorKey,
+} from "./editor/text-color-extension";
 import {
   SlashCommand,
   setImageUploadHandler,
@@ -166,6 +180,7 @@ export const NotionEditor = forwardRef<NotionEditorHandle, NotionEditorProps>(fu
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
       }),
+      TextColor,
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -438,6 +453,12 @@ export const NotionEditor = forwardRef<NotionEditorHandle, NotionEditorProps>(fu
 
   if (!editor) return null;
 
+  const activeTextColor = (editor.getAttributes("textColor")?.color ?? null) as
+    | NotionTextColorKey
+    | null;
+  const activeTextColorClass = getNotionTextColorClass(activeTextColor);
+  const textColorRadioValue = activeTextColor ?? "default";
+
   return (
     <div className={`notion-editor-wrapper ${readOnly ? "is-readonly" : ""}`}>
       {/* ── ツールバー ── */}
@@ -510,6 +531,64 @@ export const NotionEditor = forwardRef<NotionEditorHandle, NotionEditorProps>(fu
         >
           <Code className="h-4 w-4" />
         </ToolbarButton>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              title="文字色"
+              className="notion-toolbar-btn"
+              onMouseDown={(e) => {
+                // エディタの選択状態（フォーカス）が外れるのを防ぐ
+                e.preventDefault();
+              }}
+            >
+              <span
+                className={`text-sm font-semibold leading-none ${activeTextColorClass ?? ""}`}
+              >
+                A
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[10rem]">
+            <DropdownMenuRadioGroup
+              value={textColorRadioValue}
+              onValueChange={(value) => {
+                if (value === "default") {
+                  editor.chain().focus().unsetTextColor().run();
+                  return;
+                }
+                editor
+                  .chain()
+                  .focus()
+                  .setTextColor(value as NotionTextColorKey)
+                  .run();
+              }}
+            >
+              <DropdownMenuRadioItem value="default">
+                <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded border border-border text-xs font-semibold">
+                    A
+                  </span>
+                  既定
+                </span>
+              </DropdownMenuRadioItem>
+              <DropdownMenuSeparator />
+              {NOTION_TEXT_COLOR_ITEMS.map((item) => (
+                <DropdownMenuRadioItem key={item.key} value={item.key}>
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className={`inline-flex h-4 w-4 items-center justify-center rounded border border-border text-xs font-semibold ${item.className}`}
+                    >
+                      A
+                    </span>
+                    {item.label}
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <ToolbarDivider />
 

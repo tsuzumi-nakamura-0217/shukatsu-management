@@ -16,20 +16,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <main className="min-h-screen bg-background">{children}</main>;
   }
 
+  if (isSharePath) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto w-full px-4 py-4 md:px-6 md:py-6">{children}</div>
+      </main>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Share pages: show sidebar but disable all navigation links */}
-      <div className={isSharePath ? "pointer-events-none select-none opacity-60" : ""}>
-        <Sidebar />
-      </div>
+      <Sidebar />
       <main className="flex-1 overflow-y-auto bg-background">
-        {isSharePath ? (
-          <div className="pointer-events-none select-none opacity-60">
-            <MobileSidebar />
-          </div>
-        ) : (
-          <MobileSidebar />
-        )}
+        <MobileSidebar />
         <div
           className={cn(
             "mx-auto w-full",
@@ -41,7 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
-      {!isSharePath && <FloatingChat />}
+      <FloatingChat />
     </div>
   );
 }

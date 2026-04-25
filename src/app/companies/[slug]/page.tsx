@@ -22,6 +22,9 @@ import {
   ChevronUp,
   Clock,
   Calendar as CalendarIcon,
+  Share2,
+  StopCircle,
+  Link,
 } from "lucide-react";
 import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import {
@@ -199,6 +202,7 @@ export default function CompanyDetailPage({
   const [isMemoExpanded, setIsMemoExpanded] = useState(true);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [isSavingEs, setIsSavingEs] = useState(false);
+  const [isUpdatingShareDocId, setIsUpdatingShareDocId] = useState<string | null>(null);
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [isSavingInterview, setIsSavingInterview] = useState(false);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
@@ -785,6 +789,65 @@ export default function CompanyDetailPage({
       }
     } catch (error) {
       toast.error("文書の複製に失敗しました");
+    }
+  };
+
+  const handleCopyEsShareUrl = async (shareToken?: string | null) => {
+    if (!shareToken) return;
+    const shareUrl = `${window.location.origin}/share/${shareToken}`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("共有リンクをコピーしました");
+    } catch {
+      toast.error("共有リンクのコピーに失敗しました");
+    }
+  };
+
+  const handleToggleEsShare = async (doc: ESDocument) => {
+    if (isUpdatingShareDocId === doc.id) return;
+    setIsUpdatingShareDocId(doc.id);
+
+    try {
+      if (doc.shareToken) {
+        const res = await fetch(`/api/es/${doc.id}/share`, {
+          method: "DELETE",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to stop sharing");
+        }
+
+        toast.success("共有を停止しました");
+        revalidate();
+        return;
+      }
+
+      const res = await fetch(`/api/es/${doc.id}/share`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to start sharing");
+      }
+
+      const { shareToken } = await res.json();
+      revalidate();
+
+      if (shareToken) {
+        try {
+          await navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`);
+          toast.success("共有を開始し、リンクをコピーしました");
+        } catch {
+          toast.success("共有を開始しました");
+        }
+      } else {
+        toast.success("共有を開始しました");
+      }
+    } catch {
+      toast.error(doc.shareToken ? "共有の停止に失敗しました" : "共有の開始に失敗しました");
+    } finally {
+      setIsUpdatingShareDocId(null);
     }
   };
 
@@ -1526,6 +1589,38 @@ export default function CompanyDetailPage({
                             </td>
                             <td className="px-4 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-1">
+                                {doc.shareToken && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-lg text-amber-600 hover:bg-amber-500/10"
+                                    onClick={() => handleCopyEsShareUrl(doc.shareToken)}
+                                    title="共有リンクをコピー"
+                                  >
+                                    <Link className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn(
+                                    "h-8 w-8 rounded-lg",
+                                    doc.shareToken
+                                      ? "text-amber-600 hover:bg-amber-500/10"
+                                      : "hover:bg-primary/10"
+                                  )}
+                                  onClick={() => handleToggleEsShare(doc)}
+                                  title={doc.shareToken ? "共有停止" : "共有を開始"}
+                                  disabled={isUpdatingShareDocId === doc.id}
+                                >
+                                  {isUpdatingShareDocId === doc.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : doc.shareToken ? (
+                                    <StopCircle className="h-4 w-4" />
+                                  ) : (
+                                    <Share2 className="h-4 w-4" />
+                                  )}
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
