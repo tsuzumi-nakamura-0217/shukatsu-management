@@ -99,6 +99,10 @@
     @apply border-border outline-ring/50;
   }
 
+  html, body {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground transition-colors duration-300;
   }
@@ -204,9 +208,10 @@
   font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--foreground);
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   word-wrap: break-word;
-  word-break: break-word;
+  word-break: break-all;
+  white-space: pre-wrap;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -224,6 +229,7 @@
 
 .notion-editor-content * {
   max-width: 100%;
+  word-break: break-all;
 }
 
 /* 見出し */
