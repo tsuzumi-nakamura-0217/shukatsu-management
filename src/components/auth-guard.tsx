@@ -10,7 +10,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const isPublicPath = PUBLIC_PATHS.has(pathname);
+  const isPublicPath = PUBLIC_PATHS.has(pathname) || pathname.startsWith("/share");
 
   useEffect(() => {
     if (isPublicPath) {

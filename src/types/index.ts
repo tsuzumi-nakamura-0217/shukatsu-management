@@ -121,6 +121,7 @@ export interface ESDocument {
   characterLimit?: number;
   characterLimitType?: "程度" | "以下" | "未満" | "";
   status?: "未提出" | "提出済" | "結果待ち" | "通過" | "落選" | "";
+  shareToken?: string | null;
 }
 
 // ESコメントの型定義
@@ -132,6 +133,7 @@ export interface ESComment {
   positionFrom: number;
   positionTo: number;
   resolved: boolean;
+  authorName?: string | null;
   createdAt: string;
   updatedAt: string;
 }

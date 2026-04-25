@@ -1,4 +1,5 @@
 import { supabase } from "../supabase";
+import { getSupabaseAdmin } from "../supabase-admin";
 import { getCompany } from "./companies";
 import type { ESDocument } from "@/types";
 
@@ -15,6 +16,7 @@ export function rowToESDocument(row: Record<string, unknown>): ESDocument {
     characterLimit: (row.character_limit as number) || undefined,
     characterLimitType: (row.character_limit_type as "程度" | "以下" | "未満" | "") || undefined,
     status: (row.status as any) || "未提出",
+    shareToken: (row.share_token as string) || null,
     updatedAt: (row.updated_at as string) || "",
   };
 }
@@ -104,5 +106,71 @@ export async function deleteESDocument(
   id: string
 ): Promise<boolean> {
   const { error } = await supabase.from("es_documents").delete().eq("id", id);
+  return !error;
+}
+
+// ── Share Token Functions ──
+
+export async function generateShareToken(esDocId: string): Promise<string | null> {
+  const token = crypto.randomUUID();
+  const { error } = await supabase
+    .from("es_documents")
+    .update({ share_token: token })
+    .eq("id", esDocId);
+
+  if (error) {
+    console.error("Failed to generate share token:", error.message);
+    return null;
+  }
+  return token;
+}
+
+export async function removeShareToken(esDocId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("es_documents")
+    .update({ share_token: null })
+    .eq("id", esDocId);
+  return !error;
+}
+
+export async function getShareToken(esDocId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("es_documents")
+    .select("share_token")
+    .eq("id", esDocId)
+    .single();
+
+  if (error || !data) return null;
+  return (data.share_token as string) || null;
+}
+
+/**
+ * Fetch an ES document by its share token.
+ * Uses the admin client so that anonymous users can read shared documents.
+ */
+export async function getESDocumentByShareToken(shareToken: string): Promise<ESDocument | null> {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("es_documents")
+    .select("*, companies(name)")
+    .eq("share_token", shareToken)
+    .single();
+
+  if (error || !data) return null;
+  return rowToESDocument(data);
+}
+
+/**
+ * Update ES document content via share token (for shared/anonymous users).
+ */
+export async function updateESDocumentContentByShareToken(
+  shareToken: string,
+  content: string
+): Promise<boolean> {
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
+    .from("es_documents")
+    .update({ content, updated_at: new Date().toISOString() })
+    .eq("share_token", shareToken);
   return !error;
 }

@@ -7,7 +7,11 @@ import {
   Loader2,
   Copy,
   CopyPlus,
-  ChevronRight
+  ChevronRight,
+  Share2,
+  Link,
+  X,
+  StopCircle,
 } from "lucide-react";
 import {
   Card,
@@ -46,6 +50,11 @@ export default function ESListPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editStatus, setEditStatus] = useState("未提出");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Share State
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isGeneratingShare, setIsGeneratingShare] = useState(false);
 
   // ES Comments State
   const { comments: esComments, mutate: mutateESComments } = useESComments(selected?.id || null);
@@ -169,6 +178,69 @@ export default function ESListPage() {
     setEditContent(doc.content);
     setEditTitle(doc.title);
     setEditStatus(doc.status || "未提出");
+    setShowShareModal(false);
+    setShareUrl(null);
+  };
+
+  // Share Handlers
+  const handleShare = async () => {
+    if (!selected) return;
+    setIsGeneratingShare(true);
+    try {
+      const res = await fetch(`/api/es/${selected.id}/share`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed");
+      const { shareToken } = await res.json();
+      const url = `${window.location.origin}/share/${shareToken}`;
+      setShareUrl(url);
+      setShowShareModal(true);
+      mutate();
+    } catch {
+      toast.error("共有リンクの生成に失敗しました");
+    } finally {
+      setIsGeneratingShare(false);
+    }
+  };
+
+  const handleStopSharing = async () => {
+    if (!selected) return;
+    try {
+      const res = await fetch(`/api/es/${selected.id}/share`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("共有を停止しました");
+        setShareUrl(null);
+        setShowShareModal(false);
+        mutate();
+      } else {
+        toast.error("共有の停止に失敗しました");
+      }
+    } catch {
+      toast.error("共有の停止に失敗しました");
+    }
+  };
+
+  const handleCopyShareUrl = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("共有リンクをコピーしました");
+    } catch {
+      toast.error("コピーに失敗しました");
+    }
+  };
+
+  const handleOpenShareModal = async () => {
+    if (!selected) return;
+    // Check if there's an existing share token
+    if (selected.shareToken) {
+      setShareUrl(`${window.location.origin}/share/${selected.shareToken}`);
+      setShowShareModal(true);
+    } else {
+      await handleShare();
+    }
   };
 
   // Comment Handlers
@@ -288,6 +360,20 @@ export default function ESListPage() {
         <div className="flex items-center gap-3">
           {selected && (
             <>
+              <Button
+                onClick={handleOpenShareModal}
+                variant="outline"
+                size="sm"
+                disabled={isGeneratingShare}
+                className="rounded-xl h-10 px-4 font-bold border-2 hover:border-amber-500 hover:text-amber-600 transition-all gap-2"
+              >
+                {isGeneratingShare ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                {selected.shareToken ? "共有中" : "共有リンク"}
+              </Button>
               <Button
                 onClick={handleDuplicate}
                 variant="outline"
@@ -516,6 +602,83 @@ export default function ESListPage() {
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowShareModal(false)}
+          />
+          <div className="relative z-10 w-full max-w-md mx-4">
+            <Card className="border-none glass overflow-hidden rounded-3xl shadow-2xl">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                      <Share2 className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">ES共有リンク</h3>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                        ログイン不要で添削可能
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowShareModal(false)}
+                    className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-muted/20 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                    共有URL
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        readOnly
+                        value={shareUrl || ""}
+                        className="w-full pl-10 pr-3 h-11 rounded-xl bg-muted/20 border border-white/10 text-sm font-mono text-foreground/80 focus:outline-none"
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleCopyShareUrl}
+                      className="rounded-xl h-11 px-4 font-bold gap-2"
+                    >
+                      <Copy className="h-4 w-4" />
+                      コピー
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-amber-500/5 border border-amber-500/10 p-4 space-y-2">
+                  <p className="text-xs font-bold text-amber-600">共有時の注意</p>
+                  <ul className="text-[11px] text-muted-foreground space-y-1">
+                    <li>• リンクを知っている人は<span className="font-bold text-foreground">誰でも</span>閲覧・編集・コメントが可能です</li>
+                    <li>• 他の企業情報やログイン情報は<span className="font-bold text-foreground">表示されません</span></li>
+                    <li>• 共有を停止するとリンクが無効になります</li>
+                  </ul>
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={handleStopSharing}
+                  className="w-full rounded-xl h-11 font-bold border-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive transition-all gap-2"
+                >
+                  <StopCircle className="h-4 w-4" />
+                  共有を停止する
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

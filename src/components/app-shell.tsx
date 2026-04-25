@@ -10,6 +10,7 @@ const PUBLIC_PATHS = new Set(["/login"]);
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isChatPath = pathname.startsWith("/chat");
+  const isSharePath = pathname.startsWith("/share");
 
   if (PUBLIC_PATHS.has(pathname)) {
     return <main className="min-h-screen bg-background">{children}</main>;
@@ -17,9 +18,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      {/* Share pages: show sidebar but disable all navigation links */}
+      <div className={isSharePath ? "pointer-events-none select-none opacity-60" : ""}>
+        <Sidebar />
+      </div>
       <main className="flex-1 overflow-y-auto bg-background">
-        <MobileSidebar />
+        {isSharePath ? (
+          <div className="pointer-events-none select-none opacity-60">
+            <MobileSidebar />
+          </div>
+        ) : (
+          <MobileSidebar />
+        )}
         <div
           className={cn(
             "mx-auto w-full",
@@ -31,7 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
-      <FloatingChat />
+      {!isSharePath && <FloatingChat />}
     </div>
   );
 }
+

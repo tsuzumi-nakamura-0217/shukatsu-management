@@ -11,6 +11,9 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  TextSelect,
+  ArrowRight,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,12 +152,39 @@ export function ESCommentPanel({
       <div className="es-comment-list">
         {unresolvedComments.length === 0 && !showAddForm && (
           <div className="es-comment-empty">
-            <MessageSquare className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground text-center">
-              テキストを選択して
-              <br />
-              コメントを追加しましょう
+            <MessageSquare className="h-8 w-8 text-muted-foreground/20 mx-auto mb-3" />
+            <p className="text-xs font-bold text-muted-foreground text-center mb-3">
+              まだコメントはありません
             </p>
+            <div className="space-y-2 text-left w-full">
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold shrink-0">1</span>
+                <div className="flex items-center gap-1.5">
+                  <TextSelect className="h-3 w-3 text-blue-500 shrink-0" />
+                  <span className="text-[11px] text-muted-foreground">本文のテキストを<span className="font-bold text-foreground">ドラッグして選択</span></span>
+                </div>
+              </div>
+              <div className="flex items-center justify-center">
+                <ArrowRight className="h-3 w-3 text-muted-foreground/20 rotate-90" />
+              </div>
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold shrink-0">2</span>
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 text-amber-500 shrink-0" />
+                  <span className="text-[11px] text-muted-foreground">ツールバーの<span className="font-bold text-foreground">💬ボタン</span>を押す</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-center">
+                <ArrowRight className="h-3 w-3 text-muted-foreground/20 rotate-90" />
+              </div>
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-green-500/5 border border-green-500/10">
+                <span className="flex items-center justify-center h-5 w-5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold shrink-0">3</span>
+                <div className="flex items-center gap-1.5">
+                  <Send className="h-3 w-3 text-green-500 shrink-0" />
+                  <span className="text-[11px] text-muted-foreground">コメントを<span className="font-bold text-foreground">入力して送信</span></span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -213,14 +243,23 @@ export function ESCommentPanel({
             )}
 
             <div className="es-comment-card-footer">
-              <span className="es-comment-card-time">
-                {new Date(comment.createdAt).toLocaleString("ja-JP", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {comment.authorName && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-primary/70">
+                    <User className="h-2.5 w-2.5" />
+                    {comment.authorName}
+                  </span>
+                )}
+                {comment.authorName && <span className="text-muted-foreground/30">·</span>}
+                <span className="es-comment-card-time">
+                  {new Date(comment.createdAt).toLocaleString("ja-JP", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
               <div className="es-comment-card-actions">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleStartEdit(comment); }}
