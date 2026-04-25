@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 export type ChatRole = "user" | "assistant";
@@ -79,11 +80,19 @@ export function ChatSessionProvider({ children }: { children: React.ReactNode })
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
+  const pathname = usePathname();
+  const isPublicPath = pathname?.startsWith("/share") || pathname === "/login";
+
   const upsertConversation = useCallback((conversation: ChatConversation) => {
     setConversations((prev) => [conversation, ...prev.filter((item) => item.id !== conversation.id)]);
   }, []);
 
   const loadConversations = useCallback(async () => {
+    if (isPublicPath) {
+      setIsLoadingConversations(false);
+      return;
+    }
+
     setIsLoadingConversations(true);
 
     try {
@@ -117,7 +126,7 @@ export function ChatSessionProvider({ children }: { children: React.ReactNode })
     } finally {
       setIsLoadingConversations(false);
     }
-  }, []);
+  }, [isPublicPath]);
 
   useEffect(() => {
     void loadConversations();
