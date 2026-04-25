@@ -139,6 +139,7 @@
   border-radius: 0.75rem;
   background: var(--card);
   position: relative;
+  max-width: 100%;
   /* overflow: hidden; */ /* Remove to allow position:sticky on children */
 }
 
@@ -195,16 +196,30 @@
 
 /* ── エディタ本体 ── */
 .notion-editor-content {
-  padding: 1.25rem 1.5rem;
+  padding: 1rem;
   min-height: 400px;
   outline: none;
   font-size: 0.9375rem;
   line-height: 1.7;
   color: var(--foreground);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .notion-editor-content {
+    padding: 1.25rem 1.5rem;
+  }
 }
 
 .notion-editor-content>*:first-child {
   margin-top: 0;
+}
+
+.notion-editor-content * {
+  max-width: 100%;
 }
 
 /* 見出し */
@@ -274,6 +289,8 @@
   padding: 1rem;
   overflow-x: auto;
   margin: 0.75rem 0;
+  max-width: 100%;
+  white-space: pre-wrap; /* allow wrapping in pre to avoid overflow if preferred, or keep pre and use overflow-x: auto */
 }
 
 .notion-editor-content pre code {
