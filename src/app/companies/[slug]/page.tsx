@@ -25,7 +25,25 @@ import {
   Share2,
   StopCircle,
   Link,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { FlexibleDateInput } from "@/components/ui/flexible-date-input";
 import {
   Card,
@@ -76,6 +94,95 @@ import { toast } from "sonner";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useCompanyDetail, invalidateStats, invalidateAllTasks, useESComments } from "@/hooks/use-api";
 import type { Company, Task, Interview, ESDocument, AppConfig, CompanyEvent } from "@/types";
+
+/** Sortable row for a single pipeline stage */
+function SortablePipelineStage({
+  id,
+  stage,
+  index,
+  total,
+  onMove,
+  onRemove,
+  disabled,
+}: {
+  id: string;
+  stage: string;
+  index: number;
+  total: number;
+  onMove: (index: number, direction: -1 | 1) => void;
+  onRemove: (index: number) => void;
+  disabled: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1.5 touch-manipulation",
+        isDragging && "shadow-lg border-primary/40 ring-2 ring-primary/20 bg-background"
+      )}
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing hover:bg-black/5 dark:hover:bg-white/10 rounded p-0.5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </div>
+        <span className="text-xs font-medium truncate">{index + 1}. {stage}</span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onMove(index, -1)}
+          disabled={index === 0 || disabled}
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => onMove(index, 1)}
+          disabled={index === total - 1 || disabled}
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-destructive hover:text-destructive"
+          onClick={() => onRemove(index)}
+          disabled={disabled || total <= 1}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function normalizeDateTimeForCompare(value: string): string {
   if (!value) return "";
@@ -220,6 +327,10 @@ export default function CompanyDetailPage({
   const initializedCompanyId = useRef<string | null>(null);
   const focusedTaskIdRef = useRef<string | null>(null);
   const pipelineInputComposingRef = useRef(false);
+  const pipelineDndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const defaultStages = useMemo(() => normalizeStageList(config?.defaultStages), [config?.defaultStages]);
   const currentCompanyStages = useMemo(() => {
     const companyStages = normalizeStageList(company?.stages);
@@ -387,6 +498,22 @@ export default function CompanyDetailPage({
       [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
       return next;
     });
+  };
+
+  const handlePipelineDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setPipelineStages((prev) => {
+        const normalized = normalizeStageList(prev);
+        const ids = normalized.map((s, i) => `pipeline-${i}-${s}`);
+        const oldIndex = ids.indexOf(active.id as string);
+        const newIndex = ids.indexOf(over.id as string);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          return arrayMove(normalized, oldIndex, newIndex);
+        }
+        return normalized;
+      });
+    }
   };
 
   const handleRemovePipelineStage = (index: number) => {
@@ -1242,43 +1369,29 @@ export default function CompanyDetailPage({
                   {editablePipelineStages.length === 0 ? (
                     <p className="text-xs text-destructive">ステージを1件以上設定してください</p>
                   ) : (
-                    editablePipelineStages.map((stage, index) => (
-                      <div key={`${stage}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1.5">
-                        <span className="text-xs font-medium truncate">{index + 1}. {stage}</span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleMovePipelineStage(index, -1)}
-                            disabled={index === 0 || isSavingPipeline}
-                          >
-                            <ChevronUp className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleMovePipelineStage(index, 1)}
-                            disabled={index === editablePipelineStages.length - 1 || isSavingPipeline}
-                          >
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => handleRemovePipelineStage(index)}
-                            disabled={isSavingPipeline || editablePipelineStages.length <= 1}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                    <DndContext
+                      sensors={pipelineDndSensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handlePipelineDragEnd}
+                    >
+                      <SortableContext
+                        items={editablePipelineStages.map((s, i) => `pipeline-${i}-${s}`)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {editablePipelineStages.map((stage, index) => (
+                          <SortablePipelineStage
+                            key={`pipeline-${index}-${stage}`}
+                            id={`pipeline-${index}-${stage}`}
+                            stage={stage}
+                            index={index}
+                            total={editablePipelineStages.length}
+                            onMove={handleMovePipelineStage}
+                            onRemove={handleRemovePipelineStage}
+                            disabled={isSavingPipeline}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                   )}
                 </div>
 
