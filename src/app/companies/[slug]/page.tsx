@@ -250,8 +250,18 @@ function isInsideRow(target: Element, attributeName: string, rowId: string): boo
   return false;
 }
 
-function isInsideFloatingLayer(target: Element): boolean {
-  return Boolean(target.closest("[data-radix-popper-content-wrapper]"));
+function isInsideFloatingLayer(event: PointerEvent): boolean {
+  return event.composedPath().some((el) => {
+    if (!(el instanceof Element)) return false;
+    return (
+      el.hasAttribute("data-radix-popper-content-wrapper") ||
+      el.hasAttribute("data-radix-select-content") ||
+      el.getAttribute("data-slot") === "select-content" ||
+      el.getAttribute("data-slot") === "select-item" ||
+      el.getAttribute("role") === "listbox" ||
+      el.getAttribute("role") === "dialog"
+    );
+  });
 }
 
 export default function CompanyDetailPage({
@@ -292,7 +302,7 @@ export default function CompanyDetailPage({
   const [isCreatingEs, setIsCreatingEs] = useState(false);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
   const [editEsDoc, setEditEsDoc] = useState<ESDocument | null>(null);
-  
+
   // ES Comments State
   const { comments: esComments, mutate: mutateESComments } = useESComments(editEsDoc?.id || null);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
@@ -569,7 +579,7 @@ export default function CompanyDetailPage({
 
   const handleMypageClick = async () => {
     if (!company) return;
-    
+
     const loginId = company.loginId || "";
     try {
       if (navigator.clipboard) {
@@ -581,7 +591,7 @@ export default function CompanyDetailPage({
     } catch (err) {
       console.error("Failed to copy login ID:", err);
     }
-    
+
     if (company.mypageUrl) {
       window.open(company.mypageUrl, "_blank", "noopener,noreferrer");
     }
@@ -1054,14 +1064,14 @@ export default function CompanyDetailPage({
     if (!hasExpandableOpen) return;
 
     const handlePointerDownOutside = (event: PointerEvent) => {
+      if (isInsideFloatingLayer(event)) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (isInsideFloatingLayer(target)) return;
 
       if (expandedEsIds.size > 0 && !isInsideExpandedRow(target, "data-es-row-id", expandedEsIds)) {
         // Do not close automatically when clicking inside a comment panel
         if (target.closest('.es-comment-panel')) return;
-        
+
         setExpandedEsIds(new Set());
         setEditEsDoc(null);
       }
@@ -1122,11 +1132,11 @@ export default function CompanyDetailPage({
       });
       if (!res.ok) throw new Error("Failed");
       const newComment = await res.json();
-      
+
       if (editorRef.current) {
         editorRef.current.addCommentHighlight(commentSelection.from, commentSelection.to, newComment.id);
       }
-      
+
       mutateESComments();
       setShowCommentForm(false);
       setCommentSelection(null);
@@ -1321,81 +1331,81 @@ export default function CompanyDetailPage({
 
           {isPipelineEditorOpen && (
             <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Button
-                    size="sm"
-                    className="h-7 px-3 text-xs"
-                    onClick={handleSavePipelineStages}
-                    disabled={isSavingPipeline || editablePipelineStages.length === 0 || !hasPipelineChanges}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={handleSavePipelineStages}
+                  disabled={isSavingPipeline || editablePipelineStages.length === 0 || !hasPipelineChanges}
+                >
+                  {isSavingPipeline ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                  保存
+                </Button>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={newPipelineStage}
+                  onChange={(e) => setNewPipelineStage(e.target.value)}
+                  placeholder="ステージを追加"
+                  className="h-8 text-xs"
+                  onCompositionStart={() => {
+                    pipelineInputComposingRef.current = true;
+                  }}
+                  onCompositionEnd={() => {
+                    pipelineInputComposingRef.current = false;
+                  }}
+                  onKeyDown={(e) => {
+                    const isImeComposing =
+                      pipelineInputComposingRef.current ||
+                      e.nativeEvent.isComposing ||
+                      e.keyCode === 229;
+                    if (isImeComposing) {
+                      return;
+                    }
+
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddPipelineStage();
+                    }
+                  }}
+                />
+                <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddPipelineStage}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> 追加
+                </Button>
+              </div>
+
+              <div className="space-y-1">
+                {editablePipelineStages.length === 0 ? (
+                  <p className="text-xs text-destructive">ステージを1件以上設定してください</p>
+                ) : (
+                  <DndContext
+                    sensors={pipelineDndSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handlePipelineDragEnd}
                   >
-                    {isSavingPipeline ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-                    保存
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    value={newPipelineStage}
-                    onChange={(e) => setNewPipelineStage(e.target.value)}
-                    placeholder="ステージを追加"
-                    className="h-8 text-xs"
-                    onCompositionStart={() => {
-                      pipelineInputComposingRef.current = true;
-                    }}
-                    onCompositionEnd={() => {
-                      pipelineInputComposingRef.current = false;
-                    }}
-                    onKeyDown={(e) => {
-                      const isImeComposing =
-                        pipelineInputComposingRef.current ||
-                        e.nativeEvent.isComposing ||
-                        e.keyCode === 229;
-                      if (isImeComposing) {
-                        return;
-                      }
-
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddPipelineStage();
-                      }
-                    }}
-                  />
-                  <Button size="sm" variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddPipelineStage}>
-                    <Plus className="mr-1.5 h-3.5 w-3.5" /> 追加
-                  </Button>
-                </div>
-
-                <div className="space-y-1">
-                  {editablePipelineStages.length === 0 ? (
-                    <p className="text-xs text-destructive">ステージを1件以上設定してください</p>
-                  ) : (
-                    <DndContext
-                      sensors={pipelineDndSensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handlePipelineDragEnd}
+                    <SortableContext
+                      items={editablePipelineStages.map((s, i) => `pipeline-${i}-${s}`)}
+                      strategy={verticalListSortingStrategy}
                     >
-                      <SortableContext
-                        items={editablePipelineStages.map((s, i) => `pipeline-${i}-${s}`)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {editablePipelineStages.map((stage, index) => (
-                          <SortablePipelineStage
-                            key={`pipeline-${index}-${stage}`}
-                            id={`pipeline-${index}-${stage}`}
-                            stage={stage}
-                            index={index}
-                            total={editablePipelineStages.length}
-                            onMove={handleMovePipelineStage}
-                            onRemove={handleRemovePipelineStage}
-                            disabled={isSavingPipeline}
-                          />
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                </div>
+                      {editablePipelineStages.map((stage, index) => (
+                        <SortablePipelineStage
+                          key={`pipeline-${index}-${stage}`}
+                          id={`pipeline-${index}-${stage}`}
+                          stage={stage}
+                          index={index}
+                          total={editablePipelineStages.length}
+                          onMove={handleMovePipelineStage}
+                          onRemove={handleRemovePipelineStage}
+                          disabled={isSavingPipeline}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </div>
 
-                <p className="text-[10px] text-muted-foreground">現在ステータスを含まない構成は保存できません。</p>
+              <p className="text-[10px] text-muted-foreground">現在ステータスを含まない構成は保存できません。</p>
             </div>
           )}
 
@@ -1823,7 +1833,7 @@ export default function CompanyDetailPage({
                                         onAddCommentClick={handleAddCommentClick}
                                         activeCommentId={activeCommentId}
                                       />
-                                      
+
                                       <div className="mt-4 pt-4 border-t border-dashed">
                                         <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-widest">セクション別文字数</h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1841,7 +1851,7 @@ export default function CompanyDetailPage({
                                         </div>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Sidebar Comments Panel */}
                                     <div className="hidden lg:block border rounded-lg overflow-hidden bg-card/50 max-h-[800px]">
                                       <ESCommentPanel
@@ -2321,9 +2331,9 @@ export default function CompanyDetailPage({
                                         setEditingTask((prev) =>
                                           prev
                                             ? {
-                                                ...prev,
-                                                executionDate: d ? format(d, "yyyy-MM-dd") : "",
-                                              }
+                                              ...prev,
+                                              executionDate: d ? format(d, "yyyy-MM-dd") : "",
+                                            }
                                             : prev
                                         )
                                       }
@@ -2338,9 +2348,9 @@ export default function CompanyDetailPage({
                                         setEditingTask((prev) =>
                                           prev
                                             ? {
-                                                ...prev,
-                                                deadline: d ? d.toISOString() : "",
-                                              }
+                                              ...prev,
+                                              deadline: d ? d.toISOString() : "",
+                                            }
                                             : prev
                                         )
                                       }
@@ -2482,7 +2492,7 @@ export default function CompanyDetailPage({
               </DialogContent>
             </Dialog>
           </div>
-          
+
           {localEvents.length === 0 ? (
             <Card><CardContent className="py-8"><p className="text-center text-muted-foreground">予定されているイベントはありません</p></CardContent></Card>
           ) : (
