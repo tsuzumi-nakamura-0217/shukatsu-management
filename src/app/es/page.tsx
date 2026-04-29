@@ -270,11 +270,11 @@ export default function ESListPage() {
       });
       if (!res.ok) throw new Error("Failed");
       const newComment = await res.json();
-      
+
       if (editorRef.current) {
         editorRef.current.addCommentHighlight(commentSelection.from, commentSelection.to, newComment.id);
       }
-      
+
       mutateESComments();
       setShowCommentForm(false);
       setCommentSelection(null);
@@ -391,7 +391,7 @@ export default function ESListPage() {
                 className="rounded-xl h-8 sm:h-10 px-2 sm:px-4 font-bold border-2 hover:border-primary hover:text-primary transition-all gap-1 sm:gap-2 text-xs sm:text-sm"
               >
                 <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">テキストを</span>コピー
+                <span className="hidden sm:inline">テキストをコピー</span>
               </Button>
             </>
           )}
@@ -458,12 +458,12 @@ export default function ESListPage() {
                           {doc.status && (
                             <span className={cn(
                               "px-1.5 py-0.5 rounded-sm shrink-0 font-bold",
-                              selected?.id === doc.id ? "bg-white/20 text-white" : 
+                              selected?.id === doc.id ? "bg-white/20 text-white" :
                                 doc.status === "通過" ? "bg-green-500/10 text-green-700 dark:text-green-400" :
-                                doc.status === "落選" ? "bg-red-500/10 text-red-700 dark:text-red-400" :
-                                doc.status === "結果待ち" ? "bg-blue-500/10 text-blue-700 dark:text-blue-400" :
-                                doc.status === "提出済" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" :
-                                "bg-muted/50 text-muted-foreground"
+                                  doc.status === "落選" ? "bg-red-500/10 text-red-700 dark:text-red-400" :
+                                    doc.status === "結果待ち" ? "bg-blue-500/10 text-blue-700 dark:text-blue-400" :
+                                      doc.status === "提出済" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" :
+                                        "bg-muted/50 text-muted-foreground"
                             )}>
                               {doc.status}
                             </span>
