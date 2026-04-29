@@ -18,7 +18,19 @@ function rowToESComment(row: Record<string, unknown>): ESComment {
 }
 
 export async function getComments(esDocumentId: string): Promise<ESComment[]> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const admin = getSupabaseAdmin();
+  const { data: esDoc } = await admin
+    .from("es_documents")
+    .select("user_id")
+    .eq("id", esDocumentId)
+    .single();
+
+  if (!esDoc || esDoc.user_id !== user.id) return [];
+
+  const { data, error } = await admin
     .from("es_comments")
     .select("*")
     .eq("es_document_id", esDocumentId)
@@ -35,7 +47,19 @@ export async function createComment(
   positionFrom: number,
   positionTo: number
 ): Promise<ESComment> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const admin = getSupabaseAdmin();
+  const { data: esDoc } = await admin
+    .from("es_documents")
+    .select("user_id")
+    .eq("id", esDocumentId)
+    .single();
+
+  if (!esDoc || esDoc.user_id !== user.id) throw new Error("Unauthorized");
+
+  const { data, error } = await admin
     .from("es_comments")
     .insert({
       es_document_id: esDocumentId,
@@ -43,6 +67,7 @@ export async function createComment(
       highlighted_text: highlightedText,
       position_from: positionFrom,
       position_to: positionTo,
+      user_id: user.id,
     })
     .select("*")
     .single();
@@ -57,6 +82,26 @@ export async function updateComment(
   id: string,
   updates: { content?: string; resolved?: boolean }
 ): Promise<ESComment> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const admin = getSupabaseAdmin();
+  const { data: comment } = await admin
+    .from("es_comments")
+    .select("es_document_id")
+    .eq("id", id)
+    .single();
+
+  if (!comment) throw new Error("Comment not found");
+
+  const { data: esDoc } = await admin
+    .from("es_documents")
+    .select("user_id")
+    .eq("id", comment.es_document_id)
+    .single();
+
+  if (!esDoc || esDoc.user_id !== user.id) throw new Error("Unauthorized");
+
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -68,7 +113,7 @@ export async function updateComment(
     updateData.resolved = updates.resolved;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("es_comments")
     .update(updateData)
     .eq("id", id)
@@ -82,7 +127,27 @@ export async function updateComment(
 }
 
 export async function deleteComment(id: string): Promise<boolean> {
-  const { error } = await supabase.from("es_comments").delete().eq("id", id);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const admin = getSupabaseAdmin();
+  const { data: comment } = await admin
+    .from("es_comments")
+    .select("es_document_id")
+    .eq("id", id)
+    .single();
+
+  if (!comment) return false;
+
+  const { data: esDoc } = await admin
+    .from("es_documents")
+    .select("user_id")
+    .eq("id", comment.es_document_id)
+    .single();
+
+  if (!esDoc || esDoc.user_id !== user.id) return false;
+
+  const { error } = await admin.from("es_comments").delete().eq("id", id);
   return !error;
 }
 

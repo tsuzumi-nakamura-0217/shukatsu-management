@@ -37,10 +37,18 @@ export function rowToESDocument(row: Record<string, unknown>): ESDocument {
 }
 
 export async function getAllESDocuments(): Promise<ESDocument[]> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let query = supabase
     .from("es_documents")
     .select("*, companies(name)")
     .order("updated_at", { ascending: false });
+
+  if (user) {
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) return [];
   return data.map(rowToESDocument);
@@ -49,11 +57,19 @@ export async function getAllESDocuments(): Promise<ESDocument[]> {
 export async function getESDocuments(
   companySlug: string
 ): Promise<ESDocument[]> {
-  const { data, error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let query = supabase
     .from("es_documents")
     .select("*, companies(name)")
     .eq("company_slug", companySlug)
     .order("updated_at", { ascending: false });
+
+  if (user) {
+    query = query.eq("user_id", user.id);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) return [];
   return data.map(rowToESDocument);
